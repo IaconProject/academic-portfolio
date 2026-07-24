@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { Profile, SocialLink } from '@/lib/types';
-import { User, School, BookOpen, GitBranch, Mic, ListOrdered, Users, Mail, ShieldCheck } from 'lucide-react';
+import { User, School, BookOpen, GitBranch, Mic, ListOrdered, Users, Mail } from 'lucide-react';
 
 interface DesktopSidebarProps {
   profile: Profile;
@@ -80,15 +80,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
         </ul>
       </nav>
 
-      {/* Admin Panel Quick Link & Footer */}
-      <div className="p-6 border-t border-white/10 text-center space-y-3 bg-black/10">
-        <a
-          href="/admin"
-          className="inline-flex items-center justify-center gap-2 w-full py-2 px-3 bg-white/10 hover:bg-white/20 text-xs font-semibold rounded-md text-slate-200 transition-colors border border-white/10"
-        >
-          <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-          <span>Yönetim Paneli (CMS)</span>
-        </a>
+      {/* Clean Footer */}
+      <div className="p-6 border-t border-white/10 text-center bg-black/10">
         <div className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">
           © {new Date().getFullYear()} {profile.fullName}
         </div>

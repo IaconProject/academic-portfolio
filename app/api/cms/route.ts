@@ -8,9 +8,8 @@ let inMemoryStore: PortfolioData = initialPortfolioData;
 export async function GET() {
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data: profileData } = await supabase.from('public_profile').select('*').single();
+      const { data: profileData } = await supabase.from('public_profile').select('*').maybeSingle();
       if (profileData) {
-        // Map from Supabase DB to PortfolioData schema
         const { data: eduData } = await supabase.from('education').select('*');
         const { data: pubData } = await supabase.from('publications').select('*');
         const { data: projData } = await supabase.from('projects').select('*');
@@ -18,9 +17,9 @@ export async function GET() {
         const { data: actData } = await supabase.from('activities').select('*');
         const { data: refData } = await supabase.from('references_list').select('*');
         const { data: socData } = await supabase.from('social_links').select('*');
-        const { data: seoData } = await supabase.from('seo_settings').select('*').single();
+        const { data: seoData } = await supabase.from('seo_settings').select('*').maybeSingle();
 
-        return NextResponse.json({
+        const fetchedData: PortfolioData = {
           profile: {
             fullName: profileData.full_name,
             title: profileData.title,
@@ -31,7 +30,7 @@ export async function GET() {
             location: profileData.location || '',
             cvUrl: profileData.cv_url || '#',
           },
-          education: (eduData || []).map((e: any) => ({
+          education: (eduData && eduData.length > 0) ? eduData.map((e: any) => ({
             id: e.id,
             degree: e.degree,
             institution: e.institution,
@@ -39,28 +38,31 @@ export async function GET() {
             status: e.status,
             description: e.description,
             isCurrent: e.is_current,
-          })),
-          publications: (pubData || []).map((p: any) => ({
+          })) : inMemoryStore.education,
+          publications: (pubData && pubData.length > 0) ? pubData.map((p: any) => ({
             id: p.id,
             type: p.type,
             title: p.title,
             publisher: p.publisher,
             year: p.year,
             url: p.url,
-          })),
-          projects: (pr: any) => ({
+          })) : inMemoryStore.publications,
+          projects: (projData && projData.length > 0) ? projData.map((pr: any) => ({
             id: pr.id,
             title: pr.title,
             description: pr.description,
             years: pr.years,
             tags: pr.tags || [],
-          }),
-          conferences: (confData || []),
-          activities: (actData || []),
-          references: (refData || []),
-          socialLinks: (socData || []),
+          })) : inMemoryStore.projects,
+          conferences: (confData && confData.length > 0) ? confData : inMemoryStore.conferences,
+          activities: (actData && actData.length > 0) ? actData : inMemoryStore.activities,
+          references: (refData && refData.length > 0) ? refData : inMemoryStore.references,
+          socialLinks: (socData && socData.length > 0) ? socData : inMemoryStore.socialLinks,
           seoSettings: seoData || inMemoryStore.seoSettings,
-        });
+        };
+
+        inMemoryStore = fetchedData;
+        return NextResponse.json(fetchedData);
       }
     } catch (e) {
       console.warn('Supabase fetch failed in API route, returning inMemoryStore:', e);
@@ -72,31 +74,48 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const updatedData: PortfolioData = await request.json();
-    inMemoryStore = updatedData;
+    const body = await request.json();
 
-    if (isSupabaseConfigured && supabase) {
-      // Upsert profile
-      await supabase.from('public_profile').upsert({
-        full_name: updatedData.profile.fullName,
-        title: updatedData.profile.title,
-        subtitle: updatedData.profile.subtitle,
-        bio: updatedData.profile.bio,
-        avatar_url: updatedData.profile.avatarUrl,
-        email: updatedData.profile.email,
-        location: updatedData.profile.location,
-        cv_url: updatedData.profile.cvUrl,
-      });
+    if (body.adminCredentials && isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('admin_credentials').upsert({
+          email: body.adminCredentials.email,
+          password: body.adminCredentials.password,
+        });
+      } catch (e) {
+        console.warn('Admin credentials upsert error:', e);
+      }
+    }
 
-      // Upsert SEO settings
-      await supabase.from('seo_settings').upsert({
-        meta_title: updatedData.seoSettings.metaTitle,
-        meta_description: updatedData.seoSettings.metaDescription,
-        keywords: updatedData.seoSettings.keywords,
-        og_image_url: updatedData.seoSettings.ogImageUrl,
-        canonical_url: updatedData.seoSettings.canonicalUrl,
-        author_name: updatedData.seoSettings.authorName,
-      });
+    if (body.profile) {
+      const updatedData: PortfolioData = body;
+      inMemoryStore = updatedData;
+
+      if (isSupabaseConfigured && supabase) {
+        try {
+          await supabase.from('public_profile').upsert({
+            full_name: updatedData.profile.fullName,
+            title: updatedData.profile.title,
+            subtitle: updatedData.profile.subtitle,
+            bio: updatedData.profile.bio,
+            avatar_url: updatedData.profile.avatarUrl,
+            email: updatedData.profile.email,
+            location: updatedData.profile.location,
+            cv_url: updatedData.profile.cvUrl,
+          });
+
+          await supabase.from('seo_settings').upsert({
+            meta_title: updatedData.seoSettings.metaTitle,
+            meta_description: updatedData.seoSettings.metaDescription,
+            keywords: updatedData.seoSettings.keywords,
+            og_image_url: updatedData.seoSettings.ogImageUrl,
+            canonical_url: updatedData.seoSettings.canonicalUrl,
+            author_name: updatedData.seoSettings.authorName,
+          });
+        } catch (e) {
+          console.warn('Supabase upsert error:', e);
+        }
+      }
     }
 
     return NextResponse.json({ success: true, data: inMemoryStore });

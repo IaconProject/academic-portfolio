@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Menu, X, User, School, BookOpen, GitBranch, Mic, ListOrdered, Users, Mail, ShieldCheck } from 'lucide-react';
+import { Menu, X, User, School, BookOpen, GitBranch, Mic, ListOrdered, Users, Mail } from 'lucide-react';
 import { Profile } from '@/lib/types';
 
 interface MobileHeaderProps {
@@ -40,13 +40,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
         <span className="font-serif font-bold text-base md:text-lg tracking-tight text-academic-navy uppercase">
           {profile.fullName}
         </span>
-        <a
-          href="/admin"
-          aria-label="CMS Admin"
-          className="w-11 h-11 flex items-center justify-center text-academic-navy hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <ShieldCheck className="w-5 h-5 text-academic-slate" />
-        </a>
+        <div className="w-11" />
       </header>
 
       {/* Backdrop Overlay */}
@@ -96,16 +90,6 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
             );
           })}
         </ul>
-
-        <div className="mt-10 pt-6 border-t border-slate-100 text-center">
-          <a
-            href="/admin"
-            className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-slate-100 text-academic-navy font-semibold text-xs rounded-xl hover:bg-slate-200 transition-colors"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Yönetim Paneli (CMS)</span>
-          </a>
-        </div>
       </nav>
     </>
   );

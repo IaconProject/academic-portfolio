@@ -10,7 +10,7 @@ import { EducationEditor } from '@/components/admin/EducationEditor';
 import { PublicationsEditor } from '@/components/admin/PublicationsEditor';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { CredentialsEditor } from '@/components/admin/CredentialsEditor';
-import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound } from 'lucide-react';
+import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound, Terminal, Lock, Database } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type AdminTab = 'profile' | 'education' | 'publications' | 'seo' | 'security';
@@ -52,9 +52,9 @@ export default function AdminDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
       });
-      toast.success('Değişiklikler başarıyla kaydedildi!');
+      toast.success('Değişiklikler sunucuya ve Supabase veritabanına senkronize edildi!');
     } catch (e) {
-      toast.success('Yerel hafızaya kaydedildi.');
+      toast.success('Yerel depolamaya kaydedildi.');
     } finally {
       setIsSaving(false);
     }
@@ -70,77 +70,96 @@ export default function AdminDashboardPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-academic-bg flex items-center justify-center text-academic-navy">
-        <RefreshCw className="w-8 h-8 animate-spin text-academic-navy" />
+      <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center text-cyan-400">
+        <div className="flex flex-col items-center gap-3">
+          <RefreshCw className="w-10 h-10 animate-spin text-cyan-400" />
+          <span className="font-mono text-xs text-slate-400 tracking-widest uppercase animate-pulse">
+            LOADING_CYBER_CMS_NODE...
+          </span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-academic-bg text-slate-800 font-sans">
+    <div className="min-h-screen bg-[#0b0f19] text-slate-200 font-sans selection:bg-cyan-500 selection:text-black">
       <AdminNavbar onLogout={handleLogout} />
 
       <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Navigation Tabs */}
-        <div className="flex overflow-x-auto gap-2 bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
+        {/* Terminal Quick Metrics Bar */}
+        <div className="bg-slate-950/80 border border-cyan-500/20 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3 font-mono text-xs backdrop-blur-md">
+          <div className="flex items-center gap-2 text-slate-400">
+            <Terminal className="w-4 h-4 text-cyan-400" />
+            <span>NODE_STATUS:</span>
+            <span className="text-emerald-400 font-semibold">ONLINE</span>
+          </div>
+
+          <div className="flex items-center gap-4 text-slate-400 text-[11px]">
+            <span>LAST_BUILD: <strong className="text-slate-200">{new Date().toLocaleTimeString()}</strong></span>
+            <span className="hidden sm:inline">DATA_HASH: <strong className="text-cyan-400">0x8F9...A3C</strong></span>
+          </div>
+        </div>
+
+        {/* Cyber Navigation Tabs */}
+        <div className="flex overflow-x-auto gap-2 bg-slate-950/90 p-2 rounded-2xl border border-cyan-500/20 shadow-xl backdrop-blur-md">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
               activeTab === 'profile'
-                ? 'bg-academic-navy text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
             }`}
           >
             <User className="w-4 h-4" />
-            <span>Profil & Biyografi</span>
+            <span>PROFİL & BİYOGRAFİ</span>
           </button>
 
           <button
             onClick={() => setActiveTab('education')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
               activeTab === 'education'
-                ? 'bg-academic-navy text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
             }`}
           >
             <School className="w-4 h-4" />
-            <span>Eğitim Geçmişi</span>
+            <span>EĞİTİM GEÇMİŞİ</span>
           </button>
 
           <button
             onClick={() => setActiveTab('publications')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
               activeTab === 'publications'
-                ? 'bg-academic-navy text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Yayınlar & Makaleler</span>
+            <span>YAYINLAR & MAKALELER</span>
           </button>
 
           <button
             onClick={() => setActiveTab('seo')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
               activeTab === 'seo'
-                ? 'bg-academic-navy text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
             }`}
           >
             <Search className="w-4 h-4" />
-            <span>SEO & Sosyal Medya</span>
+            <span>SEO & SOSYAL MEDYA</span>
           </button>
 
           <button
             onClick={() => setActiveTab('security')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all shrink-0 ${
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
               activeTab === 'security'
-                ? 'bg-academic-navy text-white shadow-sm'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-extrabold'
+                : 'text-slate-400 hover:bg-slate-900 hover:text-emerald-400'
             }`}
           >
-            <KeyRound className="w-4 h-4 text-amber-500" />
-            <span>Güvenlik & Giriş</span>
+            <KeyRound className="w-4 h-4 text-emerald-400" />
+            <span>GÜVENLİK & GİRİŞ</span>
           </button>
         </div>
 

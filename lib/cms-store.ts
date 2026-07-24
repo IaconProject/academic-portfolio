@@ -62,7 +62,8 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
   }
 
   try {
-    const { data: profileData } = await supabase.from('public_profile').select('*').single();
+    // Use .maybeSingle() instead of .single() to avoid HTTP 406 errors on empty tables
+    const { data: profileData, error: profileErr } = await supabase.from('public_profile').select('*').maybeSingle();
     const { data: eduData } = await supabase.from('education').select('*').order('created_at', { ascending: true });
     const { data: pubData } = await supabase.from('publications').select('*').order('created_at', { ascending: true });
     const { data: projData } = await supabase.from('projects').select('*').order('created_at', { ascending: true });
@@ -70,17 +71,24 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
     const { data: actData } = await supabase.from('activities').select('*').order('created_at', { ascending: true });
     const { data: refData } = await supabase.from('references_list').select('*').order('created_at', { ascending: true });
     const { data: socData } = await supabase.from('social_links').select('*').order('created_at', { ascending: true });
-    const { data: seoData } = await supabase.from('seo_settings').select('*').single();
-    const { data: credsData } = await supabase.from('admin_credentials').select('*').single();
+    const { data: seoData } = await supabase.from('seo_settings').select('*').maybeSingle();
 
-    if (credsData) {
-      saveAdminCredentials({
-        email: credsData.email,
-        password: credsData.password,
-      });
+    // Safely check admin credentials without throwing 404
+    try {
+      const { data: credsData } = await supabase.from('admin_credentials').select('*').maybeSingle();
+      if (credsData) {
+        saveAdminCredentials({
+          email: credsData.email,
+          password: credsData.password,
+        });
+      }
+    } catch (e) {
+      // Table may not be created yet, fallback to local creds
     }
 
-    if (!profileData) return getPortfolioData();
+    if (!profileData) {
+      return getPortfolioData();
+    }
 
     const result: PortfolioData = {
       profile: {
@@ -93,7 +101,7 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         location: profileData.location || '',
         cvUrl: profileData.cv_url || '#',
       },
-      education: (eduData || []).map((item: any) => ({
+      education: (eduData && eduData.length > 0) ? eduData.map((item: any) => ({
         id: item.id,
         degree: item.degree,
         institution: item.institution,
@@ -101,8 +109,8 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         status: item.status || 'Tamamlandı',
         description: item.description,
         isCurrent: item.is_current || false,
-      })),
-      publications: (pubData || []).map((item: any) => ({
+      })) : initialPortfolioData.education,
+      publications: (pubData && pubData.length > 0) ? pubData.map((item: any) => ({
         id: item.id,
         type: item.type,
         title: item.title,
@@ -110,31 +118,31 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         year: item.year,
         url: item.url,
         doi: item.doi,
-      })),
-      projects: (projData || []).map((item: any) => ({
+      })) : initialPortfolioData.publications,
+      projects: (projData && projData.length > 0) ? projData.map((item: any) => ({
         id: item.id,
         title: item.title,
         description: item.description,
         years: item.years,
         tags: item.tags || [],
         url: item.url,
-      })),
-      conferences: (confData || []).map((item: any) => ({
+      })) : initialPortfolioData.projects,
+      conferences: (confData && confData.length > 0) ? confData.map((item: any) => ({
         id: item.id,
         title: item.title,
         eventName: item.event_name,
         location: item.location,
         year: item.year,
         role: item.role,
-      })),
-      activities: (actData || []).map((item: any) => ({
+      })) : initialPortfolioData.conferences,
+      activities: (actData && actData.length > 0) ? actData.map((item: any) => ({
         id: item.id,
         title: item.title,
         organization: item.organization,
         years: item.years,
         description: item.description,
-      })),
-      references: (refData || []).map((item: any) => ({
+      })) : initialPortfolioData.activities,
+      references: (refData && refData.length > 0) ? refData.map((item: any) => ({
         id: item.id,
         name: item.name,
         title: item.title,
@@ -142,13 +150,13 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         email: item.email,
         phone: item.phone,
         isFeatured: item.is_featured ?? true,
-      })),
-      socialLinks: (socData || []).map((item: any) => ({
+      })) : initialPortfolioData.references,
+      socialLinks: (socData && socData.length > 0) ? socData.map((item: any) => ({
         id: item.id,
         platform: item.platform,
         url: item.url,
         iconName: item.icon_name,
-      })),
+      })) : initialPortfolioData.socialLinks,
       seoSettings: seoData ? {
         metaTitle: seoData.meta_title,
         metaDescription: seoData.meta_description,
