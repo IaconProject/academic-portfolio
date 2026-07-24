@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Lora, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
+import { VisitorTracker } from '@/components/public/VisitorTracker';
 import './globals.css';
 
 const lora = Lora({
@@ -48,6 +49,7 @@ export default function RootLayout({
     <html lang="tr" className={`${lora.variable} ${plusJakarta.variable} ${spaceGrotesk.variable} scroll-smooth`}>
       <body className="bg-academic-bg text-slate-800 font-sans antialiased">
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+        <VisitorTracker />
         {children}
       </body>
     </html>

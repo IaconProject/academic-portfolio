@@ -99,3 +99,28 @@ export interface PortfolioData {
   seoSettings: SeoSettings;
   adminCredentials?: AdminCredentials;
 }
+
+export interface VisitorLog {
+  id: string;
+  ipAddress: string;
+  country: string;
+  countryCode: string;
+  city: string;
+  region: string;
+  isp: string;
+  isMobileNetwork: boolean;
+  deviceType: 'Mobile' | 'Tablet' | 'Desktop';
+  deviceBrand: string;
+  deviceModel: string;
+  osName: string;
+  osVersion: string;
+  browserName: string;
+  browserVersion: string;
+  screenResolution: string;
+  language: string;
+  pagePath: string;
+  referrer: string;
+  userAgent: string;
+  timestamp: string;
+}
+

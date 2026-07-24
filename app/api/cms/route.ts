@@ -10,11 +10,19 @@ export const revalidate = 0;
 
 const TMP_FILE_PATH = path.join('/tmp', 'academic_portfolio_data_v2.json');
 
+let inMemoryStore: PortfolioData | null = null;
+
 function readTmpStore(): PortfolioData {
+  if (inMemoryStore) {
+    return inMemoryStore;
+  }
   try {
     if (fs.existsSync(TMP_FILE_PATH)) {
       const content = fs.readFileSync(TMP_FILE_PATH, 'utf-8');
-      if (content) return JSON.parse(content);
+      if (content) {
+        inMemoryStore = JSON.parse(content);
+        return inMemoryStore!;
+      }
     }
   } catch (e) {
     console.error('Failed reading tmp store:', e);
@@ -23,6 +31,7 @@ function readTmpStore(): PortfolioData {
 }
 
 function writeTmpStore(data: PortfolioData): void {
+  inMemoryStore = data;
   try {
     fs.writeFileSync(TMP_FILE_PATH, JSON.stringify(data), 'utf-8');
   } catch (e) {

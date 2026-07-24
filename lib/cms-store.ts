@@ -39,7 +39,10 @@ export function getPortfolioData(): PortfolioData {
   try {
     const cached = localStorage.getItem(STORAGE_KEY);
     if (cached) {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.profile) {
+        return parsed;
+      }
     }
   } catch (e) {
     console.error('Failed to read from localStorage:', e);
@@ -51,6 +54,15 @@ export function getPortfolioData(): PortfolioData {
 export function savePortfolioDataLocally(data: PortfolioData): void {
   if (typeof window === 'undefined') return;
   try {
+    // Preserve custom avatar if current data provided has initial default avatar
+    const existing = getPortfolioData();
+    if (
+      existing?.profile?.avatarUrl &&
+      existing.profile.avatarUrl !== initialPortfolioData.profile.avatarUrl &&
+      data?.profile?.avatarUrl === initialPortfolioData.profile.avatarUrl
+    ) {
+      data.profile.avatarUrl = existing.profile.avatarUrl;
+    }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   } catch (e) {
     console.error('Failed to save to localStorage:', e);
@@ -58,6 +70,8 @@ export function savePortfolioDataLocally(data: PortfolioData): void {
 }
 
 export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null> {
+  const localData = getPortfolioData();
+
   // First try fetching from /api/cms endpoint (which has server memory + tmp file sync)
   try {
     const res = await fetch('/api/cms?t=' + Date.now(), {
@@ -65,8 +79,17 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
       headers: { 'Cache-Control': 'no-cache' },
     });
     if (res.ok) {
-      const apiData = await res.json();
+      const apiData: PortfolioData = await res.json();
       if (apiData && apiData.profile) {
+        // If server returns initial avatar default but local has a custom uploaded avatar, preserve custom local avatar
+        if (
+          localData?.profile?.avatarUrl &&
+          localData.profile.avatarUrl !== initialPortfolioData.profile.avatarUrl &&
+          apiData.profile.avatarUrl === initialPortfolioData.profile.avatarUrl
+        ) {
+          apiData.profile.avatarUrl = localData.profile.avatarUrl;
+        }
+
         savePortfolioDataLocally(apiData);
         return apiData;
       }

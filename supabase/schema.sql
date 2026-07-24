@@ -131,3 +131,34 @@ ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "Public Read Avatars" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
 CREATE POLICY "Admin Upload Avatars" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars');
+
+-- 12. Visitor Logs Table for Traffic & Device Analytics
+CREATE TABLE IF NOT EXISTS public.visitor_logs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  ip_address TEXT NOT NULL,
+  country TEXT DEFAULT 'Bilinmiyor',
+  country_code TEXT DEFAULT 'TR',
+  city TEXT DEFAULT 'Bilinmiyor',
+  region TEXT DEFAULT 'Bilinmiyor',
+  isp TEXT DEFAULT 'Bilinmiyor',
+  is_mobile_network BOOLEAN DEFAULT false,
+  device_type TEXT DEFAULT 'Desktop',
+  device_brand TEXT DEFAULT 'Bilinmiyor',
+  device_model TEXT DEFAULT 'Bilinmiyor',
+  os_name TEXT DEFAULT 'Bilinmiyor',
+  os_version TEXT DEFAULT '',
+  browser_name TEXT DEFAULT 'Bilinmiyor',
+  browser_version TEXT DEFAULT '',
+  screen_resolution TEXT DEFAULT '',
+  language TEXT DEFAULT '',
+  page_path TEXT DEFAULT '/',
+  referrer TEXT DEFAULT '',
+  user_agent TEXT DEFAULT '',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.visitor_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public insert visitor_logs" ON public.visitor_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public select visitor_logs" ON public.visitor_logs FOR SELECT USING (true);
+CREATE POLICY "Allow admin delete visitor_logs" ON public.visitor_logs FOR DELETE USING (true);
+
