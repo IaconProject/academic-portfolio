@@ -8,15 +8,30 @@ import { AdminNavbar } from '@/components/admin/AdminNavbar';
 import { ProfileForm } from '@/components/admin/ProfileForm';
 import { EducationEditor } from '@/components/admin/EducationEditor';
 import { PublicationsEditor } from '@/components/admin/PublicationsEditor';
+import { ProjectsEditor } from '@/components/admin/ProjectsEditor';
+import { ConferencesEditor } from '@/components/admin/ConferencesEditor';
+import { ActivitiesEditor } from '@/components/admin/ActivitiesEditor';
+import { ReferencesEditor } from '@/components/admin/ReferencesEditor';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { CredentialsEditor } from '@/components/admin/CredentialsEditor';
 import { VisitorLogsManager } from '@/components/admin/VisitorLogsManager';
 import { SocialLinksEditor } from '@/components/admin/SocialLinksEditor';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
-import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound, Terminal, Activity, Share2 } from 'lucide-react';
+import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound, Terminal, Activity, Share2, GitBranch, Mic, ListOrdered, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'profile' | 'education' | 'publications' | 'social' | 'seo' | 'security' | 'visitors';
+type AdminTab =
+  | 'profile'
+  | 'education'
+  | 'publications'
+  | 'projects'
+  | 'conferences'
+  | 'activities'
+  | 'references'
+  | 'social'
+  | 'seo'
+  | 'security'
+  | 'visitors';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -112,31 +127,19 @@ export default function AdminDashboardPage() {
           <div className="flex overflow-x-auto gap-2 bg-slate-950/90 p-2 rounded-2xl border border-cyan-500/30 shadow-2xl backdrop-blur-md">
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
                 activeTab === 'profile'
                   ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
                   : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
               <User className="w-4 h-4" />
-              <span>PROFİL & BİYOGRAFİ</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('visitors')}
-              className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'visitors'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
-              }`}
-            >
-              <Activity className="w-4 h-4 text-cyan-400" />
-              <span>ZİYARETÇİ LOGLARI</span>
+              <span>PROFİL</span>
             </button>
 
             <button
               onClick={() => setActiveTab('social')}
-              className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
                 activeTab === 'social'
                   ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
                   : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
@@ -148,31 +151,79 @@ export default function AdminDashboardPage() {
 
             <button
               onClick={() => setActiveTab('education')}
-              className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
                 activeTab === 'education'
                   ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
                   : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
               <School className="w-4 h-4" />
-              <span>EĞİTİM GEÇMİŞİ</span>
+              <span>EĞİTİM</span>
             </button>
 
             <button
               onClick={() => setActiveTab('publications')}
-              className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
                 activeTab === 'publications'
                   ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
                   : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
               <BookOpen className="w-4 h-4" />
-              <span>YAYINLAR & MAKALELER</span>
+              <span>YAYINLAR</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('projects')}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+                activeTab === 'projects'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
+              }`}
+            >
+              <GitBranch className="w-4 h-4 text-purple-400" />
+              <span>PROJELER</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('conferences')}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+                activeTab === 'conferences'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-amber-400'
+              }`}
+            >
+              <Mic className="w-4 h-4 text-amber-400" />
+              <span>SEMPOZYUM</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('activities')}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+                activeTab === 'activities'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+              }`}
+            >
+              <ListOrdered className="w-4 h-4 text-blue-400" />
+              <span>FAALİYETLER</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('references')}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+                activeTab === 'references'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-emerald-400'
+              }`}
+            >
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span>REFERANSLAR</span>
             </button>
 
             <button
               onClick={() => setActiveTab('seo')}
-              className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
                 activeTab === 'seo'
                   ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
                   : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
@@ -183,8 +234,20 @@ export default function AdminDashboardPage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('visitors')}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+                activeTab === 'visitors'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
+              }`}
+            >
+              <Activity className="w-4 h-4 text-cyan-400" />
+              <span>ZİYARETÇİ LOGLARI</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('security')}
-              className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
                 activeTab === 'security'
                   ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-extrabold'
                   : 'text-slate-400 hover:bg-slate-900 hover:text-emerald-400'
@@ -202,8 +265,6 @@ export default function AdminDashboardPage() {
               onSave={(updatedProfile) => handleSaveData({ ...data, profile: updatedProfile })}
             />
           )}
-
-          {activeTab === 'visitors' && <VisitorLogsManager />}
 
           {activeTab === 'social' && (
             <SocialLinksEditor
@@ -226,12 +287,42 @@ export default function AdminDashboardPage() {
             />
           )}
 
+          {activeTab === 'projects' && (
+            <ProjectsEditor
+              projects={data.projects || []}
+              onSave={(updatedProjects) => handleSaveData({ ...data, projects: updatedProjects })}
+            />
+          )}
+
+          {activeTab === 'conferences' && (
+            <ConferencesEditor
+              conferences={data.conferences || []}
+              onSave={(updatedConfs) => handleSaveData({ ...data, conferences: updatedConfs })}
+            />
+          )}
+
+          {activeTab === 'activities' && (
+            <ActivitiesEditor
+              activities={data.activities || []}
+              onSave={(updatedActivities) => handleSaveData({ ...data, activities: updatedActivities })}
+            />
+          )}
+
+          {activeTab === 'references' && (
+            <ReferencesEditor
+              references={data.references || []}
+              onSave={(updatedRefs) => handleSaveData({ ...data, references: updatedRefs })}
+            />
+          )}
+
           {activeTab === 'seo' && (
             <SeoEditor
               seoSettings={data.seoSettings}
               onSave={(updatedSeo) => handleSaveData({ ...data, seoSettings: updatedSeo })}
             />
           )}
+
+          {activeTab === 'visitors' && <VisitorLogsManager />}
 
           {activeTab === 'security' && <CredentialsEditor />}
         </main>
