@@ -103,7 +103,15 @@ CREATE TABLE IF NOT EXISTS public.seo_settings (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 10. Enable Row Level Security (RLS) & Policies for Public Reads
+-- 10. Create Admin Credentials Table
+CREATE TABLE IF NOT EXISTS public.admin_credentials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  password TEXT NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 11. Enable Row Level Security (RLS) & Full Write Policies
 ALTER TABLE public.public_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.education ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.publications ENABLE ROW LEVEL SECURITY;
@@ -113,26 +121,59 @@ ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.references_list ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.social_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.seo_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_credentials ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read profile" ON public.public_profile FOR SELECT USING (true);
-CREATE POLICY "Allow public read education" ON public.education FOR SELECT USING (true);
-CREATE POLICY "Allow public read publications" ON public.publications FOR SELECT USING (true);
-CREATE POLICY "Allow public read projects" ON public.projects FOR SELECT USING (true);
-CREATE POLICY "Allow public read conferences" ON public.conferences FOR SELECT USING (true);
-CREATE POLICY "Allow public read activities" ON public.activities FOR SELECT USING (true);
-CREATE POLICY "Allow public read references" ON public.references_list FOR SELECT USING (true);
-CREATE POLICY "Allow public read social_links" ON public.social_links FOR SELECT USING (true);
-CREATE POLICY "Allow public read seo_settings" ON public.seo_settings FOR SELECT USING (true);
+-- Read & Write Policies for All Public Tables
+DROP POLICY IF EXISTS "Allow public read profile" ON public.public_profile;
+DROP POLICY IF EXISTS "Allow write public_profile" ON public.public_profile;
+CREATE POLICY "Allow write public_profile" ON public.public_profile FOR ALL USING (true) WITH CHECK (true);
 
--- 11. Storage Bucket Creation for Profile Avatars
+DROP POLICY IF EXISTS "Allow public read education" ON public.education;
+DROP POLICY IF EXISTS "Allow write education" ON public.education;
+CREATE POLICY "Allow write education" ON public.education FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read publications" ON public.publications;
+DROP POLICY IF EXISTS "Allow write publications" ON public.publications;
+CREATE POLICY "Allow write publications" ON public.publications FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read projects" ON public.projects;
+DROP POLICY IF EXISTS "Allow write projects" ON public.projects;
+CREATE POLICY "Allow write projects" ON public.projects FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read conferences" ON public.conferences;
+DROP POLICY IF EXISTS "Allow write conferences" ON public.conferences;
+CREATE POLICY "Allow write conferences" ON public.conferences FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read activities" ON public.activities;
+DROP POLICY IF EXISTS "Allow write activities" ON public.activities;
+CREATE POLICY "Allow write activities" ON public.activities FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read references" ON public.references_list;
+DROP POLICY IF EXISTS "Allow write references_list" ON public.references_list;
+CREATE POLICY "Allow write references_list" ON public.references_list FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read social_links" ON public.social_links;
+DROP POLICY IF EXISTS "Allow write social_links" ON public.social_links;
+CREATE POLICY "Allow write social_links" ON public.social_links FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read seo_settings" ON public.seo_settings;
+DROP POLICY IF EXISTS "Allow write seo_settings" ON public.seo_settings;
+CREATE POLICY "Allow write seo_settings" ON public.seo_settings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow write admin_credentials" ON public.admin_credentials;
+CREATE POLICY "Allow write admin_credentials" ON public.admin_credentials FOR ALL USING (true) WITH CHECK (true);
+
+-- 12. Storage Bucket Creation for Profile Avatars
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('avatars', 'avatars', true)
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "Public Read Avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Upload Avatars" ON storage.objects;
 CREATE POLICY "Public Read Avatars" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
 CREATE POLICY "Admin Upload Avatars" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatars');
 
--- 12. Visitor Logs Table for Traffic & Device Analytics
+-- 13. Visitor Logs Table for Traffic & Device Analytics
 CREATE TABLE IF NOT EXISTS public.visitor_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   ip_address TEXT NOT NULL,
@@ -158,7 +199,9 @@ CREATE TABLE IF NOT EXISTS public.visitor_logs (
 );
 
 ALTER TABLE public.visitor_logs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public insert visitor_logs" ON public.visitor_logs;
+DROP POLICY IF EXISTS "Allow public select visitor_logs" ON public.visitor_logs;
+DROP POLICY IF EXISTS "Allow admin delete visitor_logs" ON public.visitor_logs;
 CREATE POLICY "Allow public insert visitor_logs" ON public.visitor_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public select visitor_logs" ON public.visitor_logs FOR SELECT USING (true);
 CREATE POLICY "Allow admin delete visitor_logs" ON public.visitor_logs FOR DELETE USING (true);
-

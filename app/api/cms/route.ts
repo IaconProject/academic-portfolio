@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { initialPortfolioData } from '@/lib/initial-data';
-import { PortfolioData } from '@/lib/types';
+import { PortfolioData, AdminCredentials } from '@/lib/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import fs from 'fs';
 import path from 'path';
@@ -51,8 +51,10 @@ export async function GET() {
         .limit(1);
 
       const profileData = profileRows && profileRows.length > 0 ? profileRows[0] : null;
+      const { data: credRows } = await supabase.from('admin_credentials').select('*').limit(1);
+      const credData = credRows && credRows.length > 0 ? credRows[0] : null;
 
-      if (profileData) {
+      if (profileData || credData) {
         const { data: eduData } = await supabase.from('education').select('*').order('created_at', { ascending: true });
         const { data: pubData } = await supabase.from('publications').select('*').order('created_at', { ascending: true });
         const { data: projData } = await supabase.from('projects').select('*').order('created_at', { ascending: true });
@@ -64,7 +66,7 @@ export async function GET() {
         const seoData = seoRows && seoRows.length > 0 ? seoRows[0] : null;
 
         const fetchedData: PortfolioData = {
-          profile: {
+          profile: profileData ? {
             fullName: profileData.full_name,
             title: profileData.title,
             subtitle: profileData.subtitle || '',
@@ -73,7 +75,7 @@ export async function GET() {
             email: profileData.email,
             location: profileData.location || '',
             cvUrl: profileData.cv_url || '#',
-          },
+          } : currentTmp.profile,
           education: (eduData && eduData.length > 0) ? eduData.map((e: any) => ({
             id: e.id,
             degree: e.degree,
@@ -138,6 +140,10 @@ export async function GET() {
             canonicalUrl: seoData.canonical_url,
             authorName: seoData.author_name,
           } : currentTmp.seoSettings,
+          adminCredentials: credData ? {
+            email: credData.email,
+            password: credData.password,
+          } : currentTmp.adminCredentials,
         };
 
         writeTmpStore(fetchedData);
@@ -158,29 +164,42 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const currentTmp = readTmpStore();
 
-    if (body.adminCredentials && isSupabaseConfigured && supabase) {
-      try {
-        const { data: credRows } = await supabase.from('admin_credentials').select('id').limit(1);
-        const existingId = credRows && credRows.length > 0 ? credRows[0].id : undefined;
+    // 1. Admin Credentials Upsert
+    if (body.adminCredentials) {
+      const creds: AdminCredentials = body.adminCredentials;
+      const updatedFull = { ...currentTmp, adminCredentials: creds };
+      writeTmpStore(updatedFull);
 
-        await supabase.from('admin_credentials').upsert({
-          ...(existingId ? { id: existingId } : {}),
-          email: body.adminCredentials.email,
-          password: body.adminCredentials.password,
-        });
-      } catch (e) {
-        // Table might not exist yet
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data: credRows } = await supabase.from('admin_credentials').select('id').limit(1);
+          const existingId = credRows && credRows.length > 0 ? credRows[0].id : undefined;
+
+          await supabase.from('admin_credentials').upsert({
+            ...(existingId ? { id: existingId } : {}),
+            email: creds.email,
+            password: creds.password,
+            updated_at: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.warn('Supabase admin_credentials upsert error:', e);
+        }
       }
     }
 
+    // 2. Full Portfolio Data Sync
     if (body.profile) {
-      const updatedData: PortfolioData = body;
+      const updatedData: PortfolioData = {
+        ...currentTmp,
+        ...body,
+      };
       writeTmpStore(updatedData);
 
       if (isSupabaseConfigured && supabase) {
         try {
-          // 1. Profile Upsert
+          // Profile Upsert
           const { data: profRows } = await supabase.from('public_profile').select('id').limit(1);
           const existingProfId = profRows && profRows.length > 0 ? profRows[0].id : undefined;
 
@@ -197,7 +216,7 @@ export async function POST(request: Request) {
             updated_at: new Date().toISOString(),
           });
 
-          // 2. SEO Upsert
+          // SEO Upsert
           if (updatedData.seoSettings) {
             const { data: seoRows } = await supabase.from('seo_settings').select('id').limit(1);
             const existingSeoId = seoRows && seoRows.length > 0 ? seoRows[0].id : undefined;
@@ -214,7 +233,7 @@ export async function POST(request: Request) {
             });
           }
 
-          // 3. Education Sync
+          // Education Sync
           if (Array.isArray(updatedData.education)) {
             await supabase.from('education').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (updatedData.education.length > 0) {
@@ -231,7 +250,7 @@ export async function POST(request: Request) {
             }
           }
 
-          // 4. Publications Sync
+          // Publications Sync
           if (Array.isArray(updatedData.publications)) {
             await supabase.from('publications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (updatedData.publications.length > 0) {
@@ -248,7 +267,7 @@ export async function POST(request: Request) {
             }
           }
 
-          // 5. Projects Sync
+          // Projects Sync
           if (Array.isArray(updatedData.projects)) {
             await supabase.from('projects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (updatedData.projects.length > 0) {
@@ -264,7 +283,7 @@ export async function POST(request: Request) {
             }
           }
 
-          // 6. Conferences Sync
+          // Conferences Sync
           if (Array.isArray(updatedData.conferences)) {
             await supabase.from('conferences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (updatedData.conferences.length > 0) {
@@ -280,7 +299,7 @@ export async function POST(request: Request) {
             }
           }
 
-          // 7. Activities Sync
+          // Activities Sync
           if (Array.isArray(updatedData.activities)) {
             await supabase.from('activities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (updatedData.activities.length > 0) {
@@ -295,7 +314,7 @@ export async function POST(request: Request) {
             }
           }
 
-          // 8. References Sync
+          // References Sync
           if (Array.isArray(updatedData.references)) {
             await supabase.from('references_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (updatedData.references.length > 0) {
@@ -312,7 +331,7 @@ export async function POST(request: Request) {
             }
           }
 
-          // 9. Social Links Sync
+          // Social Links Sync
           if (Array.isArray(updatedData.socialLinks)) {
             await supabase.from('social_links').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (updatedData.socialLinks.length > 0) {

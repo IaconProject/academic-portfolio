@@ -4,7 +4,6 @@ import { supabase, isSupabaseConfigured } from './supabase/client';
 
 const STORAGE_KEY = 'academic_portfolio_cms_v1';
 const CREDS_KEY = 'academic_portfolio_admin_creds_v1';
-const FIXED_PROFILE_ID = '00000000-0000-0000-0000-000000000001';
 
 export const defaultAdminCredentials: AdminCredentials = {
   email: 'admin@cedkan.com',
@@ -71,16 +70,43 @@ export function savePortfolioDataLocally(data: PortfolioData): void {
 
 export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null> {
   const localData = getPortfolioData();
+  const localCreds = getAdminCredentials();
 
-  // First try fetching from /api/cms endpoint (which has server memory + tmp file sync)
+  // First try fetching from /api/cms endpoint
   try {
     const res = await fetch('/api/cms?t=' + Date.now(), {
       cache: 'no-store',
       headers: { 'Cache-Control': 'no-cache' },
     });
+
     if (res.ok) {
       const apiData: PortfolioData = await res.json();
+
       if (apiData && apiData.profile) {
+        // Sync Admin Credentials if returned by server
+        if (apiData.adminCredentials && apiData.adminCredentials.email) {
+          saveAdminCredentials(apiData.adminCredentials);
+        }
+
+        // Check if server returned default initial data while client has local custom edits
+        const isServerInitial = apiData.profile.fullName === initialPortfolioData.profile.fullName &&
+          apiData.profile.bio === initialPortfolioData.profile.bio;
+
+        const isClientCustom = localData.profile.fullName !== initialPortfolioData.profile.fullName ||
+          localData.profile.bio !== initialPortfolioData.profile.bio ||
+          (localData.profile.avatarUrl && localData.profile.avatarUrl !== initialPortfolioData.profile.avatarUrl);
+
+        if (isServerInitial && isClientCustom) {
+          // Re-hydrate server with client's custom data so deploy never wipes client edits
+          fetch('/api/cms', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...localData, adminCredentials: localCreds }),
+          }).catch(() => {});
+          
+          return localData;
+        }
+
         // If server returns initial avatar default but local has a custom uploaded avatar, preserve custom local avatar
         if (
           localData?.profile?.avatarUrl &&
@@ -103,7 +129,6 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
   }
 
   try {
-    // Order by updated_at desc and limit to 1 row to prevent 406 when multiple rows exist
     const { data: profileRows } = await supabase
       .from('public_profile')
       .select('*')
@@ -124,8 +149,14 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
     const { data: refData } = await supabase.from('references_list').select('*').order('created_at', { ascending: true });
     const { data: socData } = await supabase.from('social_links').select('*').order('created_at', { ascending: true });
     const { data: seoRows } = await supabase.from('seo_settings').select('*').limit(1);
+    const { data: credRows } = await supabase.from('admin_credentials').select('*').limit(1);
 
     const seoData = seoRows && seoRows.length > 0 ? seoRows[0] : null;
+    const credData = credRows && credRows.length > 0 ? credRows[0] : null;
+
+    if (credData) {
+      saveAdminCredentials({ email: credData.email, password: credData.password });
+    }
 
     const result: PortfolioData = {
       profile: {
@@ -202,6 +233,10 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         canonicalUrl: seoData.canonical_url,
         authorName: seoData.author_name,
       } : initialPortfolioData.seoSettings,
+      adminCredentials: credData ? {
+        email: credData.email,
+        password: credData.password,
+      } : localCreds,
     };
 
     savePortfolioDataLocally(result);
