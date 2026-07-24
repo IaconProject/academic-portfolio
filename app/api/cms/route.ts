@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const TMP_FILE_PATH = path.join('/tmp', 'academic_portfolio_data_v2.json');
+const INITIAL_DATA_FILE = path.join(process.cwd(), 'lib', 'initial-data.ts');
 
 let inMemoryStore: PortfolioData | null = null;
 
@@ -36,6 +37,14 @@ function writeTmpStore(data: PortfolioData): void {
     fs.writeFileSync(TMP_FILE_PATH, JSON.stringify(data), 'utf-8');
   } catch (e) {
     console.error('Failed writing tmp store:', e);
+  }
+  try {
+    if (fs.existsSync(INITIAL_DATA_FILE)) {
+      const content = `import { PortfolioData } from './types';\n\nexport const initialPortfolioData: PortfolioData = ${JSON.stringify(data, null, 2)};\n`;
+      fs.writeFileSync(INITIAL_DATA_FILE, content, 'utf-8');
+    }
+  } catch (e) {
+    // Ephemeral disk in lambda
   }
 }
 
