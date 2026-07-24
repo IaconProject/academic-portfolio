@@ -15,8 +15,9 @@ module.exports = {
         'academic-border': '#e2e8f0',
       },
       fontFamily: {
-        serif: ['Playfair Display', 'serif'],
-        sans: ['Inter', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Lora', 'serif'],
+        sans: ['var(--font-sans)', 'Plus Jakarta Sans', 'sans-serif'],
+        mono: ['var(--font-mono)', 'Space Grotesk', 'monospace'],
       },
       spacing: {
         touch: '48px',

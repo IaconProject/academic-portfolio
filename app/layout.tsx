@@ -1,17 +1,23 @@
 import type { Metadata } from 'next';
-import { Playfair_Display, Inter } from 'next/font/google';
+import { Lora, Plus_Jakarta_Sans, Space_Grotesk } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import './globals.css';
 
-const playfair = Playfair_Display({
+const lora = Lora({
   subsets: ['latin'],
   variable: '--font-serif',
   display: 'swap',
 });
 
-const inter = Inter({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
+  display: 'swap',
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-mono',
   display: 'swap',
 });
 
@@ -39,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr" className={`${playfair.variable} ${inter.variable} scroll-smooth`}>
+    <html lang="tr" className={`${lora.variable} ${plusJakarta.variable} ${spaceGrotesk.variable} scroll-smooth`}>
       <body className="bg-academic-bg text-slate-800 font-sans antialiased">
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         {children}

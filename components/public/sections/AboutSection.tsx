@@ -13,7 +13,7 @@ interface AboutSectionProps {
 export const AboutSection: React.FC<AboutSectionProps> = ({ profile, socialLinks }) => {
   return (
     <AcademicCard id="hakkinda" title="Hakkında" icon={User}>
-      <p className="text-academic-slate text-base md:text-lg leading-relaxed mb-6 font-sans">
+      <p className="text-academic-slate text-base md:text-lg leading-relaxed mb-6 font-sans text-justify">
         {profile.bio}
       </p>
 

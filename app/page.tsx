@@ -100,12 +100,12 @@ export default function PublicPortfolioPage() {
           {/* Top Profile Hero for Mobile */}
           <ProfileHero profile={profile} />
 
-          {/* Desktop Page Title Header */}
-          <header className="hidden lg:block mb-12 border-b border-slate-200/60 pb-8">
-            <h1 className="text-4xl md:text-5xl font-serif font-bold text-academic-navy mb-3">
+          {/* Desktop Page Title Header - Centered */}
+          <header className="hidden lg:flex flex-col items-center text-center mb-12 border-b border-slate-200/60 pb-8 mx-auto max-w-2xl">
+            <h1 className="text-4xl md:text-5xl font-serif font-bold text-academic-navy mb-3 tracking-tight">
               Akademik Özgeçmiş
             </h1>
-            <p className="text-lg md:text-xl text-academic-slate max-w-3xl font-sans">
+            <p className="text-base md:text-lg text-academic-slate font-sans leading-relaxed">
               {profile.subtitle}
             </p>
           </header>

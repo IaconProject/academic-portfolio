@@ -28,19 +28,22 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
 
   return (
     <>
-      {/* Sticky Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 w-full z-50 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 shadow-sm">
+      {/* Sticky Minimal Mobile Header */}
+      <header className="lg:hidden fixed top-0 left-0 w-full z-50 h-14 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-4 shadow-2xs">
         <button
           onClick={toggleMenu}
           aria-label="Menüyü Aç"
-          className="w-11 h-11 flex items-center justify-center text-academic-navy hover:bg-slate-100 rounded-lg transition-colors"
+          className="w-10 h-10 flex items-center justify-center text-academic-navy hover:bg-slate-100 rounded-xl transition-colors"
         >
-          <Menu className="w-6 h-6" />
+          <Menu className="w-5 h-5" />
         </button>
-        <span className="font-serif font-bold text-base md:text-lg tracking-tight text-academic-navy uppercase">
-          {profile.fullName}
-        </span>
-        <div className="w-11" />
+
+        {/* Minimal Academic Icon Badge */}
+        <div className="flex items-center gap-1.5 text-xs font-serif font-bold tracking-widest text-academic-navy opacity-80 uppercase">
+          <span>PORTFOLYO</span>
+        </div>
+
+        <div className="w-10" />
       </header>
 
       {/* Backdrop Overlay */}

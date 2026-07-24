@@ -26,7 +26,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
                   {project.years}
                 </span>
               </div>
-              <p className="text-sm text-slate-600 leading-relaxed mb-3">
+              <p className="text-sm text-slate-600 leading-relaxed mb-3 text-justify font-sans">
                 {project.description}
               </p>
 
