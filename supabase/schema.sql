@@ -205,3 +205,22 @@ DROP POLICY IF EXISTS "Allow admin delete visitor_logs" ON public.visitor_logs;
 CREATE POLICY "Allow public insert visitor_logs" ON public.visitor_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public select visitor_logs" ON public.visitor_logs FOR SELECT USING (true);
 CREATE POLICY "Allow admin delete visitor_logs" ON public.visitor_logs FOR DELETE USING (true);
+
+-- 14. Contact Messages Table for Visitor Inquiries
+CREATE TABLE IF NOT EXISTS public.contact_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  phone TEXT DEFAULT '',
+  message TEXT NOT NULL,
+  is_read BOOLEAN DEFAULT false,
+  is_starred BOOLEAN DEFAULT false,
+  ip_address TEXT DEFAULT '',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow write contact_messages" ON public.contact_messages;
+CREATE POLICY "Allow write contact_messages" ON public.contact_messages FOR ALL USING (true) WITH CHECK (true);
+

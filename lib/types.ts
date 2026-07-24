@@ -124,3 +124,17 @@ export interface VisitorLog {
   timestamp: string;
 }
 
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  phone?: string;
+  message: string;
+  isRead: boolean;
+  isStarred: boolean;
+  ipAddress?: string;
+  createdAt: string;
+}
+
+

@@ -14,14 +14,16 @@ import { ActivitiesEditor } from '@/components/admin/ActivitiesEditor';
 import { ReferencesEditor } from '@/components/admin/ReferencesEditor';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { CredentialsEditor } from '@/components/admin/CredentialsEditor';
+import { MessagesManager } from '@/components/admin/MessagesManager';
 import { VisitorLogsManager } from '@/components/admin/VisitorLogsManager';
 import { SocialLinksEditor } from '@/components/admin/SocialLinksEditor';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
-import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound, Terminal, Activity, Share2, GitBranch, Mic, ListOrdered, Users } from 'lucide-react';
+import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound, Terminal, Activity, Share2, GitBranch, Mic, ListOrdered, Users, Inbox } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type AdminTab =
   | 'profile'
+  | 'messages'
   | 'education'
   | 'publications'
   | 'projects'
@@ -38,6 +40,7 @@ export default function AdminDashboardPage() {
   const [data, setData] = useState<PortfolioData | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>('profile');
   const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [unreadMsgCount, setUnreadMsgCount] = useState<number>(0);
 
   useEffect(() => {
     // Auth Check
@@ -57,6 +60,16 @@ export default function AdminDashboardPage() {
     fetchPortfolioFromSupabase().then((remote) => {
       if (remote) setData(remote);
     });
+
+    // Check unread messages count
+    fetch('/api/messages?t=' + Date.now())
+      .then((res) => res.json())
+      .then((resData) => {
+        if (typeof resData?.unreadCount === 'number') {
+          setUnreadMsgCount(resData.unreadCount);
+        }
+      })
+      .catch(() => {});
   }, [router]);
 
   const handleSaveData = async (updated: PortfolioData) => {
@@ -135,6 +148,23 @@ export default function AdminDashboardPage() {
             >
               <User className="w-4 h-4" />
               <span>PROFİL</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('messages')}
+              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 relative ${
+                activeTab === 'messages'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
+              }`}
+            >
+              <Inbox className="w-4 h-4 text-cyan-400" />
+              <span>GELEN MESAJLAR</span>
+              {unreadMsgCount > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-emerald-500 text-slate-950 text-[10px] font-mono font-extrabold rounded-full animate-pulse shadow-md">
+                  {unreadMsgCount}
+                </span>
+              )}
             </button>
 
             <button
@@ -265,6 +295,8 @@ export default function AdminDashboardPage() {
               onSave={(updatedProfile) => handleSaveData({ ...data, profile: updatedProfile })}
             />
           )}
+
+          {activeTab === 'messages' && <MessagesManager />}
 
           {activeTab === 'social' && (
             <SocialLinksEditor
