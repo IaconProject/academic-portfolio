@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from './supabase/client';
 
 const STORAGE_KEY = 'academic_portfolio_cms_v1';
 const CREDS_KEY = 'academic_portfolio_admin_creds_v1';
+const FIXED_PROFILE_ID = '00000000-0000-0000-0000-000000000001';
 
 export const defaultAdminCredentials: AdminCredentials = {
   email: 'admin@cedkan.com',
@@ -57,13 +58,41 @@ export function savePortfolioDataLocally(data: PortfolioData): void {
 }
 
 export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null> {
+  // First try fetching from /api/cms endpoint (which has server memory + tmp file sync)
+  try {
+    const res = await fetch('/api/cms?t=' + Date.now(), {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' },
+    });
+    if (res.ok) {
+      const apiData = await res.json();
+      if (apiData && apiData.profile) {
+        savePortfolioDataLocally(apiData);
+        return apiData;
+      }
+    }
+  } catch (e) {
+    console.warn('API cms fetch warning:', e);
+  }
+
   if (!isSupabaseConfigured || !supabase) {
     return getPortfolioData();
   }
 
   try {
-    // Use .maybeSingle() instead of .single() to avoid HTTP 406 errors on empty tables
-    const { data: profileData, error: profileErr } = await supabase.from('public_profile').select('*').maybeSingle();
+    // Order by updated_at desc and limit to 1 row to prevent 406 when multiple rows exist
+    const { data: profileRows } = await supabase
+      .from('public_profile')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    const profileData = profileRows && profileRows.length > 0 ? profileRows[0] : null;
+
+    if (!profileData) {
+      return getPortfolioData();
+    }
+
     const { data: eduData } = await supabase.from('education').select('*').order('created_at', { ascending: true });
     const { data: pubData } = await supabase.from('publications').select('*').order('created_at', { ascending: true });
     const { data: projData } = await supabase.from('projects').select('*').order('created_at', { ascending: true });
@@ -71,24 +100,9 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
     const { data: actData } = await supabase.from('activities').select('*').order('created_at', { ascending: true });
     const { data: refData } = await supabase.from('references_list').select('*').order('created_at', { ascending: true });
     const { data: socData } = await supabase.from('social_links').select('*').order('created_at', { ascending: true });
-    const { data: seoData } = await supabase.from('seo_settings').select('*').maybeSingle();
+    const { data: seoRows } = await supabase.from('seo_settings').select('*').limit(1);
 
-    // Safely check admin credentials without throwing 404
-    try {
-      const { data: credsData } = await supabase.from('admin_credentials').select('*').maybeSingle();
-      if (credsData) {
-        saveAdminCredentials({
-          email: credsData.email,
-          password: credsData.password,
-        });
-      }
-    } catch (e) {
-      // Table may not be created yet, fallback to local creds
-    }
-
-    if (!profileData) {
-      return getPortfolioData();
-    }
+    const seoData = seoRows && seoRows.length > 0 ? seoRows[0] : null;
 
     const result: PortfolioData = {
       profile: {
@@ -178,13 +192,13 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
 export async function uploadAvatarImage(file: File): Promise<string> {
   if (isSupabaseConfigured && supabase) {
     try {
-      const fileExt = file.name.split('.').pop();
+      const fileExt = file.name.split('.').pop() || 'png';
       const fileName = `avatar-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, file, { upsert: true, cacheControl: '0' });
 
       if (!uploadError) {
         const { data: urlData } = supabase.storage

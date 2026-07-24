@@ -35,16 +35,24 @@ export async function GET() {
 
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data: profileData } = await supabase.from('public_profile').select('*').maybeSingle();
+      const { data: profileRows } = await supabase
+        .from('public_profile')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      const profileData = profileRows && profileRows.length > 0 ? profileRows[0] : null;
+
       if (profileData) {
-        const { data: eduData } = await supabase.from('education').select('*');
-        const { data: pubData } = await supabase.from('publications').select('*');
-        const { data: projData } = await supabase.from('projects').select('*');
-        const { data: confData } = await supabase.from('conferences').select('*');
-        const { data: actData } = await supabase.from('activities').select('*');
-        const { data: refData } = await supabase.from('references_list').select('*');
-        const { data: socData } = await supabase.from('social_links').select('*');
-        const { data: seoData } = await supabase.from('seo_settings').select('*').maybeSingle();
+        const { data: eduData } = await supabase.from('education').select('*').order('created_at', { ascending: true });
+        const { data: pubData } = await supabase.from('publications').select('*').order('created_at', { ascending: true });
+        const { data: projData } = await supabase.from('projects').select('*').order('created_at', { ascending: true });
+        const { data: confData } = await supabase.from('conferences').select('*').order('created_at', { ascending: true });
+        const { data: actData } = await supabase.from('activities').select('*').order('created_at', { ascending: true });
+        const { data: refData } = await supabase.from('references_list').select('*').order('created_at', { ascending: true });
+        const { data: socData } = await supabase.from('social_links').select('*').order('created_at', { ascending: true });
+        const { data: seoRows } = await supabase.from('seo_settings').select('*').limit(1);
+        const seoData = seoRows && seoRows.length > 0 ? seoRows[0] : null;
 
         const fetchedData: PortfolioData = {
           profile: {
@@ -97,7 +105,7 @@ export async function GET() {
 
         writeTmpStore(fetchedData);
         return NextResponse.json(fetchedData, {
-          headers: { 'Cache-Control': 'no-store, max-age=0' },
+          headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
         });
       }
     } catch (e) {
@@ -106,7 +114,7 @@ export async function GET() {
   }
 
   return NextResponse.json(currentTmp, {
-    headers: { 'Cache-Control': 'no-store, max-age=0' },
+    headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
   });
 }
 
@@ -116,12 +124,16 @@ export async function POST(request: Request) {
 
     if (body.adminCredentials && isSupabaseConfigured && supabase) {
       try {
+        const { data: credRows } = await supabase.from('admin_credentials').select('id').limit(1);
+        const existingId = credRows && credRows.length > 0 ? credRows[0].id : undefined;
+
         await supabase.from('admin_credentials').upsert({
+          ...(existingId ? { id: existingId } : {}),
           email: body.adminCredentials.email,
           password: body.adminCredentials.password,
         });
       } catch (e) {
-        // Table might not exist yet, suppress console error
+        // Table might not exist yet
       }
     }
 
@@ -131,7 +143,11 @@ export async function POST(request: Request) {
 
       if (isSupabaseConfigured && supabase) {
         try {
+          const { data: profRows } = await supabase.from('public_profile').select('id').limit(1);
+          const existingProfId = profRows && profRows.length > 0 ? profRows[0].id : undefined;
+
           await supabase.from('public_profile').upsert({
+            ...(existingProfId ? { id: existingProfId } : {}),
             full_name: updatedData.profile.fullName,
             title: updatedData.profile.title,
             subtitle: updatedData.profile.subtitle,
@@ -140,15 +156,21 @@ export async function POST(request: Request) {
             email: updatedData.profile.email,
             location: updatedData.profile.location,
             cv_url: updatedData.profile.cvUrl,
+            updated_at: new Date().toISOString(),
           });
 
+          const { data: seoRows } = await supabase.from('seo_settings').select('id').limit(1);
+          const existingSeoId = seoRows && seoRows.length > 0 ? seoRows[0].id : undefined;
+
           await supabase.from('seo_settings').upsert({
+            ...(existingSeoId ? { id: existingSeoId } : {}),
             meta_title: updatedData.seoSettings.metaTitle,
             meta_description: updatedData.seoSettings.metaDescription,
             keywords: updatedData.seoSettings.keywords,
             og_image_url: updatedData.seoSettings.ogImageUrl,
             canonical_url: updatedData.seoSettings.canonicalUrl,
             author_name: updatedData.seoSettings.authorName,
+            updated_at: new Date().toISOString(),
           });
         } catch (e) {
           console.warn('Supabase upsert warning:', e);
@@ -157,7 +179,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: true, data: readTmpStore() }, {
-      headers: { 'Cache-Control': 'no-store, max-age=0' },
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
     });
   } catch (err) {
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
