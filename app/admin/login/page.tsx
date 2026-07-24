@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, Lock, Mail, ArrowRight, Cpu, KeyRound } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, ArrowRight, Cpu } from 'lucide-react';
 import { getAdminCredentials } from '@/lib/cms-store';
+import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
 import toast from 'react-hot-toast';
 
 export default function AdminLoginPage() {
@@ -33,7 +34,7 @@ export default function AdminLoginPage() {
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('academic_admin_auth', 'true');
         }
-        toast.success('Yönetici oturumu doğrulandı!');
+        toast.success('Yönetici kimliği doğrulandı!');
         router.push('/admin');
       } else {
         toast.error('Geçersiz e-posta adresi veya şifre!');
@@ -43,14 +44,17 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex items-center justify-center p-4 selection:bg-cyan-500 selection:text-black">
-      <div className="w-full max-w-md bg-slate-950/90 rounded-2xl shadow-2xl border border-cyan-500/30 p-8 space-y-6 backdrop-blur-xl relative overflow-hidden">
+    <div className="min-h-screen bg-[#0b0f19] text-slate-100 flex items-center justify-center p-4 selection:bg-cyan-500 selection:text-black relative overflow-hidden">
+      {/* Interactive Node Line Canvas Background */}
+      <BlockchainCanvasAnimation />
+
+      <div className="w-full max-w-md bg-slate-950/90 rounded-2xl shadow-2xl border border-cyan-500/30 p-8 space-y-6 backdrop-blur-xl relative z-10 overflow-hidden">
         {/* Top Glowing Accent Line */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-emerald-400 to-cyan-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-emerald-400 to-cyan-500 animate-pulse" />
 
         <div className="text-center space-y-2">
           <div className="w-14 h-14 bg-cyan-950/80 text-cyan-400 border border-cyan-500/40 rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-cyan-500/10">
-            <Cpu className="w-8 h-8 animate-pulse" />
+            <Cpu className="w-8 h-8 animate-pulse text-cyan-400" />
           </div>
           <h1 className="text-2xl font-mono font-bold tracking-wider text-slate-100 uppercase">
             CMS // AUTH_NODE

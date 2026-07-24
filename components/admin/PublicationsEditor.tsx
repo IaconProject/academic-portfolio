@@ -67,39 +67,40 @@ export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publicat
   };
 
   return (
-    <div className="bg-white p-6 md:p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+    <div className="bg-slate-950/80 p-6 md:p-8 rounded-2xl border border-cyan-500/20 shadow-2xl backdrop-blur-md space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <h2 className="text-xl font-serif font-bold text-academic-navy">
-            Yayınlar & Makaleler Yönetimi
+          <h2 className="text-xl font-mono font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-cyan-400" />
+            <span>Yayınlar & Makaleler Yönetimi</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Akademik makalelerinizi, kitap bölümlerinizi ve tebliğlerinizi yönetebilirsiniz.
+          <p className="text-xs font-mono text-slate-400 mt-1">
+            Akademik makalelerinizi, kitap bölümlerinizi ve tebliğlerinizi yönetin.
           </p>
         </div>
         <button
           onClick={startAdd}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-1.5 py-2 px-4 bg-academic-navy text-white text-xs font-bold rounded-lg hover:bg-academic-blue transition-colors shadow-sm disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
-          <span>Yeni Yayın Ekle</span>
+          <span>YENİ YAYIN EKLE</span>
         </button>
       </div>
 
       {/* Editing Form */}
       {editingId && (
-        <div className="p-5 bg-slate-50 border border-slate-300 rounded-xl space-y-4">
-          <h3 className="text-sm font-bold text-academic-navy border-b border-slate-200 pb-2">
-            {editingId === 'new' ? 'Yeni Yayın Ekle' : 'Yayın Bilgisini Düzenle'}
+        <div className="p-5 bg-slate-900/90 border border-cyan-500/30 rounded-xl space-y-4">
+          <h3 className="text-xs font-mono font-bold uppercase text-cyan-400 border-b border-slate-800 pb-2">
+            {editingId === 'new' ? '// YENİ YAYIN EKLE' : '// YAYIN BİLGİSİNİ DÜZENLE'}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Yayın Türü</label>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Yayın Türü</label>
               <select
                 value={formState.type || 'Akademik Makale'}
                 onChange={(e) => setFormState({ ...formState, type: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
               >
                 <option value="Akademik Makale">Akademik Makale</option>
                 <option value="Kitap Bölümü">Kitap Bölümü</option>
@@ -109,42 +110,42 @@ export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publicat
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Yayın Yılı</label>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Yayın Yılı</label>
               <input
                 type="text"
                 value={formState.year || ''}
                 onChange={(e) => setFormState({ ...formState, year: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Yayın Başlığı</label>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Yayın Başlığı</label>
               <input
                 type="text"
                 placeholder="Örn: Din ve Yapay Zeka Kapsamında Yapay Zeka Etiği"
                 value={formState.title || ''}
                 onChange={(e) => setFormState({ ...formState, title: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Yayınevi / Dergi</label>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Yayınevi / Dergi</label>
               <input
                 type="text"
                 placeholder="Örn: Dijital Çağda İslami Finans Yayınları"
                 value={formState.publisher || ''}
                 onChange={(e) => setFormState({ ...formState, publisher: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Erişim Linki / DOI (Opsiyonel)</label>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Erişim Linki / DOI (Opsiyonel)</label>
               <input
                 type="url"
                 placeholder="https://doi.org/..."
                 value={formState.url || ''}
                 onChange={(e) => setFormState({ ...formState, url: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
               />
             </div>
           </div>
@@ -152,16 +153,16 @@ export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publicat
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={cancelEdit}
-              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-lg"
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-semibold rounded-xl"
             >
               İptal
             </button>
             <button
               onClick={handleSaveItem}
-              className="inline-flex items-center gap-1 px-4 py-1.5 bg-academic-navy text-white text-xs font-bold rounded-lg hover:bg-academic-blue"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>Kaydet</span>
+              <span>KAYDET</span>
             </button>
           </div>
         </div>
@@ -172,29 +173,29 @@ export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publicat
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between p-4 bg-slate-50 border border-slate-200 rounded-xl"
+            className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl hover:border-cyan-500/30 transition-colors"
           >
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase bg-white px-2 py-0.5 border rounded text-slate-600">
+                <span className="text-[10px] font-mono font-bold uppercase bg-cyan-950 text-cyan-400 px-2 py-0.5 border border-cyan-500/30 rounded">
                   {item.type}
                 </span>
-                <span className="text-xs font-semibold text-slate-500">{item.year}</span>
+                <span className="text-xs font-mono text-slate-400">{item.year}</span>
               </div>
-              <h4 className="font-bold text-academic-navy text-sm mt-1">&quot;{item.title}&quot;</h4>
-              {item.publisher && <p className="text-xs text-slate-500 italic">{item.publisher}</p>}
+              <h4 className="font-serif font-bold text-slate-100 text-sm mt-1">&quot;{item.title}&quot;</h4>
+              {item.publisher && <p className="text-xs font-mono text-slate-400 italic mt-0.5">{item.publisher}</p>}
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => startEdit(item)}
-                className="p-1.5 text-slate-600 hover:text-academic-navy hover:bg-white rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleDelete(item.id)}
-                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-white rounded-lg transition-colors"
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

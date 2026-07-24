@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
-import { Upload, Camera, Trash2, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Upload, Camera, Trash2, CheckCircle, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
 import { uploadAvatarImage } from '@/lib/cms-store';
 
 interface ImageUploaderProps {
@@ -22,7 +22,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setErrorMsg('Lütfen sadece resim dosyası seçin (PNG, JPG, WEBP).');
+      setErrorMsg('Lütfen geçerli bir resim dosyası seçin (PNG, JPG, WEBP).');
       return;
     }
 
@@ -40,9 +40,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
       setPreviewUrl(uploadedUrl);
       onImageUploaded(uploadedUrl);
       setUploadSuccess(true);
-      setTimeout(() => setUploadSuccess(false), 3000);
+      setTimeout(() => setUploadSuccess(false), 3500);
     } catch (err) {
-      console.error('Avatar upload failed:', err);
+      console.error('Avatar upload error:', err);
       setErrorMsg('Resim yüklenirken hata oluştu.');
     } finally {
       setIsUploading(false);
@@ -54,51 +54,52 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
   };
 
   return (
-    <div className="bg-slate-50 p-6 rounded-xl border border-slate-200">
-      <label className="block text-sm font-semibold text-slate-800 mb-3">
-        Profil Fotoğrafı Yükle & Değiştir
+    <div className="bg-slate-900/90 p-6 rounded-2xl border border-cyan-500/30 shadow-xl backdrop-blur-md">
+      <label className="block text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 mb-4 flex items-center gap-2">
+        <Sparkles className="w-4 h-4 text-cyan-400" />
+        <span>PROFİL FOTOĞRAFI YÜKLE & DEĞİŞTİR // AVATAR_NODE</span>
       </label>
 
       <div className="flex flex-col sm:flex-row items-center gap-6">
         {/* Avatar Preview */}
-        <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white shadow-md ring-2 ring-slate-200 shrink-0">
+        <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-cyan-500/40 shadow-xl ring-2 ring-cyan-500/20 shrink-0 bg-slate-950 flex items-center justify-center">
           {previewUrl ? (
             <Image
               src={previewUrl}
               alt="Profil Önizleme"
               fill
               sizes="128px"
-              className="object-cover"
-              unoptimized={previewUrl.startsWith('data:')}
+              className="object-cover rounded-full"
+              unoptimized
             />
           ) : (
-            <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400">
-              <Camera className="w-8 h-8" />
+            <div className="w-full h-full bg-slate-950 text-slate-500 flex items-center justify-center">
+              <Camera className="w-8 h-8 text-cyan-500/60" />
             </div>
           )}
 
           {isUploading && (
-            <div className="absolute inset-0 bg-academic-navy/60 backdrop-blur-xs flex items-center justify-center text-white">
-              <RefreshCw className="w-6 h-6 animate-spin" />
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center text-cyan-400">
+              <RefreshCw className="w-7 h-7 animate-spin text-cyan-400" />
             </div>
           )}
         </div>
 
         {/* Action Controls */}
         <div className="flex-1 space-y-3 text-center sm:text-left">
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Kare oranlı (1:1), en az 400x400 piksel çözünürlükte net bir vesikalık veya akademik fotoğraf önerilir. PNG, JPG veya WEBP. Max 5MB.
+          <p className="text-xs font-mono text-slate-400 leading-relaxed">
+            Akademik görünüm için dairesel kırpılan 1:1 oranında net vesikalık veya portre fotoğrafı yükleyin. PNG, JPG veya WEBP. Max 5MB.
           </p>
 
-          <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+          <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
             <button
               type="button"
               onClick={triggerSelect}
               disabled={isUploading}
-              className="inline-flex items-center gap-2 py-2 px-4 bg-academic-navy text-white text-xs font-semibold rounded-lg hover:bg-academic-blue transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center gap-2 py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs font-extrabold rounded-xl transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
             >
-              <Upload className="w-3.5 h-3.5" />
-              <span>Yeni Fotoğraf Seç</span>
+              <Upload className="w-4 h-4" />
+              <span>YENİ FOTOĞRAFA GÖZ AT</span>
             </button>
 
             {previewUrl && (
@@ -108,7 +109,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
                   setPreviewUrl('');
                   onImageUploaded('');
                 }}
-                className="inline-flex items-center gap-1.5 py-2 px-3 bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 py-2.5 px-3.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-mono text-xs font-semibold rounded-xl border border-red-500/30 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Kaldır</span>
@@ -125,15 +126,15 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
           />
 
           {uploadSuccess && (
-            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-600 font-semibold bg-emerald-50 px-3 py-1 rounded-md">
-              <CheckCircle className="w-3.5 h-3.5" />
-              <span>Fotoğraf başarıyla yüklendi ve güncellendi.</span>
+            <div className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-500/40 px-3 py-1.5 rounded-lg shadow-sm">
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              <span>Fotoğraf başarıyla yüklendi ve senkronize edildi.</span>
             </div>
           )}
 
           {errorMsg && (
-            <div className="inline-flex items-center gap-1.5 text-xs text-red-600 font-semibold bg-red-50 px-3 py-1 rounded-md">
-              <AlertCircle className="w-3.5 h-3.5" />
+            <div className="inline-flex items-center gap-1.5 text-xs font-mono text-red-400 font-semibold bg-red-950/60 border border-red-500/40 px-3 py-1.5 rounded-lg shadow-sm">
+              <AlertCircle className="w-4 h-4 text-red-400" />
               <span>{errorMsg}</span>
             </div>
           )}

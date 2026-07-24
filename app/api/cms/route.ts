@@ -2,10 +2,37 @@ import { NextResponse } from 'next/server';
 import { initialPortfolioData } from '@/lib/initial-data';
 import { PortfolioData } from '@/lib/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import fs from 'fs';
+import path from 'path';
 
-let inMemoryStore: PortfolioData = initialPortfolioData;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const TMP_FILE_PATH = path.join('/tmp', 'academic_portfolio_data_v2.json');
+
+function readTmpStore(): PortfolioData {
+  try {
+    if (fs.existsSync(TMP_FILE_PATH)) {
+      const content = fs.readFileSync(TMP_FILE_PATH, 'utf-8');
+      if (content) return JSON.parse(content);
+    }
+  } catch (e) {
+    console.error('Failed reading tmp store:', e);
+  }
+  return initialPortfolioData;
+}
+
+function writeTmpStore(data: PortfolioData): void {
+  try {
+    fs.writeFileSync(TMP_FILE_PATH, JSON.stringify(data), 'utf-8');
+  } catch (e) {
+    console.error('Failed writing tmp store:', e);
+  }
+}
 
 export async function GET() {
+  const currentTmp = readTmpStore();
+
   if (isSupabaseConfigured && supabase) {
     try {
       const { data: profileData } = await supabase.from('public_profile').select('*').maybeSingle();
@@ -38,7 +65,7 @@ export async function GET() {
             status: e.status,
             description: e.description,
             isCurrent: e.is_current,
-          })) : inMemoryStore.education,
+          })) : currentTmp.education,
           publications: (pubData && pubData.length > 0) ? pubData.map((p: any) => ({
             id: p.id,
             type: p.type,
@@ -46,30 +73,41 @@ export async function GET() {
             publisher: p.publisher,
             year: p.year,
             url: p.url,
-          })) : inMemoryStore.publications,
+          })) : currentTmp.publications,
           projects: (projData && projData.length > 0) ? projData.map((pr: any) => ({
             id: pr.id,
             title: pr.title,
             description: pr.description,
             years: pr.years,
             tags: pr.tags || [],
-          })) : inMemoryStore.projects,
-          conferences: (confData && confData.length > 0) ? confData : inMemoryStore.conferences,
-          activities: (actData && actData.length > 0) ? actData : inMemoryStore.activities,
-          references: (refData && refData.length > 0) ? refData : inMemoryStore.references,
-          socialLinks: (socData && socData.length > 0) ? socData : inMemoryStore.socialLinks,
-          seoSettings: seoData || inMemoryStore.seoSettings,
+          })) : currentTmp.projects,
+          conferences: (confData && confData.length > 0) ? confData : currentTmp.conferences,
+          activities: (actData && actData.length > 0) ? actData : currentTmp.activities,
+          references: (refData && refData.length > 0) ? refData : currentTmp.references,
+          socialLinks: (socData && socData.length > 0) ? socData : currentTmp.socialLinks,
+          seoSettings: seoData ? {
+            metaTitle: seoData.meta_title,
+            metaDescription: seoData.meta_description,
+            keywords: seoData.keywords,
+            ogImageUrl: seoData.og_image_url,
+            canonicalUrl: seoData.canonical_url,
+            authorName: seoData.author_name,
+          } : currentTmp.seoSettings,
         };
 
-        inMemoryStore = fetchedData;
-        return NextResponse.json(fetchedData);
+        writeTmpStore(fetchedData);
+        return NextResponse.json(fetchedData, {
+          headers: { 'Cache-Control': 'no-store, max-age=0' },
+        });
       }
     } catch (e) {
-      console.warn('Supabase fetch failed in API route, returning inMemoryStore:', e);
+      console.warn('Supabase fetch error, returning tmp store:', e);
     }
   }
 
-  return NextResponse.json(inMemoryStore);
+  return NextResponse.json(currentTmp, {
+    headers: { 'Cache-Control': 'no-store, max-age=0' },
+  });
 }
 
 export async function POST(request: Request) {
@@ -83,13 +121,13 @@ export async function POST(request: Request) {
           password: body.adminCredentials.password,
         });
       } catch (e) {
-        console.warn('Admin credentials upsert error:', e);
+        // Table might not exist yet, suppress console error
       }
     }
 
     if (body.profile) {
       const updatedData: PortfolioData = body;
-      inMemoryStore = updatedData;
+      writeTmpStore(updatedData);
 
       if (isSupabaseConfigured && supabase) {
         try {
@@ -113,12 +151,14 @@ export async function POST(request: Request) {
             author_name: updatedData.seoSettings.authorName,
           });
         } catch (e) {
-          console.warn('Supabase upsert error:', e);
+          console.warn('Supabase upsert warning:', e);
         }
       }
     }
 
-    return NextResponse.json({ success: true, data: inMemoryStore });
+    return NextResponse.json({ success: true, data: readTmpStore() }, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    });
   } catch (err) {
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
   }
