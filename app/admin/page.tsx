@@ -11,11 +11,12 @@ import { PublicationsEditor } from '@/components/admin/PublicationsEditor';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { CredentialsEditor } from '@/components/admin/CredentialsEditor';
 import { VisitorLogsManager } from '@/components/admin/VisitorLogsManager';
+import { SocialLinksEditor } from '@/components/admin/SocialLinksEditor';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
-import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound, Terminal, Activity } from 'lucide-react';
+import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound, Terminal, Activity, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'profile' | 'education' | 'publications' | 'seo' | 'security' | 'visitors';
+type AdminTab = 'profile' | 'education' | 'publications' | 'social' | 'seo' | 'security' | 'visitors';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -134,6 +135,18 @@ export default function AdminDashboardPage() {
             </button>
 
             <button
+              onClick={() => setActiveTab('social')}
+              className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
+                activeTab === 'social'
+                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
+              }`}
+            >
+              <Share2 className="w-4 h-4 text-pink-400" />
+              <span>SOSYAL MEDYA</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('education')}
               className={`flex items-center gap-2.5 px-4.5 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
                 activeTab === 'education'
@@ -166,7 +179,7 @@ export default function AdminDashboardPage() {
               }`}
             >
               <Search className="w-4 h-4" />
-              <span>SEO & SOSYAL MEDYA</span>
+              <span>SEO</span>
             </button>
 
             <button
@@ -191,6 +204,13 @@ export default function AdminDashboardPage() {
           )}
 
           {activeTab === 'visitors' && <VisitorLogsManager />}
+
+          {activeTab === 'social' && (
+            <SocialLinksEditor
+              socialLinks={data.socialLinks || []}
+              onSave={(updatedSocial) => handleSaveData({ ...data, socialLinks: updatedSocial })}
+            />
+          )}
 
           {activeTab === 'education' && (
             <EducationEditor

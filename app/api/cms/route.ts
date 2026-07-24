@@ -90,6 +90,7 @@ export async function GET() {
             publisher: p.publisher,
             year: p.year,
             url: p.url,
+            doi: p.doi,
           })) : currentTmp.publications,
           projects: (projData && projData.length > 0) ? projData.map((pr: any) => ({
             id: pr.id,
@@ -97,11 +98,38 @@ export async function GET() {
             description: pr.description,
             years: pr.years,
             tags: pr.tags || [],
+            url: pr.url,
           })) : currentTmp.projects,
-          conferences: (confData && confData.length > 0) ? confData : currentTmp.conferences,
-          activities: (actData && actData.length > 0) ? actData : currentTmp.activities,
-          references: (refData && refData.length > 0) ? refData : currentTmp.references,
-          socialLinks: (socData && socData.length > 0) ? socData : currentTmp.socialLinks,
+          conferences: (confData && confData.length > 0) ? confData.map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            eventName: c.event_name,
+            location: c.location,
+            year: c.year,
+            role: c.role,
+          })) : currentTmp.conferences,
+          activities: (actData && actData.length > 0) ? actData.map((a: any) => ({
+            id: a.id,
+            title: a.title,
+            organization: a.organization,
+            years: a.years,
+            description: a.description,
+          })) : currentTmp.activities,
+          references: (refData && refData.length > 0) ? refData.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            title: r.title,
+            institution: r.institution,
+            email: r.email,
+            phone: r.phone,
+            isFeatured: r.is_featured ?? true,
+          })) : currentTmp.references,
+          socialLinks: (socData && socData.length > 0) ? socData.map((s: any) => ({
+            id: s.id,
+            platform: s.platform,
+            url: s.url,
+            iconName: s.icon_name || s.platform,
+          })) : currentTmp.socialLinks,
           seoSettings: seoData ? {
             metaTitle: seoData.meta_title,
             metaDescription: seoData.meta_description,
@@ -152,6 +180,7 @@ export async function POST(request: Request) {
 
       if (isSupabaseConfigured && supabase) {
         try {
+          // 1. Profile Upsert
           const { data: profRows } = await supabase.from('public_profile').select('id').limit(1);
           const existingProfId = profRows && profRows.length > 0 ? profRows[0].id : undefined;
 
@@ -168,19 +197,134 @@ export async function POST(request: Request) {
             updated_at: new Date().toISOString(),
           });
 
-          const { data: seoRows } = await supabase.from('seo_settings').select('id').limit(1);
-          const existingSeoId = seoRows && seoRows.length > 0 ? seoRows[0].id : undefined;
+          // 2. SEO Upsert
+          if (updatedData.seoSettings) {
+            const { data: seoRows } = await supabase.from('seo_settings').select('id').limit(1);
+            const existingSeoId = seoRows && seoRows.length > 0 ? seoRows[0].id : undefined;
 
-          await supabase.from('seo_settings').upsert({
-            ...(existingSeoId ? { id: existingSeoId } : {}),
-            meta_title: updatedData.seoSettings.metaTitle,
-            meta_description: updatedData.seoSettings.metaDescription,
-            keywords: updatedData.seoSettings.keywords,
-            og_image_url: updatedData.seoSettings.ogImageUrl,
-            canonical_url: updatedData.seoSettings.canonicalUrl,
-            author_name: updatedData.seoSettings.authorName,
-            updated_at: new Date().toISOString(),
-          });
+            await supabase.from('seo_settings').upsert({
+              ...(existingSeoId ? { id: existingSeoId } : {}),
+              meta_title: updatedData.seoSettings.metaTitle,
+              meta_description: updatedData.seoSettings.metaDescription,
+              keywords: updatedData.seoSettings.keywords,
+              og_image_url: updatedData.seoSettings.ogImageUrl,
+              canonical_url: updatedData.seoSettings.canonicalUrl,
+              author_name: updatedData.seoSettings.authorName,
+              updated_at: new Date().toISOString(),
+            });
+          }
+
+          // 3. Education Sync
+          if (Array.isArray(updatedData.education)) {
+            await supabase.from('education').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (updatedData.education.length > 0) {
+              await supabase.from('education').insert(
+                updatedData.education.map((e) => ({
+                  degree: e.degree,
+                  institution: e.institution,
+                  years: e.years,
+                  status: e.status || 'Tamamlandı',
+                  description: e.description || '',
+                  is_current: e.isCurrent || false,
+                }))
+              );
+            }
+          }
+
+          // 4. Publications Sync
+          if (Array.isArray(updatedData.publications)) {
+            await supabase.from('publications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (updatedData.publications.length > 0) {
+              await supabase.from('publications').insert(
+                updatedData.publications.map((p) => ({
+                  type: p.type,
+                  title: p.title,
+                  publisher: p.publisher || '',
+                  year: p.year,
+                  url: p.url || '#',
+                  doi: p.doi || '',
+                }))
+              );
+            }
+          }
+
+          // 5. Projects Sync
+          if (Array.isArray(updatedData.projects)) {
+            await supabase.from('projects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (updatedData.projects.length > 0) {
+              await supabase.from('projects').insert(
+                updatedData.projects.map((pr) => ({
+                  title: pr.title,
+                  description: pr.description,
+                  years: pr.years,
+                  tags: pr.tags || [],
+                  url: pr.url || '#',
+                }))
+              );
+            }
+          }
+
+          // 6. Conferences Sync
+          if (Array.isArray(updatedData.conferences)) {
+            await supabase.from('conferences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (updatedData.conferences.length > 0) {
+              await supabase.from('conferences').insert(
+                updatedData.conferences.map((c) => ({
+                  title: c.title,
+                  event_name: c.eventName,
+                  location: c.location,
+                  year: c.year,
+                  role: c.role,
+                }))
+              );
+            }
+          }
+
+          // 7. Activities Sync
+          if (Array.isArray(updatedData.activities)) {
+            await supabase.from('activities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (updatedData.activities.length > 0) {
+              await supabase.from('activities').insert(
+                updatedData.activities.map((a) => ({
+                  title: a.title,
+                  organization: a.organization,
+                  years: a.years,
+                  description: a.description || '',
+                }))
+              );
+            }
+          }
+
+          // 8. References Sync
+          if (Array.isArray(updatedData.references)) {
+            await supabase.from('references_list').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (updatedData.references.length > 0) {
+              await supabase.from('references_list').insert(
+                updatedData.references.map((r) => ({
+                  name: r.name,
+                  title: r.title,
+                  institution: r.institution,
+                  email: r.email || '',
+                  phone: r.phone || '',
+                  is_featured: r.isFeatured ?? true,
+                }))
+              );
+            }
+          }
+
+          // 9. Social Links Sync
+          if (Array.isArray(updatedData.socialLinks)) {
+            await supabase.from('social_links').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            if (updatedData.socialLinks.length > 0) {
+              await supabase.from('social_links').insert(
+                updatedData.socialLinks.map((s) => ({
+                  platform: s.platform,
+                  url: s.url,
+                  icon_name: s.iconName || s.platform,
+                }))
+              );
+            }
+          }
         } catch (e) {
           console.warn('Supabase upsert warning:', e);
         }

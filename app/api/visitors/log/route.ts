@@ -25,7 +25,7 @@ function getStoredLogs(): any[] {
 }
 
 function saveLogs(logs: any[]): void {
-  inMemoryVisitorLogs = logs.slice(0, 500); // keep max 500 items in local fallback
+  inMemoryVisitorLogs = logs.slice(0, 500); // keep max 500 items
   try {
     fs.writeFileSync(TMP_LOGS_PATH, JSON.stringify(inMemoryVisitorLogs), 'utf-8');
   } catch (e) {
@@ -45,7 +45,7 @@ function parseUserAgent(ua: string) {
 
   const uaLower = ua.toLowerCase();
 
-  // 1. Device Category & OS Detection
+  // 1. Device Category
   if (/ipad|tablet|playbook|silk/i.test(ua)) {
     deviceType = 'Tablet';
   } else if (/mobile|iphone|ipod|android|blackberry|opera mini|iemobile|webos/i.test(ua)) {
@@ -81,7 +81,6 @@ function parseUserAgent(ua: string) {
   // 2. Device Brand & Model Detection
   if (ua.includes('iPhone')) {
     deviceBrand = 'Apple';
-    // Extract iPhone model indicators if present
     if (ua.includes('iPhone15,') || uaLower.includes('iphone 15')) deviceModel = 'iPhone 15 Series';
     else if (ua.includes('iPhone14,') || uaLower.includes('iphone 14')) deviceModel = 'iPhone 14 Series';
     else if (ua.includes('iPhone13,') || uaLower.includes('iphone 13')) deviceModel = 'iPhone 13 Series';
@@ -169,8 +168,8 @@ function parseUserAgent(ua: string) {
 }
 
 // Clean ISP / Carrier names for user clarity
-function formatOperatorName(isp: string, org: string, asName: string, isMobile: boolean): { ispName: string; isMobile: boolean } {
-  const text = `${isp} ${org} ${asName}`.toLowerCase();
+function formatOperatorName(isp: string, org: string, isMobile: boolean): { ispName: string; isMobile: boolean } {
+  const text = `${isp} ${org}`.toLowerCase();
   let mobileFlag = isMobile;
 
   if (text.includes('turkcell') || text.includes('cellular')) {
@@ -218,7 +217,7 @@ export async function POST(request: Request) {
     // Parse User Agent
     const uaInfo = parseUserAgent(userAgent);
 
-    // Fetch Geolocation & ISP
+    // Fetch Geolocation & ISP over HTTPS (ipwho.is)
     let country = 'Türkiye';
     let countryCode = 'TR';
     let city = 'Bilinmiyor';
@@ -229,26 +228,28 @@ export async function POST(request: Request) {
     const cleanIp = (rawIp === '127.0.0.1' || rawIp === '::1' || rawIp === 'localhost') ? '' : rawIp;
 
     try {
-      const geoRes = await fetch(`http://ip-api.com/json/${cleanIp}?fields=status,message,country,countryCode,regionName,city,isp,org,as,mobile,query`, {
-        signal: AbortSignal.timeout(3000),
+      // Use HTTPS geo endpoint to avoid mixed-content / SSL failures on Vercel
+      const geoRes = await fetch(`https://ipwho.is/${cleanIp}`, {
+        signal: AbortSignal.timeout(3500),
       });
 
       if (geoRes.ok) {
         const geoData = await geoRes.json();
-        if (geoData.status === 'success') {
+        if (geoData.success) {
           country = geoData.country || country;
-          countryCode = geoData.countryCode || countryCode;
+          countryCode = geoData.country_code || countryCode;
           city = geoData.city || city;
-          region = geoData.regionName || region;
-          rawIp = geoData.query || rawIp;
+          region = geoData.region || region;
+          if (geoData.ip) rawIp = geoData.ip;
 
-          const formattedOp = formatOperatorName(geoData.isp, geoData.org, geoData.as, geoData.mobile);
+          const rawIsp = geoData.connection?.isp || geoData.connection?.org || '';
+          const formattedOp = formatOperatorName(rawIsp, geoData.connection?.domain || '', geoData.connection?.type === 'mobile');
           isp = formattedOp.ispName;
           isMobileNetwork = formattedOp.isMobile;
         }
       }
     } catch (e) {
-      console.warn('Geo IP lookup timeout or error:', e);
+      console.warn('Geo IP lookup warning (HTTPS fallback used):', e);
     }
 
     const newLog = {

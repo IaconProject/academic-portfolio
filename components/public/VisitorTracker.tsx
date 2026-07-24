@@ -10,13 +10,15 @@ export function VisitorTracker() {
     // Only run in browser
     if (typeof window === 'undefined') return;
 
-    // Throttle logging per page change / session to avoid spamming
+    // Do not log admin dashboard visits to avoid cluttering public traffic stats
+    if (pathname && pathname.startsWith('/admin')) return;
+
+    // Throttle logging slightly per session (60 seconds) to avoid duplicate spam on re-renders
     const sessionKey = `visitor_log_session_${pathname}`;
     const lastLogged = sessionStorage.getItem(sessionKey);
     const now = Date.now();
 
-    // If logged within last 10 minutes for this route, skip
-    if (lastLogged && now - parseInt(lastLogged, 10) < 10 * 60 * 1000) {
+    if (lastLogged && now - parseInt(lastLogged, 10) < 60 * 1000) {
       return;
     }
 
