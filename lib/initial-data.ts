@@ -1,0 +1,148 @@
+import { PortfolioData } from './types';
+
+export const initialPortfolioData: PortfolioData = {
+  profile: {
+    fullName: "MUHAMMED AKAN",
+    title: "İlahiyat Fakültesi Öğrencisi & Araştırmacı",
+    subtitle: "İslam Hukuku, Blok Zincir Teknolojisi ve Yapay Zeka Etiği üzerine disiplinlerarası araştırmalar.",
+    bio: "Bir mühendis, bir teknoloji tutkunu ve mükemmeliyet arayışında bir araştırmacı. 2016'nın son çeyreğinden 2020'nin Haziran ayına kadar Google'da çalışarak kamu kurumlarına ve özel sektöre siber güvenlik ve web teknolojileri seminerleri verdim. Şu anda Eskişehir Osmangazi Üniversitesi İlahiyat Fakültesi'nde lisans eğitimime devam ederken; İslam hukuku, blok zincir teknolojisi, kripto varlıklar ve yapay zeka etiği kesişiminde akademik çalışmalar yapmaktayım.",
+    avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuA-KBBpvs5evHk59TU9Hl--ORrCyZFNw7uFmuM4gJpV_HQ7yTuKWqQH04tzNe1v69dQ72GhfUXox40B7LBQpBuA_CmKny3G6g8Sk3Mv1AUlksZXJY9Brq_vyBg7Fj6Tf4rV3QvXdnNhEiqj1d2H9FqqGqxZC2fdsSMDnwDigrd9lRGJevglE9JaUvqThBJ75MQK20DqPbnV28aKYyNcOoEAqmzY9q4lv3ZAfVEGCPvEc6k0hl_WDTbECYXXpVqqt6lX37NQibDD1zBo",
+    email: "info@cedkan.com",
+    location: "Eskişehir, Türkiye",
+    cvUrl: "#",
+  },
+  education: [
+    {
+      id: "edu-1",
+      degree: "Lisans (Devam Ediyor)",
+      institution: "Eskişehir Osmangazi Üniversitesi, İlahiyat Fakültesi",
+      years: "2020 - Devam Ediyor",
+      status: "Devam Ediyor",
+      description: "Temel İslam Bilimleri, İslam Hukuku ve Çağdaş Fıkıh Problemleri üzerine akademik araştırmalar.",
+      isCurrent: true,
+    },
+    {
+      id: "edu-2",
+      degree: "Lisans (Önceki Kayıt)",
+      institution: "Eskişehir Osmangazi Üniversitesi, İlahiyat Fakültesi",
+      years: "2017 - 2020",
+      status: "Tamamlandı",
+      description: "Arapça Hazırlık ve İlahiyat Temel Müfredatı.",
+      isCurrent: false,
+    },
+  ],
+  publications: [
+    {
+      id: "pub-1",
+      type: "Akademik Makale",
+      title: "Din ve Yapay Zeka Kapsamında Yapay Zeka Etiği",
+      publisher: "Akademik Etik Araştırmaları Dergisi",
+      year: "2023",
+      url: "#",
+    },
+    {
+      id: "pub-2",
+      type: "Kitap Bölümü",
+      title: "İslam Hukuku Çerçevesinde Blok Zincir Teknolojisi ve Kripto Paralar",
+      publisher: "Dijital Çağda İslami Finans Yayınları",
+      year: "2024",
+      url: "#",
+    },
+  ],
+  projects: [
+    {
+      id: "proj-1",
+      title: "Akıllı Sözleşmeler ve İslami Hukuk Uyumu",
+      description: "Akıllı sözleşmelerin (Smart Contracts) fıkhi açıdan geçerliliği, borçlar hukuku prensipleriyle uyumu ve İslami finans sistemlerine entegrasyonu üzerine kapsamlı araştırma projesi.",
+      years: "2022 - 2023",
+      tags: ["Blok Zincir", "İslam Hukuku", "Smart Contracts", "Fintech"],
+      url: "#",
+    },
+    {
+      id: "proj-2",
+      title: "Yapay Zeka Destekli Fıkhi Danışmanlık Sistemi",
+      description: "Güncel fıkhi meselelerde makine öğrenimi ve doğal dil işleme kullanarak klasik ve modern fıkıh kaynaklarını analiz eden kavramsal araştırma projesi.",
+      years: "2021 - 2022",
+      tags: ["Yapay Zeka", "NLP", "Fıkıh", "Etik"],
+      url: "#",
+    },
+  ],
+  conferences: [
+    {
+      id: "conf-1",
+      title: "Dijitalleşen Dünyada Fıkıh ve Teknoloji Sempozyumu",
+      eventName: "Ulusal İlahiyat Araştırmaları Kongresi",
+      location: "Eskişehir",
+      year: "2023",
+      role: "Konuşmacı / Bildiri Sunumu",
+    },
+    {
+      id: "conf-2",
+      title: "Web Güvenliği ve Siber Savunma Seminer Dizisi",
+      eventName: "Kamu Kurumları Siber Güvenlik Zirvesi",
+      location: "Ankara",
+      year: "2019",
+      role: "Davetli Seminer Veren",
+    },
+  ],
+  activities: [
+    {
+      id: "act-1",
+      title: "Fıkıh ve Teknoloji Okumaları Atölyesi",
+      organization: "Osmangazi Üniversitesi Öğrenci Kulübü",
+      years: "2021 - 2023",
+      description: "Öğrenciler için dijitalleşme ve etik üzerine haftalık okuma atölyesi koordinatörlüğü.",
+    },
+    {
+      id: "act-2",
+      title: "Google Siber Güvenlik Eğitmenliği",
+      organization: "Google Kamu İlişkileri Ekibi",
+      years: "2016 - 2020",
+      description: "Kamu personeline yönelik bilgi güvenliği, web güvenliği ve farkındalık eğitimleri.",
+    },
+  ],
+  references: [
+    {
+      id: "ref-1",
+      name: "Prof. Dr. Mustafa YILDIRIM",
+      title: "Emekli Dekan",
+      institution: "Eskişehir Osmangazi Üniversitesi, İlahiyat Fakültesi",
+      isFeatured: true,
+    },
+    {
+      id: "ref-2",
+      name: "Prof. Dr. Ali Rıza GÜL",
+      title: "Temel İslam Bilimleri Anabilim Dalı Başkanı",
+      institution: "Eskişehir Osmangazi Üniversitesi, İlahiyat Fakültesi",
+      isFeatured: true,
+    },
+  ],
+  socialLinks: [
+    {
+      id: "soc-1",
+      platform: "LinkedIn",
+      url: "https://linkedin.com",
+      iconName: "Linkedin",
+    },
+    {
+      id: "soc-2",
+      platform: "ORCID",
+      url: "https://orcid.org",
+      iconName: "FileText",
+    },
+    {
+      id: "soc-3",
+      platform: "GitHub",
+      url: "https://github.com",
+      iconName: "Github",
+    },
+  ],
+  seoSettings: {
+    metaTitle: "MUHAMMED AKAN | Akademik Portfolyo & Özgeçmiş",
+    metaDescription: "İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan'ın akademik portfolyosu. İslam Hukuku, Blok Zincir Teknolojisi ve Yapay Zeka Etiği üzerine yayınlar ve projeler.",
+    keywords: "Muhammed Akan, Akademik Portfolyo, İlahiyat, İslam Hukuku, Blok Zincir, Yapay Zeka Etiği, Eskişehir Osmangazi Üniversitesi",
+    ogImageUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuA-KBBpvs5evHk59TU9Hl--ORrCyZFNw7uFmuM4gJpV_HQ7yTuKWqQH04tzNe1v69dQ72GhfUXox40B7LBQpBuA_CmKny3G6g8Sk3Mv1AUlksZXJY9Brq_vyBg7Fj6Tf4rV3QvXdnNhEiqj1d2H9FqqGqxZC2fdsSMDnwDigrd9lRGJevglE9JaUvqThBJ75MQK20DqPbnV28aKYyNcOoEAqmzY9q4lv3ZAfVEGCPvEc6k0hl_WDTbECYXXpVqqt6lX37NQibDD1zBo",
+    canonicalUrl: "https://muhammedakan.vercel.app",
+    authorName: "Muhammed Akan",
+  },
+};
