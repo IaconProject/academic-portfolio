@@ -28,6 +28,9 @@ export const metadata: Metadata = {
   keywords: ['Muhammed Akan', 'Akademik Portfolyo', 'İlahiyat', 'İslam Hukuku', 'Blok Zincir', 'Yapay Zeka Etiği'],
   authors: [{ name: 'Muhammed Akan' }],
   metadataBase: new URL('https://muhammedakan.vercel.app'),
+  icons: {
+    icon: '/favicon.ico',
+  },
   openGraph: {
     title: 'MUHAMMED AKAN | Akademik Portfolyo',
     description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu.',
