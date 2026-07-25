@@ -30,6 +30,88 @@ export function getActiveRecipientEmail(): string {
   ).trim().toLowerCase();
 }
 
+/**
+ * Resend API Helper with Automatic Test Mode Rerouting to Resend Account Owner
+ */
+async function sendViaResend({
+  resendKey,
+  from,
+  to,
+  subject,
+  html,
+  text,
+}: {
+  resendKey: string;
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<boolean> {
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: from || 'onboarding@resend.dev',
+        to: [to],
+        subject: subject,
+        html: html,
+        text: text,
+      }),
+    });
+
+    const json = await res.json().catch(() => ({}));
+
+    if (res.ok && json.id) {
+      console.log(`[Resend API Success] Email delivered to ${to} | ID: ${json.id}`);
+      return true;
+    }
+
+    // Handle HTTP 403 Test Mode restrictions (Unverified custom domain target)
+    if (json.statusCode === 403 || (json.message && json.message.includes('only send testing emails'))) {
+      const match = json.message.match(/to your own email address \(([^)]+)\)/i);
+      const ownerEmail = match && match[1] ? match[1] : null;
+
+      if (ownerEmail && ownerEmail.toLowerCase() !== to.toLowerCase()) {
+        console.warn(
+          `[Resend Test Mode Auto-Reroute] Target ${to} is unverified. Auto-rerouting email to Resend account owner: ${ownerEmail}`
+        );
+
+        const retryRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${resendKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'onboarding@resend.dev',
+            to: [ownerEmail],
+            subject: `[CMS Bildirim -> ${to}] ${subject}`,
+            html: html,
+            text: text,
+          }),
+        });
+
+        const retryJson = await retryRes.json().catch(() => ({}));
+        if (retryRes.ok && retryJson.id) {
+          console.log(`[Resend Auto-Reroute Success] Delivered to ${ownerEmail} | ID: ${retryJson.id}`);
+          return true;
+        }
+      }
+    }
+
+    console.warn('[Resend API Error Response]', json);
+  } catch (e) {
+    console.error('[Resend API Catch Error]', e);
+  }
+
+  return false;
+}
+
 interface SendEmailParams {
   subject: string;
   htmlText: string;
@@ -64,36 +146,19 @@ export async function sendNotificationEmail({ subject, htmlText, plainText, type
   console.log(`[Email Service] Sending ${type} notification to ${recipient}...`);
 
   if (resendKey) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Akademik Portfolyo CMS <onboarding@resend.dev>',
-          to: [recipient],
-          subject: subject,
-          html: htmlText,
-          text: plainText,
-        }),
-      });
-
-      if (res.ok) {
-        console.log(`[Email Service] Notification sent successfully via Resend API to ${recipient}`);
-        return true;
-      } else {
-        const errorJson = await res.json().catch(() => ({}));
-        console.warn('[Email Service] Resend API error response:', errorJson);
-      }
-    } catch (e) {
-      console.warn('[Email Service] Failed to send via Resend API:', e);
-    }
+    const success = await sendViaResend({
+      resendKey,
+      from: 'onboarding@resend.dev',
+      to: recipient,
+      subject,
+      html: htmlText,
+      text: plainText,
+    });
+    if (success) return true;
   }
 
-  console.log(`[Email Service Fallback Alert] To: ${recipient} | Subject: ${subject}`);
-  return true;
+  console.log(`[Email Service Fallback Log] To: ${recipient} | Subject: ${subject}`);
+  return false;
 }
 
 export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpCode: string }): Promise<boolean> {
@@ -103,7 +168,7 @@ export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpC
   const htmlText = `
     <div style="font-family: sans-serif; padding: 25px; background-color: #f7f5f0; color: #1c1917; max-width: 500px; margin: 0 auto; border-radius: 16px; border: 1px solid #e7e3d8;">
       <h2 style="color: #1c1917; margin-top: 0;">🔑 Güvenli Şifre Sıfırlama</h2>
-      <p style="color: #57534e; font-size: 14px; leading-height: 1.6;">
+      <p style="color: #57534e; font-size: 14px; line-height: 1.6;">
         Yönetim paneli şifrenizi sıfırlama talebinde bulundunuz. Tek kullanımlık doğrulama kodunuz aşağıdadır:
       </p>
       <div style="background-color: #ffffff; padding: 15px 25px; border-radius: 12px; border: 2px border #d97706; text-align: center; margin: 20px 0;">
@@ -118,31 +183,17 @@ export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpC
   const plainText = `Şifre Sıfırlama Doğrulama Kodu: ${otpCode}\nBu kod 10 dakika boyunca geçerlidir.`;
 
   if (resendKey) {
-    try {
-      const res = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Akademik Portfolyo Güvenlik <onboarding@resend.dev>',
-          to: [toEmail],
-          subject: subject,
-          html: htmlText,
-          text: plainText,
-        }),
-      });
-
-      if (res.ok) {
-        console.log(`[Email Service] OTP code sent successfully via Resend API to ${toEmail}`);
-        return true;
-      }
-    } catch (e) {
-      console.warn('[Email Service] Failed sending OTP via Resend API:', e);
-    }
+    const success = await sendViaResend({
+      resendKey,
+      from: 'onboarding@resend.dev',
+      to: toEmail,
+      subject,
+      html: htmlText,
+      text: plainText,
+    });
+    if (success) return true;
   }
 
   console.log(`[Email Service OTP Fallback Log] To: ${toEmail} | OTP: ${otpCode}`);
-  return true;
+  return false;
 }
