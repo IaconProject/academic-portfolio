@@ -14,29 +14,29 @@ export const EducationSection: React.FC<EducationSectionProps> = ({ education })
     <AcademicCard id="egitim" title="Eğitim" icon={School}>
       <div className="space-y-6">
         {education.map((item, index) => (
-          <div key={item.id || index} className="relative pl-7 border-l-2 border-slate-200">
+          <div key={item.id || index} className="relative pl-7 border-l-2 border-[#ded9cb]">
             {/* Timeline Dot */}
             <div
-              className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white ring-4 ring-slate-100 ${
+              className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-[#faf8f4] ring-4 ring-[#efece4] ${
                 item.isCurrent || item.status === 'Devam Ediyor'
-                  ? 'bg-academic-navy ring-academic-navy/10'
-                  : 'bg-slate-300'
+                  ? 'bg-[#1c2128]'
+                  : 'bg-[#b0a999]'
               }`}
             />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-              <h3 className="font-bold text-academic-navy text-base md:text-lg">
+              <h3 className="font-bold text-[#24211e] text-base md:text-lg">
                 {item.degree}
               </h3>
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-slate-100 rounded-md text-slate-600 w-fit">
-                <Calendar className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide px-2.5 py-1 bg-[#efece4] border border-[#ded9cb] rounded-lg text-[#57534e] w-fit">
+                <Calendar className="w-3 h-3 text-[#78716c]" />
                 {item.years}
               </span>
             </div>
-            <p className="text-slate-600 text-sm mt-1 font-medium">
+            <p className="text-[#57534e] text-sm mt-1 font-medium">
               {item.institution}
             </p>
             {item.description && (
-              <p className="text-slate-500 text-xs md:text-sm mt-2 leading-relaxed">
+              <p className="text-[#78716c] text-xs md:text-sm mt-2 leading-relaxed">
                 {item.description}
               </p>
             )}

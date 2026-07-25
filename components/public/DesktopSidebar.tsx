@@ -27,12 +27,12 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
   const [imgError, setImgError] = useState(false);
 
   return (
-    <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 bg-[#1c1917] text-stone-100 flex-col z-50 shadow-2xl border-r border-stone-800/80 overflow-hidden">
+    <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 bg-[#1c2128] text-[#e6e1d6] flex-col z-50 shadow-2xl border-r border-[#2d333b] overflow-hidden">
       {/* Header Profile Section */}
-      <div className="p-8 flex flex-col items-center border-b border-stone-800 text-center">
+      <div className="p-8 flex flex-col items-center border-b border-[#2d333b] text-center">
         <div
           onClick={() => profile.avatarUrl && !imgError && onOpenAvatar?.(profile.avatarUrl)}
-          className="relative w-32 h-32 aspect-square rounded-full overflow-hidden border-4 border-stone-700/60 mb-5 shadow-xl transition-all duration-300 hover:scale-105 hover:border-amber-500/80 bg-stone-900 flex items-center justify-center cursor-pointer group"
+          className="relative w-32 h-32 aspect-square rounded-full overflow-hidden border-4 border-[#373e47] mb-5 shadow-xl transition-all duration-300 hover:scale-105 hover:border-amber-500 bg-[#2d333b] flex items-center justify-center cursor-pointer group"
           title="Fotoğrafı Büyüt"
         >
           {profile.avatarUrl && !imgError ? (
@@ -52,15 +52,15 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
               </div>
             </>
           ) : (
-            <div className="w-full h-full bg-stone-800 text-white flex items-center justify-center text-3xl font-serif rounded-full">
+            <div className="w-full h-full bg-[#2d333b] text-[#e6e1d6] flex items-center justify-center text-3xl font-serif rounded-full">
               {profile.fullName.charAt(0)}
             </div>
           )}
         </div>
-        <h1 className="text-xl font-serif font-bold tracking-tight text-stone-100 leading-tight uppercase">
+        <h1 className="text-xl font-serif font-bold tracking-tight text-[#f0ebe1] leading-tight">
           {profile.fullName}
         </h1>
-        <p className="text-xs text-stone-400 mt-2 font-sans italic opacity-90 leading-snug">
+        <p className="text-xs text-[#adbac7] mt-2 font-sans italic opacity-90 leading-snug">
           {profile.title}
         </p>
       </div>
@@ -77,8 +77,8 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
                   href={`#${item.id}`}
                   className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-stone-800 text-stone-50 font-bold border-l-4 border-amber-500 pl-3 shadow-sm'
-                      : 'text-stone-400 hover:bg-stone-800/60 hover:text-stone-100'
+                      ? 'bg-[#2d333b] text-white font-bold border-l-4 border-amber-500 pl-3 shadow-sm'
+                      : 'text-[#adbac7] hover:bg-[#252b33] hover:text-white'
                   }`}
                 >
                   <Icon className="w-4 h-4 shrink-0 opacity-80" />

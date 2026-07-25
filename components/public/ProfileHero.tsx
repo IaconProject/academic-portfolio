@@ -38,13 +38,13 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({ profile, onOpenAvatar 
               </div>
             </>
           ) : (
-            <div className="w-full h-full bg-stone-900 text-white flex items-center justify-center text-3xl font-serif rounded-full">
+            <div className="w-full h-full bg-[#1c2128] text-white flex items-center justify-center text-3xl font-serif rounded-full">
               {profile.fullName.charAt(0)}
             </div>
           )}
         </div>
       </div>
-      <h1 className="font-serif text-2xl md:text-3xl font-bold text-stone-900 mb-1 uppercase tracking-wide">
+      <h1 className="font-serif text-2xl md:text-3xl font-bold text-stone-900 mb-1 tracking-wide">
         {profile.fullName}
       </h1>
       <p className="font-sans text-stone-600 text-sm md:text-base font-medium max-w-md mx-auto">
@@ -52,7 +52,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({ profile, onOpenAvatar 
       </p>
 
       {profile.location && (
-        <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-stone-200/80 rounded-full text-xs text-stone-700 font-medium">
+        <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 bg-[#eae6dc] rounded-full text-xs text-stone-700 font-medium">
           <MapPin className="w-3.5 h-3.5 text-stone-500" />
           <span>{profile.location}</span>
         </div>

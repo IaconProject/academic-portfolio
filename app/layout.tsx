@@ -23,7 +23,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'MUHAMMED AKAN | Akademik Portfolyo',
+  title: 'Muhammed Akan | Akademik Portfolyo',
   description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu. İslam Hukuku, Blok Zincir Teknolojisi ve Yapay Zeka Etiği.',
   keywords: ['Muhammed Akan', 'Akademik Portfolyo', 'İlahiyat', 'İslam Hukuku', 'Blok Zincir', 'Yapay Zeka Etiği'],
   authors: [{ name: 'Muhammed Akan' }],
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     icon: '/favicon.ico',
   },
   openGraph: {
-    title: 'MUHAMMED AKAN | Akademik Portfolyo',
+    title: 'Muhammed Akan | Akademik Portfolyo',
     description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu.',
     type: 'website',
     locale: 'tr_TR',

@@ -100,13 +100,13 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
     >
       <div className="space-y-8 max-w-2xl mx-auto">
         {/* 1. Direct Visitor Message Form Box (TOP) */}
-        <div className="bg-white/95 p-6 md:p-8 rounded-2xl border border-[#e7e3d8] shadow-sm space-y-6">
-          <div className="border-b border-stone-100 pb-4">
-            <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-stone-700" />
+        <div className="bg-[#faf8f4] p-6 md:p-8 rounded-2xl border border-[#e6e2d5] shadow-sm space-y-6">
+          <div className="border-b border-[#ece8dc] pb-4">
+            <h3 className="text-lg font-bold text-[#24211e] flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-[#57534e]" />
               <span>Doğrudan Mesaj Bırakın</span>
             </h3>
-            <p className="text-xs text-stone-500 mt-1">
+            <p className="text-xs text-[#78716c] mt-1">
               Aşağıdaki formu doldurarak iletinizi doğrudan yönetim panelime ulaştırabilirsiniz.
             </p>
           </div>
@@ -144,35 +144,35 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5">
+                  <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                     Ad Soyad <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+                    <User className="w-4 h-4 text-[#a19b8f] absolute left-3.5 top-3.5" />
                     <input
                       type="text"
                       required
                       placeholder="Adınız ve Soyadınız..."
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-stone-50/80 border border-[#e7e3d8] rounded-xl text-sm text-stone-900 focus:border-stone-900 focus:bg-white focus:ring-1 focus:ring-stone-900 outline-none transition-colors"
+                      className="w-full pl-10 pr-4 py-3 bg-[#f5f2ea]/80 border border-[#e6e2d5] rounded-xl text-sm text-[#24211e] focus:border-[#1c2128] focus:bg-white outline-none transition-colors"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5">
+                  <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                     E-posta Adresi <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+                    <Mail className="w-4 h-4 text-[#a19b8f] absolute left-3.5 top-3.5" />
                     <input
                       type="email"
                       required
                       placeholder="ornek@domain.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-stone-50/80 border border-[#e7e3d8] rounded-xl text-sm text-stone-900 focus:border-stone-900 focus:bg-white focus:ring-1 focus:ring-stone-900 outline-none transition-colors"
+                      className="w-full pl-10 pr-4 py-3 bg-[#f5f2ea]/80 border border-[#e6e2d5] rounded-xl text-sm text-[#24211e] focus:border-[#1c2128] focus:bg-white outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -180,15 +180,15 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5">
+                  <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                     Konu Kategorisi
                   </label>
                   <div className="relative">
-                    <Tag className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                    <Tag className="w-4 h-4 text-[#a19b8f] absolute left-3.5 top-3.5 pointer-events-none" />
                     <select
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-stone-50/80 border border-[#e7e3d8] rounded-xl text-sm text-stone-900 focus:border-stone-900 focus:bg-white focus:ring-1 focus:ring-stone-900 outline-none transition-colors appearance-none"
+                      className="w-full pl-10 pr-4 py-3 bg-[#f5f2ea]/80 border border-[#e6e2d5] rounded-xl text-sm text-[#24211e] focus:border-[#1c2128] focus:bg-white outline-none transition-colors appearance-none"
                     >
                       {SUBJECT_OPTIONS.map((subj) => (
                         <option key={subj} value={subj}>
@@ -200,24 +200,24 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5">
+                  <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                     Telefon / WhatsApp (İsteğe Bağlı)
                   </label>
                   <div className="relative">
-                    <Phone className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+                    <Phone className="w-4 h-4 text-[#a19b8f] absolute left-3.5 top-3.5" />
                     <input
                       type="tel"
                       placeholder="+90 5XX XXX XX XX"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-stone-50/80 border border-[#e7e3d8] rounded-xl text-sm text-stone-900 focus:border-stone-900 focus:bg-white focus:ring-1 focus:ring-stone-900 outline-none transition-colors"
+                      className="w-full pl-10 pr-4 py-3 bg-[#f5f2ea]/80 border border-[#e6e2d5] rounded-xl text-sm text-[#24211e] focus:border-[#1c2128] focus:bg-white outline-none transition-colors"
                     />
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5">
+                <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                   Mesajınız <span className="text-rose-500">*</span>
                 </label>
                 <textarea
@@ -226,7 +226,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                   placeholder="İletinizi buraya detaylı bir şekilde yazabilirsiniz..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full p-4 bg-stone-50/80 border border-[#e7e3d8] rounded-xl text-sm text-stone-900 focus:border-stone-900 focus:bg-white focus:ring-1 focus:ring-stone-900 outline-none transition-colors leading-relaxed resize-none"
+                  className="w-full p-4 bg-[#f5f2ea]/80 border border-[#e6e2d5] rounded-xl text-sm text-[#24211e] focus:border-[#1c2128] focus:bg-white outline-none transition-colors leading-relaxed resize-none"
                 />
               </div>
 
@@ -234,17 +234,17 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex items-center gap-2 py-3.5 px-7 bg-stone-900 hover:bg-stone-800 text-stone-50 font-bold rounded-xl transition-all shadow-md active:scale-95 text-xs md:text-sm disabled:opacity-50"
+                  className="inline-flex items-center gap-2 py-3.5 px-7 bg-[#1c2128] hover:bg-[#2d333b] text-stone-50 font-bold rounded-xl transition-all shadow-md active:scale-95 text-xs md:text-sm disabled:opacity-50"
                 >
                   {loading ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                      <span>İLETİLİYOR...</span>
+                      <span>İletiliyor...</span>
                     </>
                   ) : (
                     <>
                       <Send className="w-4 h-4" />
-                      <span>MESAJI GÖNDER</span>
+                      <span>Mesajı Gönder</span>
                     </>
                   )}
                 </button>
@@ -254,15 +254,15 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
         </div>
 
         {/* 2. Direct Email Header Card (BOTTOM) */}
-        <div className="text-center py-4 space-y-5 bg-white/95 p-6 md:p-8 rounded-2xl border border-[#e7e3d8] shadow-sm">
-          <p className="text-stone-600 text-sm md:text-base leading-relaxed">
+        <div className="text-center py-4 space-y-5 bg-[#faf8f4] p-6 md:p-8 rounded-2xl border border-[#e6e2d5] shadow-sm">
+          <p className="text-[#57534e] text-sm md:text-base leading-relaxed">
             Akademik davetler, seminerler, proje işbirlikleri ve görüş alışverişi için doğrudan e-posta adresi üzerinden de iletişime geçebilirsiniz:
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a
               href={`mailto:${profile.email}`}
-              className="inline-flex items-center justify-center gap-2.5 py-3 px-6 bg-stone-900 text-stone-50 rounded-xl font-bold shadow-md hover:bg-stone-800 transition-all active:scale-95 text-xs md:text-sm w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2.5 py-3 px-6 bg-[#1c2128] text-stone-50 rounded-xl font-bold shadow-md hover:bg-[#2d333b] transition-all active:scale-95 text-xs md:text-sm w-full sm:w-auto"
             >
               <Send className="w-4 h-4" />
               <span>{profile.email}</span>
@@ -271,7 +271,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
             <button
               onClick={handleCopyEmail}
               aria-label="E-postayı kopyala"
-              className="inline-flex items-center justify-center gap-2 py-3 px-5 bg-stone-100 border border-stone-200 text-stone-700 rounded-xl font-semibold text-xs hover:bg-stone-200 transition-colors w-full sm:w-auto"
+              className="inline-flex items-center justify-center gap-2 py-3 px-5 bg-[#efece4] border border-[#ded9cb] text-[#2c2825] rounded-xl font-semibold text-xs hover:bg-[#e5e1d5] transition-colors w-full sm:w-auto"
             >
               {copied ? (
                 <>
@@ -280,7 +280,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 text-stone-500" />
+                  <Copy className="w-4 h-4 text-[#78716c]" />
                   <span>Adresi Kopyala</span>
                 </>
               )}
@@ -288,8 +288,8 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
           </div>
 
           {profile.location && (
-            <div className="inline-flex items-center gap-1.5 text-xs text-stone-500 font-medium pt-1">
-              <MapPin className="w-4 h-4 text-stone-400" />
+            <div className="inline-flex items-center gap-1.5 text-xs text-[#78716c] font-medium pt-1">
+              <MapPin className="w-4 h-4 text-[#a19b8f]" />
               <span>{profile.location}</span>
             </div>
           )}

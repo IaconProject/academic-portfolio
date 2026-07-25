@@ -2,7 +2,7 @@ import { PortfolioData } from './types';
 
 export const initialPortfolioData: PortfolioData = {
   profile: {
-    fullName: "MUHAMMED AKAN",
+    fullName: "Muhammed Akan",
     title: "İlahiyat Fakültesi Öğrencisi & Araştırmacı",
     subtitle: "İslam Hukuku, Blok Zincir Teknolojisi ve Yapay Zeka Etiği üzerine disiplinlerarası araştırmalar.",
     bio: "Bir mühendis, bir teknoloji tutkunu ve mükemmeliyet arayışında bir araştırmacı. 2016'nın son çeyreğinden 2020'nin Haziran ayına kadar Google'da çalışarak kamu kurumlarına ve özel sektöre siber güvenlik ve web teknolojileri seminerleri verdim. Şu anda Eskişehir Osmangazi Üniversitesi İlahiyat Fakültesi'nde lisans eğitimime devam ederken; İslam hukuku, blok zincir teknolojisi, kripto varlıklar ve yapay zeka etiği kesişiminde akademik çalışmalar yapmaktayım.",
@@ -138,7 +138,7 @@ export const initialPortfolioData: PortfolioData = {
     },
   ],
   seoSettings: {
-    metaTitle: "MUHAMMED AKAN | Akademik Portfolyo & Özgeçmiş",
+    metaTitle: "Muhammed Akan | Akademik Portfolyo & Özgeçmiş",
     metaDescription: "İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan'ın akademik portfolyosu. İslam Hukuku, Blok Zincir Teknolojisi ve Yapay Zeka Etiği üzerine yayınlar ve projeler.",
     keywords: "Muhammed Akan, Akademik Portfolyo, İlahiyat, İslam Hukuku, Blok Zincir, Yapay Zeka Etiği, Eskişehir Osmangazi Üniversitesi",
     ogImageUrl: "",
