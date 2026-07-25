@@ -276,4 +276,20 @@ ALTER TABLE public.password_attempts ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow write password_attempts" ON public.password_attempts;
 CREATE POLICY "Allow write password_attempts" ON public.password_attempts FOR ALL USING (true) WITH CHECK (true);
 
+-- 17. Notification Settings Table (Persistent E-mail Configuration)
+CREATE TABLE IF NOT EXISTS public.notification_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email_notifications_enabled BOOLEAN DEFAULT true,
+  notify_on_new_message BOOLEAN DEFAULT true,
+  notify_on_new_visitor BOOLEAN DEFAULT false,
+  recipient_email TEXT DEFAULT 'info@cedkan.com',
+  recipient_emails TEXT[] DEFAULT '{info@cedkan.com}',
+  resend_api_key TEXT DEFAULT '',
+  sender_email TEXT DEFAULT 'noreply@cedkan.com',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.notification_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow write notification_settings" ON public.notification_settings;
+CREATE POLICY "Allow write notification_settings" ON public.notification_settings FOR ALL USING (true) WITH CHECK (true);
 

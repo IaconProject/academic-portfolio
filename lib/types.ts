@@ -93,6 +93,7 @@ export interface NotificationSettings {
   notifyOnNewVisitor: boolean;
   recipientEmail: string;
   recipientEmails?: string[];
+  senderEmail?: string;
   resendApiKey?: string;
   smtpHost?: string;
   smtpPort?: number;

@@ -1,4 +1,4 @@
-import { PortfolioData } from './types';
+import { PortfolioData, NotificationSettings } from './types';
 import { initialPortfolioData } from './initial-data';
 import fs from 'fs';
 import path from 'path';
@@ -21,15 +21,22 @@ export function getStoredData(): PortfolioData {
 }
 
 /**
+ * Returns the sender email address.
+ * MUST use the verified domain to avoid Resend test-mode restrictions.
+ */
+export function getSenderEmail(): string {
+  const data = getStoredData();
+  return data.notificationSettings?.senderEmail || 'noreply@cedkan.com';
+}
+
+/**
  * Returns deduplicated list of all registered recipient emails.
- * Combines recipientEmails[] array + legacy recipientEmail field.
  */
 export function getAllRecipientEmails(): string[] {
   const data = getStoredData();
   const ns = data.notificationSettings;
   const emails: string[] = [];
 
-  // Primary: recipientEmails array
   if (ns?.recipientEmails && Array.isArray(ns.recipientEmails)) {
     ns.recipientEmails.forEach(e => {
       const clean = e.trim().toLowerCase();
@@ -39,49 +46,45 @@ export function getAllRecipientEmails(): string[] {
     });
   }
 
-  // Fallback: legacy single recipientEmail
   if (emails.length === 0 && ns?.recipientEmail) {
     const clean = ns.recipientEmail.trim().toLowerCase();
     if (clean && clean.includes('@')) emails.push(clean);
   }
 
-  // Fallback: profile email
   if (emails.length === 0 && data.profile?.email) {
     const clean = data.profile.email.trim().toLowerCase();
     if (clean && clean.includes('@')) emails.push(clean);
   }
 
-  // Ultimate fallback
   if (emails.length === 0) emails.push('info@cedkan.com');
 
   return emails;
 }
 
-/** Legacy single-address helper (backward compat) */
 export function getActiveRecipientEmail(): string {
   return getAllRecipientEmails()[0];
 }
 
 // ────────────────────────────────────────────────────────────
-// Core Resend API sender with auto-reroute for test mode
+// Core Resend API sender
 // ────────────────────────────────────────────────────────────
 
 interface ResendResult {
   success: boolean;
   id?: string;
-  rerouted?: boolean;
-  reroutedTo?: string;
   error?: string;
 }
 
 async function sendViaResend({
   resendKey,
+  from,
   to,
   subject,
   html,
   text,
 }: {
   resendKey: string;
+  from: string;
   to: string;
   subject: string;
   html: string;
@@ -94,105 +97,56 @@ async function sendViaResend({
         'Authorization': `Bearer ${resendKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        from: 'onboarding@resend.dev',
-        to: [to],
-        subject,
-        html,
-        text: text || '',
-      }),
+      body: JSON.stringify({ from, to: [to], subject, html, text: text || '' }),
     });
 
     const body = await res.text();
     let json: any = {};
     try { json = JSON.parse(body); } catch { json = { raw: body }; }
 
-    console.log(`[Resend] Direct send to=${to} status=${res.status} body=${body.substring(0, 300)}`);
+    console.log(`[Resend] to=${to} from=${from} status=${res.status} body=${body.substring(0, 300)}`);
 
     if (res.ok && json.id) {
       return { success: true, id: json.id };
     }
 
-    // Handle 403 test-mode restriction -> auto-reroute to account owner
-    if (res.status === 403 || (json.message && json.message.includes('only send testing emails'))) {
-      const match = (json.message || '').match(/to your own email address \(([^)]+)\)/i);
-      const ownerEmail = match?.[1]?.trim();
-
-      if (ownerEmail) {
-        console.log(`[Resend] Test mode. Rerouting to account owner: ${ownerEmail}`);
-
-        const retryRes = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${resendKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: 'onboarding@resend.dev',
-            to: [ownerEmail],
-            subject: `[→ ${to}] ${subject}`,
-            html,
-            text: text || '',
-          }),
-        });
-
-        const retryBody = await retryRes.text();
-        let retryJson: any = {};
-        try { retryJson = JSON.parse(retryBody); } catch { retryJson = { raw: retryBody }; }
-
-        console.log(`[Resend] Reroute to=${ownerEmail} status=${retryRes.status} body=${retryBody.substring(0, 300)}`);
-
-        if (retryRes.ok && retryJson.id) {
-          return { success: true, id: retryJson.id, rerouted: true, reroutedTo: ownerEmail };
-        }
-
-        return { success: false, error: `Reroute failed: ${retryBody}` };
-      }
-    }
-
-    return { success: false, error: `Resend error (${res.status}): ${body.substring(0, 200)}` };
+    return { success: false, error: `Resend ${res.status}: ${body.substring(0, 200)}` };
   } catch (e: any) {
     console.error('[Resend] Network error:', e);
     return { success: false, error: e.message || String(e) };
   }
 }
 
-/**
- * Sends an email to ALL registered recipient emails.
- */
 async function sendToAllRecipients({
   resendKey,
+  from,
   subject,
   html,
   text,
   recipients,
 }: {
   resendKey: string;
+  from: string;
   subject: string;
   html: string;
   text: string;
   recipients: string[];
-}): Promise<{ successes: string[]; failures: string[]; rerouted?: boolean; reroutedTo?: string }> {
+}): Promise<{ successes: string[]; failures: string[]; errors: string[] }> {
   const successes: string[] = [];
   const failures: string[] = [];
-  let rerouted = false;
-  let reroutedTo: string | undefined;
+  const errors: string[] = [];
 
   for (const email of recipients) {
-    const result = await sendViaResend({ resendKey, to: email, subject, html, text });
+    const result = await sendViaResend({ resendKey, from, to: email, subject, html, text });
     if (result.success) {
       successes.push(email);
-      if (result.rerouted) {
-        rerouted = true;
-        reroutedTo = result.reroutedTo;
-      }
     } else {
       failures.push(email);
-      console.warn(`[Email] Failed for ${email}: ${result.error}`);
+      errors.push(`${email}: ${result.error}`);
     }
   }
 
-  return { successes, failures, rerouted, reroutedTo };
+  return { successes, failures, errors };
 }
 
 // ────────────────────────────────────────────────────────────
@@ -214,35 +168,30 @@ export async function sendNotificationEmail({ subject, htmlText, plainText, type
     console.log(`[Email] Global notifications disabled. Skipping ${type}.`);
     return false;
   }
-
   if (type === 'message' && !settings.notifyOnNewMessage) {
-    console.log('[Email] Message notifications disabled. Skipping.');
+    console.log('[Email] Message notifications disabled.');
     return false;
   }
   if (type === 'visitor' && !settings.notifyOnNewVisitor) {
-    console.log('[Email] Visitor notifications disabled. Skipping.');
+    console.log('[Email] Visitor notifications disabled.');
     return false;
   }
 
   const recipients = getAllRecipientEmails();
   const resendKey = process.env.RESEND_API_KEY || settings.resendApiKey;
+  const from = getSenderEmail();
 
   if (!resendKey) {
-    console.warn('[Email] No RESEND_API_KEY found. Cannot send.');
+    console.warn('[Email] No RESEND_API_KEY found.');
     return false;
   }
 
-  console.log(`[Email] Sending ${type} notification to ${recipients.join(', ')}...`);
+  console.log(`[Email] Sending ${type} from=${from} to=${recipients.join(', ')}...`);
 
-  const result = await sendToAllRecipients({
-    resendKey,
-    recipients,
-    subject,
-    html: htmlText,
-    text: plainText,
-  });
+  const result = await sendToAllRecipients({ resendKey, from, recipients, subject, html: htmlText, text: plainText });
 
-  console.log(`[Email] Results: ${result.successes.length} sent, ${result.failures.length} failed${result.rerouted ? ` (rerouted to ${result.reroutedTo})` : ''}`);
+  console.log(`[Email] ${result.successes.length} sent, ${result.failures.length} failed`);
+  if (result.errors.length > 0) console.warn('[Email] Errors:', result.errors.join(' | '));
 
   return result.successes.length > 0;
 }
@@ -250,10 +199,11 @@ export async function sendNotificationEmail({ subject, htmlText, plainText, type
 export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpCode: string }): Promise<boolean> {
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) {
-    console.warn('[Email OTP] No RESEND_API_KEY. Cannot send OTP.');
+    console.warn('[Email OTP] No RESEND_API_KEY.');
     return false;
   }
 
+  const from = getSenderEmail();
   const subject = `🔑 Şifre Sıfırlama Kodu: ${otpCode}`;
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 30px; background-color: #f7f5f0; color: #1c1917; max-width: 480px; margin: 0 auto; border-radius: 16px; border: 1px solid #e7e3d8;">
@@ -269,14 +219,12 @@ export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpC
       </p>
     </div>
   `;
-  const text = `Şifre Sıfırlama Kodu: ${otpCode} — 10 dakika geçerli.`;
 
-  console.log(`[Email OTP] Sending OTP to ${toEmail}...`);
-
-  const result = await sendViaResend({ resendKey, to: toEmail, subject, html, text });
+  console.log(`[Email OTP] from=${from} to=${toEmail}...`);
+  const result = await sendViaResend({ resendKey, from, to: toEmail, subject, html, text: `Kod: ${otpCode}` });
 
   if (result.success) {
-    console.log(`[Email OTP] Sent OK. ID=${result.id}${result.rerouted ? ` (rerouted to ${result.reroutedTo})` : ''}`);
+    console.log(`[Email OTP] Sent OK. ID=${result.id}`);
   } else {
     console.warn(`[Email OTP] Failed: ${result.error}`);
   }
@@ -284,45 +232,36 @@ export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpC
   return result.success;
 }
 
-/**
- * Direct diagnostic send — bypasses CMS toggle checks.
- * Sends to ALL registered emails (or a custom list).
- */
 export async function sendTestEmailDirect({ to }: { to?: string }): Promise<{
   success: boolean;
   message: string;
-  results?: { successes: string[]; failures: string[] };
-  rerouted?: boolean;
-  reroutedTo?: string;
+  results?: { successes: string[]; failures: string[]; errors: string[] };
   debug?: any;
 }> {
   const data = getStoredData();
   const resendKey = process.env.RESEND_API_KEY || data.notificationSettings?.resendApiKey;
+  const from = getSenderEmail();
 
   if (!resendKey) {
     return {
       success: false,
-      message: 'RESEND_API_KEY ortam değişkeni bulunamadı. Vercel Environment Variables paneline veya .env.local dosyasına ekleyin.',
+      message: 'RESEND_API_KEY bulunamadı. Vercel veya .env.local dosyasına ekleyin.',
       debug: {
         envKeyExists: !!process.env.RESEND_API_KEY,
         cmsKeyExists: !!data.notificationSettings?.resendApiKey,
-        envKeys: Object.keys(process.env).filter(k => k.includes('RESEND')),
       },
     };
   }
 
-  // If a specific email is given, send only to that; otherwise send to all registered
   const recipients = to ? [to.trim().toLowerCase()] : getAllRecipientEmails();
-
   const now = new Date();
   const subject = `🧪 CMS E-posta Testi — ${now.toLocaleTimeString('tr-TR')}`;
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 25px; background-color: #f7f5f0; color: #1c1917; max-width: 480px; margin: 0 auto; border-radius: 16px; border: 1px solid #e7e3d8;">
       <h2 style="color: #d97706; margin-top: 0;">🧪 E-posta Testi Başarılı!</h2>
-      <p style="color: #57534e; font-size: 14px; line-height: 1.6;">
-        Akademik Portfolyo CMS e-posta bildirim sistemi doğru çalışmaktadır.
-      </p>
+      <p style="color: #57534e; font-size: 14px; line-height: 1.6;">CMS e-posta bildirimleri doğru çalışmaktadır.</p>
       <table style="font-size: 13px; color: #44403c; margin-top: 12px;">
+        <tr><td style="padding-right: 12px; color: #78716c;">Gönderen:</td><td><strong>${from}</strong></td></tr>
         <tr><td style="padding-right: 12px; color: #78716c;">Alıcılar:</td><td><strong>${recipients.join(', ')}</strong></td></tr>
         <tr><td style="padding-right: 12px; color: #78716c;">Tarih:</td><td>${now.toLocaleString('tr-TR')}</td></tr>
       </table>
@@ -330,28 +269,22 @@ export async function sendTestEmailDirect({ to }: { to?: string }): Promise<{
   `;
 
   const result = await sendToAllRecipients({
-    resendKey,
-    recipients,
-    subject,
-    html,
-    text: `CMS E-posta testi — Alıcılar: ${recipients.join(', ')}`,
+    resendKey, from, recipients, subject, html,
+    text: `CMS Test — Gönderen: ${from} — Alıcılar: ${recipients.join(', ')}`,
   });
 
   if (result.successes.length > 0) {
     return {
       success: true,
-      message: result.rerouted
-        ? `Test e-postası Resend test modu nedeniyle ${result.reroutedTo} adresine yönlendirildi. (Hedefler: ${recipients.join(', ')})`
-        : `Test e-postası başarıyla gönderildi: ${result.successes.join(', ')}`,
+      message: `Test e-postası gönderildi: ${result.successes.join(', ')} (Gönderen: ${from})`,
       results: result,
-      rerouted: result.rerouted,
-      reroutedTo: result.reroutedTo,
     };
   }
 
   return {
     success: false,
-    message: `E-posta gönderilemedi. Başarısız adresler: ${result.failures.join(', ')}`,
+    message: `E-posta gönderilemedi. Hatalar: ${result.errors.join(' | ')}`,
     results: result,
+    debug: { from, recipients, resendKeyPrefix: resendKey.substring(0, 8) },
   };
 }

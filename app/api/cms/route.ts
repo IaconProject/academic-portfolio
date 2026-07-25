@@ -198,6 +198,12 @@ export async function POST(request: Request) {
       }
     }
 
+    // 2. Notification Settings Sync
+    if (body.notificationSettings) {
+      const updatedFull = { ...currentTmp, notificationSettings: body.notificationSettings };
+      writeTmpStore(updatedFull);
+    }
+
     // 2. Full Portfolio Data Sync
     if (body.profile) {
       const updatedData: PortfolioData = {

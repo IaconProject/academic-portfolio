@@ -352,24 +352,45 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
         </p>
       </div>
 
-      {/* Resend API Key */}
-      <div>
-        <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
-          Resend API Key (İsteğe Bağlı)
-        </label>
-        <div className="relative">
-          <Key className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
-          <input
-            type="password"
-            value={settings.resendApiKey || ''}
-            onChange={(e) => setSettings({ ...settings, resendApiKey: e.target.value })}
-            placeholder="re_123456789..."
-            className="w-full pl-10 pr-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
-          />
+      {/* Sender Email & Resend API Key */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+            Gönderen E-posta Adresi (Doğrulanmış Domain)
+          </label>
+          <div className="relative">
+            <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+            <input
+              type="email"
+              value={settings.senderEmail || 'noreply@cedkan.com'}
+              onChange={(e) => setSettings({ ...settings, senderEmail: e.target.value })}
+              placeholder="noreply@cedkan.com"
+              className="w-full pl-10 pr-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
+            />
+          </div>
+          <p className="text-[11px] text-stone-400 mt-1">
+            Resend üzerinde doğruladığınız alan adından bir adres (örn: noreply@cedkan.com).
+          </p>
         </div>
-        <p className="text-[11px] text-stone-400 mt-1">
-          Vercel ortam değişkenine (RESEND_API_KEY) eklendiyse bu alan boş bırakılabilir.
-        </p>
+
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+            Resend API Key (İsteğe Bağlı)
+          </label>
+          <div className="relative">
+            <Key className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
+            <input
+              type="password"
+              value={settings.resendApiKey || ''}
+              onChange={(e) => setSettings({ ...settings, resendApiKey: e.target.value })}
+              placeholder="re_123456789... (Vercel ENV'de Aktif)"
+              className="w-full pl-10 pr-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
+            />
+          </div>
+          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium mt-1">
+            ✓ Vercel sunucusunda (RESEND_API_KEY) tanımlı olduğu için bu alanı boş bırakabilirsiniz.
+          </p>
+        </div>
       </div>
 
       {/* Mobile Test Email Button */}
