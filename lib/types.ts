@@ -92,6 +92,7 @@ export interface NotificationSettings {
   notifyOnNewMessage: boolean;
   notifyOnNewVisitor: boolean;
   recipientEmail: string;
+  recipientEmails?: string[];
   resendApiKey?: string;
   smtpHost?: string;
   smtpPort?: number;

@@ -150,5 +150,6 @@ export const initialPortfolioData: PortfolioData = {
     notifyOnNewMessage: true,
     notifyOnNewVisitor: false,
     recipientEmail: "info@cedkan.com",
+    recipientEmails: ["info@cedkan.com"],
   },
 };

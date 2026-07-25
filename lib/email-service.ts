@@ -20,21 +20,60 @@ export function getStoredData(): PortfolioData {
   return initialPortfolioData;
 }
 
-export function getActiveRecipientEmail(): string {
+/**
+ * Returns deduplicated list of all registered recipient emails.
+ * Combines recipientEmails[] array + legacy recipientEmail field.
+ */
+export function getAllRecipientEmails(): string[] {
   const data = getStoredData();
-  return (
-    data.adminCredentials?.email ||
-    data.notificationSettings?.recipientEmail ||
-    data.profile?.email ||
-    'info@cedkan.com'
-  ).trim().toLowerCase();
+  const ns = data.notificationSettings;
+  const emails: string[] = [];
+
+  // Primary: recipientEmails array
+  if (ns?.recipientEmails && Array.isArray(ns.recipientEmails)) {
+    ns.recipientEmails.forEach(e => {
+      const clean = e.trim().toLowerCase();
+      if (clean && clean.includes('@') && !emails.includes(clean)) {
+        emails.push(clean);
+      }
+    });
+  }
+
+  // Fallback: legacy single recipientEmail
+  if (emails.length === 0 && ns?.recipientEmail) {
+    const clean = ns.recipientEmail.trim().toLowerCase();
+    if (clean && clean.includes('@')) emails.push(clean);
+  }
+
+  // Fallback: profile email
+  if (emails.length === 0 && data.profile?.email) {
+    const clean = data.profile.email.trim().toLowerCase();
+    if (clean && clean.includes('@')) emails.push(clean);
+  }
+
+  // Ultimate fallback
+  if (emails.length === 0) emails.push('info@cedkan.com');
+
+  return emails;
 }
 
-/**
- * Core Resend API sender with auto-reroute for test mode (unverified domain).
- * Resend free tier only allows sending to the account owner email.
- * When a 403 is returned, we parse the owner email from the error and retry.
- */
+/** Legacy single-address helper (backward compat) */
+export function getActiveRecipientEmail(): string {
+  return getAllRecipientEmails()[0];
+}
+
+// ────────────────────────────────────────────────────────────
+// Core Resend API sender with auto-reroute for test mode
+// ────────────────────────────────────────────────────────────
+
+interface ResendResult {
+  success: boolean;
+  id?: string;
+  rerouted?: boolean;
+  reroutedTo?: string;
+  error?: string;
+}
+
 async function sendViaResend({
   resendKey,
   to,
@@ -47,8 +86,7 @@ async function sendViaResend({
   subject: string;
   html: string;
   text: string;
-}): Promise<{ success: boolean; id?: string; rerouted?: boolean; reroutedTo?: string; error?: string }> {
-  // Step 1: Try direct send
+}): Promise<ResendResult> {
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -69,19 +107,19 @@ async function sendViaResend({
     let json: any = {};
     try { json = JSON.parse(body); } catch { json = { raw: body }; }
 
-    console.log(`[Resend] Direct send to=${to} status=${res.status} body=${body}`);
+    console.log(`[Resend] Direct send to=${to} status=${res.status} body=${body.substring(0, 300)}`);
 
     if (res.ok && json.id) {
       return { success: true, id: json.id };
     }
 
-    // Step 2: Handle 403 test-mode restriction -> auto-reroute to account owner
+    // Handle 403 test-mode restriction -> auto-reroute to account owner
     if (res.status === 403 || (json.message && json.message.includes('only send testing emails'))) {
       const match = (json.message || '').match(/to your own email address \(([^)]+)\)/i);
       const ownerEmail = match?.[1]?.trim();
 
       if (ownerEmail) {
-        console.log(`[Resend] Test mode detected. Rerouting to account owner: ${ownerEmail}`);
+        console.log(`[Resend] Test mode. Rerouting to account owner: ${ownerEmail}`);
 
         const retryRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
@@ -102,7 +140,7 @@ async function sendViaResend({
         let retryJson: any = {};
         try { retryJson = JSON.parse(retryBody); } catch { retryJson = { raw: retryBody }; }
 
-        console.log(`[Resend] Reroute to=${ownerEmail} status=${retryRes.status} body=${retryBody}`);
+        console.log(`[Resend] Reroute to=${ownerEmail} status=${retryRes.status} body=${retryBody.substring(0, 300)}`);
 
         if (retryRes.ok && retryJson.id) {
           return { success: true, id: retryJson.id, rerouted: true, reroutedTo: ownerEmail };
@@ -112,11 +150,49 @@ async function sendViaResend({
       }
     }
 
-    return { success: false, error: `Resend error: ${body}` };
+    return { success: false, error: `Resend error (${res.status}): ${body.substring(0, 200)}` };
   } catch (e: any) {
-    console.error('[Resend] Network/fetch error:', e);
+    console.error('[Resend] Network error:', e);
     return { success: false, error: e.message || String(e) };
   }
+}
+
+/**
+ * Sends an email to ALL registered recipient emails.
+ */
+async function sendToAllRecipients({
+  resendKey,
+  subject,
+  html,
+  text,
+  recipients,
+}: {
+  resendKey: string;
+  subject: string;
+  html: string;
+  text: string;
+  recipients: string[];
+}): Promise<{ successes: string[]; failures: string[]; rerouted?: boolean; reroutedTo?: string }> {
+  const successes: string[] = [];
+  const failures: string[] = [];
+  let rerouted = false;
+  let reroutedTo: string | undefined;
+
+  for (const email of recipients) {
+    const result = await sendViaResend({ resendKey, to: email, subject, html, text });
+    if (result.success) {
+      successes.push(email);
+      if (result.rerouted) {
+        rerouted = true;
+        reroutedTo = result.reroutedTo;
+      }
+    } else {
+      failures.push(email);
+      console.warn(`[Email] Failed for ${email}: ${result.error}`);
+    }
+  }
+
+  return { successes, failures, rerouted, reroutedTo };
 }
 
 // ────────────────────────────────────────────────────────────
@@ -134,13 +210,11 @@ export async function sendNotificationEmail({ subject, htmlText, plainText, type
   const data = getStoredData();
   const settings = data.notificationSettings || initialPortfolioData.notificationSettings!;
 
-  // Check global toggle
   if (!settings.emailNotificationsEnabled) {
     console.log(`[Email] Global notifications disabled. Skipping ${type}.`);
     return false;
   }
 
-  // Check per-event toggle
   if (type === 'message' && !settings.notifyOnNewMessage) {
     console.log('[Email] Message notifications disabled. Skipping.');
     return false;
@@ -150,7 +224,7 @@ export async function sendNotificationEmail({ subject, htmlText, plainText, type
     return false;
   }
 
-  const recipient = getActiveRecipientEmail();
+  const recipients = getAllRecipientEmails();
   const resendKey = process.env.RESEND_API_KEY || settings.resendApiKey;
 
   if (!resendKey) {
@@ -158,23 +232,19 @@ export async function sendNotificationEmail({ subject, htmlText, plainText, type
     return false;
   }
 
-  console.log(`[Email] Sending ${type} notification to ${recipient}...`);
+  console.log(`[Email] Sending ${type} notification to ${recipients.join(', ')}...`);
 
-  const result = await sendViaResend({
+  const result = await sendToAllRecipients({
     resendKey,
-    to: recipient,
+    recipients,
     subject,
     html: htmlText,
     text: plainText,
   });
 
-  if (result.success) {
-    console.log(`[Email] Sent OK. ID=${result.id}${result.rerouted ? ` (rerouted to ${result.reroutedTo})` : ''}`);
-  } else {
-    console.warn(`[Email] Send failed: ${result.error}`);
-  }
+  console.log(`[Email] Results: ${result.successes.length} sent, ${result.failures.length} failed${result.rerouted ? ` (rerouted to ${result.reroutedTo})` : ''}`);
 
-  return result.success;
+  return result.successes.length > 0;
 }
 
 export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpCode: string }): Promise<boolean> {
@@ -185,7 +255,6 @@ export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpC
   }
 
   const subject = `🔑 Şifre Sıfırlama Kodu: ${otpCode}`;
-
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 30px; background-color: #f7f5f0; color: #1c1917; max-width: 480px; margin: 0 auto; border-radius: 16px; border: 1px solid #e7e3d8;">
       <h2 style="color: #1c1917; margin-top: 0; font-size: 20px;">🔑 Şifre Sıfırlama Doğrulaması</h2>
@@ -200,23 +269,16 @@ export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpC
       </p>
     </div>
   `;
-
   const text = `Şifre Sıfırlama Kodu: ${otpCode} — 10 dakika geçerli.`;
 
   console.log(`[Email OTP] Sending OTP to ${toEmail}...`);
 
-  const result = await sendViaResend({
-    resendKey,
-    to: toEmail,
-    subject,
-    html,
-    text,
-  });
+  const result = await sendViaResend({ resendKey, to: toEmail, subject, html, text });
 
   if (result.success) {
     console.log(`[Email OTP] Sent OK. ID=${result.id}${result.rerouted ? ` (rerouted to ${result.reroutedTo})` : ''}`);
   } else {
-    console.warn(`[Email OTP] Send failed: ${result.error}`);
+    console.warn(`[Email OTP] Failed: ${result.error}`);
   }
 
   return result.success;
@@ -224,12 +286,12 @@ export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpC
 
 /**
  * Direct diagnostic send — bypasses CMS toggle checks.
- * Used by /api/cms/test-email endpoint.
+ * Sends to ALL registered emails (or a custom list).
  */
-export async function sendTestEmailDirect({ to }: { to: string }): Promise<{
+export async function sendTestEmailDirect({ to }: { to?: string }): Promise<{
   success: boolean;
   message: string;
-  resendId?: string;
+  results?: { successes: string[]; failures: string[] };
   rerouted?: boolean;
   reroutedTo?: string;
   debug?: any;
@@ -249,6 +311,9 @@ export async function sendTestEmailDirect({ to }: { to: string }): Promise<{
     };
   }
 
+  // If a specific email is given, send only to that; otherwise send to all registered
+  const recipients = to ? [to.trim().toLowerCase()] : getAllRecipientEmails();
+
   const now = new Date();
   const subject = `🧪 CMS E-posta Testi — ${now.toLocaleTimeString('tr-TR')}`;
   const html = `
@@ -258,29 +323,27 @@ export async function sendTestEmailDirect({ to }: { to: string }): Promise<{
         Akademik Portfolyo CMS e-posta bildirim sistemi doğru çalışmaktadır.
       </p>
       <table style="font-size: 13px; color: #44403c; margin-top: 12px;">
-        <tr><td style="padding-right: 12px; color: #78716c;">Alıcı:</td><td><strong>${to}</strong></td></tr>
+        <tr><td style="padding-right: 12px; color: #78716c;">Alıcılar:</td><td><strong>${recipients.join(', ')}</strong></td></tr>
         <tr><td style="padding-right: 12px; color: #78716c;">Tarih:</td><td>${now.toLocaleString('tr-TR')}</td></tr>
-        <tr><td style="padding-right: 12px; color: #78716c;">API Key:</td><td>${resendKey.substring(0, 8)}...${resendKey.substring(resendKey.length - 4)}</td></tr>
       </table>
     </div>
   `;
 
-  const result = await sendViaResend({
+  const result = await sendToAllRecipients({
     resendKey,
-    to,
+    recipients,
     subject,
     html,
-    text: `CMS E-posta testi — Alıcı: ${to}`,
+    text: `CMS E-posta testi — Alıcılar: ${recipients.join(', ')}`,
   });
 
-  if (result.success) {
-    const target = result.rerouted ? result.reroutedTo : to;
+  if (result.successes.length > 0) {
     return {
       success: true,
       message: result.rerouted
-        ? `Test e-postası Resend test modu kısıtlaması nedeniyle ${target} adresine yönlendirildi. (ID: ${result.id})`
-        : `Test e-postası ${to} adresine başarıyla gönderildi. (ID: ${result.id})`,
-      resendId: result.id,
+        ? `Test e-postası Resend test modu nedeniyle ${result.reroutedTo} adresine yönlendirildi. (Hedefler: ${recipients.join(', ')})`
+        : `Test e-postası başarıyla gönderildi: ${result.successes.join(', ')}`,
+      results: result,
       rerouted: result.rerouted,
       reroutedTo: result.reroutedTo,
     };
@@ -288,11 +351,7 @@ export async function sendTestEmailDirect({ to }: { to: string }): Promise<{
 
   return {
     success: false,
-    message: `E-posta gönderilemedi: ${result.error}`,
-    debug: {
-      resendKeyPrefix: resendKey.substring(0, 8),
-      targetEmail: to,
-      error: result.error,
-    },
+    message: `E-posta gönderilemedi. Başarısız adresler: ${result.failures.join(', ')}`,
+    results: result,
   };
 }
