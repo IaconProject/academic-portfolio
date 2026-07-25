@@ -32,7 +32,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
       <button
         onClick={toggleMenu}
         aria-label="Menüyü Aç"
-        className="lg:hidden fixed top-4 right-4 z-50 w-11 h-11 bg-white/95 text-academic-navy rounded-2xl border border-slate-200/90 shadow-lg shadow-slate-900/10 flex items-center justify-center backdrop-blur-md hover:bg-slate-50 transition-all active:scale-95"
+        className="lg:hidden fixed top-4 left-4 z-50 w-11 h-11 bg-white/95 text-academic-navy rounded-2xl border border-slate-200/90 shadow-lg shadow-slate-900/10 flex items-center justify-center backdrop-blur-md hover:bg-slate-50 transition-all active:scale-95"
       >
         <Menu className="w-5 h-5" />
       </button>

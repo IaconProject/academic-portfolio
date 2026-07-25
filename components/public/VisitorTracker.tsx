@@ -9,9 +9,7 @@ export function getOrCreateSessionId(): string {
     let s = localStorage.getItem('tracker_session_id');
     if (!s) {
       s = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      try {
-        localStorage.setItem('tracker_session_id', s);
-      } catch (e) {}
+      localStorage.setItem('tracker_session_id', s);
     }
     return s;
   } catch (e) {
@@ -41,18 +39,17 @@ export function VisitorTracker() {
     const trackCurrentPage = () => {
       if (typeof window === 'undefined') return;
 
-      const currentPath = `${pathname}${window.location.hash || ''}`;
-
-      // 1. DO NOT LOG Admin Panel visits (e.g. /admin, /admin/settings), BUT DO LOG Login Screen (/admin/login)!
+      // Admin panele yapılan ziyaretleri takip etme (login hariç)
       if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
         return;
       }
 
+      const currentPath = `${pathname}${window.location.hash || ''}`;
       if (lastTrackedPath.current === currentPath) return;
       lastTrackedPath.current = currentPath;
 
       const sessionId = getOrCreateSessionId();
-      const screenResolution = `${window.screen.width || 0}x${window.screen.height || 0}`;
+      const screenResolution = `${window.screen?.width || 0}x${window.screen?.height || 0}`;
       const gpuRenderer = getGpuRenderer();
       const pageTitle = document.title || 'Muhammed AKAN | Akademik Portfolyo';
 
@@ -66,12 +63,11 @@ export function VisitorTracker() {
       };
 
       try {
-        // Use keepalive: true so Mobile Safari & Android Chrome never abort background network requests
         fetch('/api/visitors/track', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-          keepalive: true,
+          keepalive: true, // Help ensure request finishes on mobile navigation
         }).catch(() => {});
       } catch (e) {}
     };
@@ -83,8 +79,18 @@ export function VisitorTracker() {
     const handleHashChange = () => trackCurrentPage();
     window.addEventListener('hashchange', handleHashChange);
 
+    // Track when restoring from back/forward cache (common on mobile)
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        lastTrackedPath.current = ''; // Reset to ensure it tracks
+        trackCurrentPage();
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [pathname]);
 

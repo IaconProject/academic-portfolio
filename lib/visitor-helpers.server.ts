@@ -158,30 +158,10 @@ export function parseDeviceAndBrowser(userAgent: string, gpuRenderer?: string, s
   const uaLower = userAgent.toLowerCase();
 
   // Determine Device Type
-  const isMobileUa =
-    result.device.type === 'mobile' ||
-    uaLower.includes('iphone') ||
-    uaLower.includes('ipod') ||
-    uaLower.includes('android') ||
-    uaLower.includes('mobile') ||
-    uaLower.includes('samsung') ||
-    uaLower.includes('xiaomi') ||
-    uaLower.includes('redmi') ||
-    uaLower.includes('huawei') ||
-    uaLower.includes('pixel') ||
-    uaLower.includes('opera mini');
-
-  const isTabletUa =
-    result.device.type === 'tablet' ||
-    uaLower.includes('ipad') ||
-    (uaLower.includes('android') && !uaLower.includes('mobile'));
-
-  if (isTabletUa) {
-    deviceType = 'Tablet';
-  } else if (isMobileUa) {
+  if (result.device.type === 'mobile' || uaLower.includes('iphone') || uaLower.includes('android') && uaLower.includes('mobile')) {
     deviceType = 'Mobile';
-  } else {
-    deviceType = 'Desktop';
+  } else if (result.device.type === 'tablet' || uaLower.includes('ipad') || (uaLower.includes('android') && !uaLower.includes('mobile'))) {
+    deviceType = 'Tablet';
   }
 
   // Refine Apple iPhones
