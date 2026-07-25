@@ -58,6 +58,43 @@ export function getLocalSessions(): any[] {
   );
 }
 
+/** Delete a single local session by id or sessionId */
+export function deleteLocalSession(id: string): void {
+  loadLocalSessions();
+  // Try direct key match (sessionId is the key)
+  if (inMemorySessions[id]) {
+    delete inMemorySessions[id];
+  } else {
+    // Search by id field
+    for (const key of Object.keys(inMemorySessions)) {
+      if (inMemorySessions[key]?.id === id) {
+        delete inMemorySessions[key];
+        break;
+      }
+    }
+  }
+  persistLocalSessions();
+}
+
+/** Delete multiple local sessions by their ids */
+export function deleteLocalSessionsByIds(ids: string[]): void {
+  loadLocalSessions();
+  const idSet = new Set(ids);
+  for (const key of Object.keys(inMemorySessions)) {
+    const entry = inMemorySessions[key];
+    if (idSet.has(key) || idSet.has(entry?.id) || idSet.has(entry?.session_id) || idSet.has(entry?.sessionId)) {
+      delete inMemorySessions[key];
+    }
+  }
+  persistLocalSessions();
+}
+
+/** Clear all local sessions */
+export function deleteAllLocalSessions(): void {
+  inMemorySessions = {};
+  persistLocalSessions();
+}
+
 // ── POST Handler ──
 
 export async function POST(request: Request) {
@@ -110,7 +147,7 @@ export async function POST(request: Request) {
               pages: existingPages,
               updated_at: nowIso,
             })
-            .eq('session_id', sessionId);
+            .eq('id', row.id);
 
           if (updateErr) {
             console.warn('[app-sync] Supabase update error:', updateErr);

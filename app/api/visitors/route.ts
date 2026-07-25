@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { VisitorSession } from '@/lib/types';
-import { getLocalSessions } from '@/app/api/app-sync/route';
+import {
+  getLocalSessions,
+  deleteLocalSession,
+  deleteLocalSessionsByIds,
+  deleteAllLocalSessions,
+} from '@/app/api/app-sync/route';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -151,7 +156,9 @@ export async function DELETE(request: Request) {
       console.warn('[visitors DELETE] Body parse error:', e);
     }
 
+    // ── Clear All ──
     if (clearAll === 'true') {
+      // Clear Supabase
       if (isSupabaseConfigured && supabase) {
         try {
           await supabase.from('visitor_sessions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -160,16 +167,34 @@ export async function DELETE(request: Request) {
         }
       }
 
+      // Clear local fallback store
+      try {
+        deleteAllLocalSessions();
+      } catch (e) {
+        console.warn('[visitors DELETE] Local clearAll error:', e);
+      }
+
       return NextResponse.json({ success: true });
     }
 
+    // ── Delete by IDs (batch or single) ──
     const idsToDelete = idsParam ? idsParam.split(',').map((x) => x.trim()).filter(Boolean) : id ? [id] : [];
 
-    if (idsToDelete.length > 0 && isSupabaseConfigured && supabase) {
+    if (idsToDelete.length > 0) {
+      // Delete from Supabase
+      if (isSupabaseConfigured && supabase) {
+        try {
+          await supabase.from('visitor_sessions').delete().in('id', idsToDelete);
+        } catch (e) {
+          console.warn('[visitors DELETE] Supabase delete error:', e);
+        }
+      }
+
+      // Delete from local fallback store
       try {
-        await supabase.from('visitor_sessions').delete().in('id', idsToDelete);
+        deleteLocalSessionsByIds(idsToDelete);
       } catch (e) {
-        console.warn('[visitors DELETE] Supabase delete error:', e);
+        console.warn('[visitors DELETE] Local delete error:', e);
       }
 
       return NextResponse.json({ success: true, count: idsToDelete.length });
