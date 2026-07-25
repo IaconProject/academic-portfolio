@@ -22,6 +22,9 @@ import {
   Navigation,
   Compass,
   Zap,
+  CheckSquare,
+  Square,
+  Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -32,6 +35,9 @@ export const VisitorLogsManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterType, setFilterType] = useState<'all' | 'mobile' | 'active' | 'desktop'>('all');
   const [selectedSession, setSelectedSession] = useState<VisitorSession | null>(null);
+
+  // Multi-select batch deletion state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -57,11 +63,13 @@ export const VisitorLogsManager: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Instant Single Delete (No confirmation alert!)
   const handleDeleteSession = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (!confirm('Bu ziyaretçi oturumunu silmek istediğinize emin misiniz?')) return;
 
     setSessions((prev) => prev.filter((s) => s.id !== id && s.sessionId !== id));
+    setSelectedIds((prev) => prev.filter((item) => item !== id));
+
     if (selectedSession?.id === id || selectedSession?.sessionId === id) {
       setSelectedSession(null);
     }
@@ -72,17 +80,56 @@ export const VisitorLogsManager: React.FC = () => {
     } catch (e) {}
   };
 
-  const handleClearAll = async () => {
-    if (!confirm('TÜM ziyaretçi oturum kayıtlarını silmek istediğinize emin misiniz?')) return;
+  // Instant Batch Delete for selected checkboxes (No confirmation alert!)
+  const handleBatchDelete = async () => {
+    if (selectedIds.length === 0) return;
 
+    const count = selectedIds.length;
+    const deleteSet = new Set(selectedIds);
+
+    setSessions((prev) => prev.filter((s) => !deleteSet.has(s.id)));
+    setSelectedIds([]);
+
+    if (selectedSession && deleteSet.has(selectedSession.id)) {
+      setSelectedSession(null);
+    }
+
+    toast.success(`${count} adet oturum silindi.`);
+
+    try {
+      await fetch('/api/visitors', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(deleteSet) }),
+      });
+    } catch (e) {}
+  };
+
+  const handleClearAll = async () => {
     setSessions([]);
     setStats(null);
     setSelectedSession(null);
+    setSelectedIds([]);
     toast.success('Tüm loglar silindi.');
 
     try {
       await fetch('/api/visitors?clearAll=true', { method: 'DELETE' });
     } catch (e) {}
+  };
+
+  const handleToggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredSessions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredSessions.map((s) => s.id));
+    }
   };
 
   const handleExportCSV = () => {
@@ -168,6 +215,8 @@ export const VisitorLogsManager: React.FC = () => {
     return true;
   });
 
+  const isAllSelected = filteredSessions.length > 0 && selectedIds.length === filteredSessions.length;
+
   return (
     <div className="bg-slate-950/80 p-6 md:p-8 rounded-2xl border border-cyan-500/20 shadow-2xl backdrop-blur-md space-y-6">
       {/* Header */}
@@ -191,6 +240,17 @@ export const VisitorLogsManager: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Batch Delete Action Button */}
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleBatchDelete}
+              className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white text-xs font-mono font-extrabold rounded-xl transition-all shadow-lg shadow-red-600/30 animate-pulse"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>SEÇİLENLERİ SİL ({selectedIds.length})</span>
+            </button>
+          )}
+
           <button
             onClick={fetchLogs}
             disabled={loading}
@@ -199,6 +259,7 @@ export const VisitorLogsManager: React.FC = () => {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
+
           <button
             onClick={handleExportCSV}
             className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-mono font-bold rounded-xl border border-slate-800 transition-colors"
@@ -301,21 +362,47 @@ export const VisitorLogsManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Info & Clear Button */}
-      {sessions.length > 0 && (
-        <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-1">
-          <span>Gösterilen Oturum: <strong className="text-slate-200">{filteredSessions.length}</strong> / {sessions.length}</span>
-          <button
-            onClick={handleClearAll}
-            className="hover:text-red-400 inline-flex items-center gap-1 transition-colors"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Tüm Logları Temizle</span>
-          </button>
+      {/* Selection Control Bar */}
+      {filteredSessions.length > 0 && (
+        <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-1 border-t border-slate-800/60">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSelectAll}
+              className="inline-flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-bold transition-colors"
+            >
+              {isAllSelected ? (
+                <>
+                  <CheckSquare className="w-4 h-4 text-cyan-400" />
+                  <span>TÜM SEÇİMLERİ KALDIR</span>
+                </>
+              ) : (
+                <>
+                  <Square className="w-4 h-4 text-slate-500" />
+                  <span>TÜMÜNÜ SEÇ ({filteredSessions.length})</span>
+                </>
+              )}
+            </button>
+            {selectedIds.length > 0 && (
+              <span className="text-slate-300 font-bold">
+                ({selectedIds.length} oturum seçildi)
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span>Gösterilen: <strong className="text-slate-200">{filteredSessions.length}</strong> / {sessions.length}</span>
+            <button
+              onClick={handleClearAll}
+              className="hover:text-red-400 inline-flex items-center gap-1 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Tüm Logları Temizle</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* Sessions List */}
+      {/* Sessions List Cards */}
       <div className="space-y-3 font-mono">
         {loading ? (
           <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-3">
@@ -330,55 +417,73 @@ export const VisitorLogsManager: React.FC = () => {
           filteredSessions.map((sess) => {
             const pageSteps = Array.isArray(sess.pages) ? sess.pages : [];
             const isLive = new Date(sess.updatedAt || sess.createdAt).getTime() >= fifteenMinsAgo;
+            const isSelected = selectedIds.includes(sess.id);
 
             return (
               <div
                 key={sess.id}
                 onClick={() => setSelectedSession(sess)}
                 className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                  isLive
+                  isSelected
+                    ? 'bg-slate-900 border-cyan-400 ring-1 ring-cyan-400/50 shadow-lg shadow-cyan-500/10'
+                    : isLive
                     ? 'bg-slate-900/90 border-emerald-500/40 shadow-lg shadow-emerald-500/5 hover:border-emerald-400'
                     : 'bg-slate-950/60 border-slate-800/80 hover:border-cyan-500/30'
                 }`}
               >
-                {/* Left Info Column */}
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-slate-100 text-sm">{sess.ip}</span>
-                    {isLive && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-950 text-emerald-400 px-2 py-0.5 border border-emerald-500/30 rounded">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                        CANLI AKTİF
-                      </span>
+                {/* Left Selection Checkbox & Info Column */}
+                <div className="flex items-start gap-3 min-w-0 flex-1">
+                  {/* Checkbox */}
+                  <button
+                    onClick={(e) => handleToggleSelect(sess.id, e)}
+                    className="pt-0.5 text-slate-500 hover:text-cyan-400 transition-colors shrink-0"
+                    title="Seç"
+                  >
+                    {isSelected ? (
+                      <CheckSquare className="w-5 h-5 text-cyan-400 fill-cyan-950" />
+                    ) : (
+                      <Square className="w-5 h-5 text-slate-600 hover:text-slate-400" />
                     )}
-                    <span className="text-[10px] font-bold bg-cyan-950 text-cyan-300 px-2 py-0.5 border border-cyan-500/30 rounded">
-                      📍 {sess.city}, {sess.countryCode}
-                    </span>
-                    <span className="text-[10px] font-bold bg-slate-900 text-slate-300 px-2 py-0.5 border border-slate-800 rounded">
-                      ⚡ {sess.isp}
-                    </span>
-                  </div>
+                  </button>
 
-                  {/* Device & OS */}
-                  <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
-                    <span className="text-amber-400 font-semibold">📱 {sess.deviceBrand} ({sess.deviceModel})</span>
-                    <span>•</span>
-                    <span className="text-cyan-300 font-semibold">💻 {sess.osName} {sess.osVersion} / {sess.browserName}</span>
-                  </div>
-
-                  {/* Navigation Steps Preview */}
-                  <div className="flex items-center gap-2 text-xs text-slate-300 pt-1">
-                    <Route className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                    <span className="font-bold text-cyan-400">{pageSteps.length} Sayfa Gezindi:</span>
-                    <div className="flex items-center gap-1.5 overflow-hidden text-[11px] text-slate-400">
-                      {pageSteps.slice(0, 3).map((step, idx) => (
-                        <span key={idx} className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">
-                          {step.path}
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-slate-100 text-sm">{sess.ip}</span>
+                      {isLive && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-950 text-emerald-400 px-2 py-0.5 border border-emerald-500/30 rounded">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          CANLI AKTİF
                         </span>
-                      ))}
-                      {pageSteps.length > 3 && (
-                        <span className="text-cyan-400 font-bold">+{pageSteps.length - 3} daha</span>
                       )}
+                      <span className="text-[10px] font-bold bg-cyan-950 text-cyan-300 px-2 py-0.5 border border-cyan-500/30 rounded">
+                        📍 {sess.city}, {sess.countryCode}
+                      </span>
+                      <span className="text-[10px] font-bold bg-slate-900 text-slate-300 px-2 py-0.5 border border-slate-800 rounded">
+                        ⚡ {sess.isp}
+                      </span>
+                    </div>
+
+                    {/* Device & OS */}
+                    <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                      <span className="text-amber-400 font-semibold">📱 {sess.deviceBrand} ({sess.deviceModel})</span>
+                      <span>•</span>
+                      <span className="text-cyan-300 font-semibold">💻 {sess.osName} {sess.osVersion} / {sess.browserName}</span>
+                    </div>
+
+                    {/* Navigation Steps Preview */}
+                    <div className="flex items-center gap-2 text-xs text-slate-300 pt-1">
+                      <Route className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="font-bold text-cyan-400">{pageSteps.length} Sayfa Gezindi:</span>
+                      <div className="flex items-center gap-1.5 overflow-hidden text-[11px] text-slate-400">
+                        {pageSteps.slice(0, 3).map((step, idx) => (
+                          <span key={idx} className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">
+                            {step.path}
+                          </span>
+                        ))}
+                        {pageSteps.length > 3 && (
+                          <span className="text-cyan-400 font-bold">+{pageSteps.length - 3} daha</span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -399,12 +504,13 @@ export const VisitorLogsManager: React.FC = () => {
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
 
+                    {/* Instant Delete Button (No confirmation prompt!) */}
                     <button
                       onClick={(e) => handleDeleteSession(sess.id, e)}
                       className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
-                      title="Oturumu Sil"
+                      title="Anında Sil"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4 text-slate-400 hover:text-red-400" />
                     </button>
                   </div>
                 </div>
@@ -519,7 +625,7 @@ export const VisitorLogsManager: React.FC = () => {
                 onClick={() => handleDeleteSession(selectedSession.id)}
                 className="py-2 px-4 bg-red-950/60 hover:bg-red-900 text-red-300 text-xs font-bold rounded-xl border border-red-500/30"
               >
-                Oturumu Sil
+                Anında Sil
               </button>
 
               <button

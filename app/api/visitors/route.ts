@@ -147,8 +147,19 @@ export async function GET() {
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
+    let id = searchParams.get('id');
+    let idsParam = searchParams.get('ids');
     const clearAll = searchParams.get('clearAll');
+
+    // Also support JSON body if passed
+    try {
+      if (request.headers.get('content-type')?.includes('application/json')) {
+        const body = await request.json();
+        if (body.ids && Array.isArray(body.ids)) {
+          idsParam = body.ids.join(',');
+        }
+      }
+    } catch (e) {}
 
     let current = readLocalSessions();
 
@@ -164,17 +175,20 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    if (id) {
-      current = current.filter((s) => s.id !== id && s.sessionId !== id);
+    const idsToDelete = idsParam ? idsParam.split(',').map((x) => x.trim()).filter(Boolean) : id ? [id] : [];
+
+    if (idsToDelete.length > 0) {
+      const deleteSet = new Set(idsToDelete);
+      current = current.filter((s) => !deleteSet.has(s.id) && !deleteSet.has(s.sessionId));
       writeLocalSessions(current);
 
       if (isSupabaseConfigured && supabase) {
         try {
-          await supabase.from('visitor_sessions').delete().or(`id.eq.${id},session_id.eq.${id}`);
+          await supabase.from('visitor_sessions').delete().in('id', idsToDelete);
         } catch (e) {}
       }
 
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, count: idsToDelete.length });
     }
 
     return NextResponse.json({ success: false, error: 'Parametre eksik.' }, { status: 400 });
