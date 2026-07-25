@@ -75,24 +75,20 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
   const handleSendTestEmail = async () => {
     setTesting(true);
     try {
-      const res = await fetch('/api/messages', {
+      const res = await fetch('/api/cms/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'Sistem Testi (Admin)',
-          email: settings.recipientEmail,
-          subject: 'E-posta Bildirim Testi',
-          message: 'Bu bir e-posta bildirim test mesajıdır. CMS ayarlarınız başarıyla çalışmaktadır.',
-        }),
+        body: JSON.stringify({ email: settings.recipientEmail }),
       });
 
-      if (res.ok) {
-        toast.success(`Test bildirimi ${settings.recipientEmail} adresine iletildi!`);
+      const json = await res.json();
+      if (json.success) {
+        toast.success(json.message || `Test maili ${settings.recipientEmail} adresine gönderildi!`);
       } else {
-        toast.error('Test e-postası gönderilemedi.');
+        toast.error(json.error || 'Test e-postası gönderilemedi.');
       }
     } catch (e) {
-      toast.error('Test e-postası gönderilirken hata oluştu.');
+      toast.error('Test e-postası gönderilirken sunucu hatası oluştu.');
     } finally {
       setTesting(false);
     }

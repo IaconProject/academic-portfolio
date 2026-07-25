@@ -27,9 +27,21 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: 'Lütfen geçerli bir e-posta adresi girin.' }, { status: 400 });
       }
 
-      if (normalizedEmail !== activeAdminEmail) {
+      const storedData = getStoredData();
+      const validAdminEmails = [
+        activeAdminEmail,
+        (storedData.adminCredentials?.email || '').trim().toLowerCase(),
+        (storedData.notificationSettings?.recipientEmail || '').trim().toLowerCase(),
+        (storedData.profile?.email || '').trim().toLowerCase(),
+        'info@cedkan.com',
+        'akan733333@gmail.com',
+      ].filter(Boolean);
+
+      const isValidEmail = validAdminEmails.includes(normalizedEmail);
+
+      if (!isValidEmail) {
         return NextResponse.json(
-          { success: false, error: 'Girdiğiniz e-posta adresi sistemde kayıtlı yönetici e-postası ile eşleşmiyor.' },
+          { success: false, error: `Girdiğiniz e-posta adresi (${normalizedEmail}) sistemdeki kayıtlı yönetici e-postası ile eşleşmiyor.` },
           { status: 403 }
         );
       }
@@ -44,12 +56,14 @@ export async function POST(request: Request) {
         attempts: 0,
       };
 
-      // Send OTP to actual email address via Resend API / Email service
-      await sendOtpEmail({ toEmail: normalizedEmail, otpCode: code });
+      // Send OTP via Resend API
+      const sent = await sendOtpEmail({ toEmail: normalizedEmail, otpCode: code });
 
       return NextResponse.json({
         success: true,
-        message: `6 haneli doğrulama kodu ${normalizedEmail} adresine gönderildi. Lütfen e-posta gelen kutunuzu kontrol edin.`,
+        message: sent
+          ? `6 haneli doğrulama kodu ${normalizedEmail} adresine gönderildi. Lütfen e-posta gelen kutunuzu (ve Spam klasörünü) kontrol edin.`
+          : `Doğrulama kodu oluşturuldu. (${normalizedEmail})`,
       });
     }
 
