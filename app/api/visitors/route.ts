@@ -1,13 +1,46 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { VisitorSession } from '@/lib/types';
+import { getLocalSessions } from '@/app/api/app-sync/route';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+/**
+ * Map a raw session row (from Supabase or local store) to the VisitorSession shape
+ * used by the admin panel. Handles both snake_case (DB) and camelCase (local) keys.
+ */
+function mapSession(row: any): VisitorSession {
+  return {
+    id: row.id,
+    sessionId: row.session_id || row.sessionId || '',
+    ip: row.ip || '',
+    country: row.country || 'Türkiye',
+    countryCode: row.country_code || row.countryCode || 'TR',
+    city: row.city || 'Bilinmiyor',
+    region: row.region || 'Bilinmiyor',
+    isp: row.isp || 'Bilinmeyen Operatör',
+    isMobileNetwork: row.is_mobile_network ?? row.isMobileNetwork ?? false,
+    deviceBrand: row.device_brand || row.deviceBrand || 'Bilinmiyor',
+    deviceModel: row.device_model || row.deviceModel || 'Bilinmiyor',
+    deviceType: row.device_type || row.deviceType || 'Desktop',
+    osName: row.os_name || row.osName || 'Bilinmiyor',
+    osVersion: row.os_version || row.osVersion || '',
+    browserName: row.browser_name || row.browserName || 'Bilinmiyor',
+    browserVersion: row.browser_version || row.browserVersion || '',
+    userAgent: row.user_agent || row.userAgent || '',
+    lat: row.lat || 0,
+    lon: row.lon || 0,
+    pages: Array.isArray(row.pages) ? row.pages : [],
+    createdAt: row.created_at || row.createdAt || '',
+    updatedAt: row.updated_at || row.updatedAt || '',
+  };
+}
+
 export async function GET() {
   let sessions: VisitorSession[] = [];
 
+  // ── Try Supabase first ──
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
@@ -16,36 +49,25 @@ export async function GET() {
         .order('updated_at', { ascending: false })
         .limit(1000);
 
-      if (!error && data) {
-        sessions = data.map((row: any) => ({
-          id: row.id,
-          sessionId: row.session_id,
-          ip: row.ip,
-          country: row.country || 'Türkiye',
-          countryCode: row.country_code || 'TR',
-          city: row.city || 'Bilinmiyor',
-          region: row.region || 'Bilinmiyor',
-          isp: row.isp || 'Bilinmeyen Operatör',
-          isMobileNetwork: row.is_mobile_network ?? false,
-          deviceBrand: row.device_brand || 'Bilinmiyor',
-          deviceModel: row.device_model || 'Bilinmiyor',
-          deviceType: row.device_type || 'Desktop',
-          osName: row.os_name || 'Bilinmiyor',
-          osVersion: row.os_version || '',
-          browserName: row.browser_name || 'Bilinmiyor',
-          browserVersion: row.browser_version || '',
-          userAgent: row.user_agent || '',
-          lat: row.lat || 0,
-          lon: row.lon || 0,
-          pages: Array.isArray(row.pages) ? row.pages : [],
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-        }));
-      } else {
-        console.error('Supabase GET visitor_sessions error:', error);
+      if (!error && data && data.length > 0) {
+        sessions = data.map(mapSession);
+      } else if (error) {
+        console.error('[visitors GET] Supabase error:', error);
       }
     } catch (e) {
-      console.error('Supabase GET visitor_sessions catch error:', e);
+      console.error('[visitors GET] Supabase catch error:', e);
+    }
+  }
+
+  // ── Local fallback: read from in-memory/tmp store if Supabase returned nothing ──
+  if (sessions.length === 0) {
+    try {
+      const localData = getLocalSessions();
+      if (localData && localData.length > 0) {
+        sessions = localData.map(mapSession);
+      }
+    } catch (e) {
+      console.warn('[visitors GET] Local fallback read error:', e);
     }
   }
 
@@ -125,13 +147,17 @@ export async function DELETE(request: Request) {
           idsParam = body.ids.join(',');
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('[visitors DELETE] Body parse error:', e);
+    }
 
     if (clearAll === 'true') {
       if (isSupabaseConfigured && supabase) {
         try {
           await supabase.from('visitor_sessions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        } catch (e) {}
+        } catch (e) {
+          console.warn('[visitors DELETE] Supabase clearAll error:', e);
+        }
       }
 
       return NextResponse.json({ success: true });
@@ -142,7 +168,9 @@ export async function DELETE(request: Request) {
     if (idsToDelete.length > 0 && isSupabaseConfigured && supabase) {
       try {
         await supabase.from('visitor_sessions').delete().in('id', idsToDelete);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[visitors DELETE] Supabase delete error:', e);
+      }
 
       return NextResponse.json({ success: true, count: idsToDelete.length });
     }

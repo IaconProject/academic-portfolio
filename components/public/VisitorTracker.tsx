@@ -31,6 +31,50 @@ function getGpuRenderer(): string {
   return '';
 }
 
+/**
+ * Send tracking payload with retry logic.
+ * Falls back to navigator.sendBeacon if fetch fails (useful on mobile page unload).
+ */
+async function sendTrackingData(payload: Record<string, unknown>, retries = 2): Promise<void> {
+  const url = '/api/app-sync';
+  const bodyStr = JSON.stringify(payload);
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: bodyStr,
+        keepalive: true,
+      });
+
+      if (res.ok) return; // Success
+
+      // If server error (5xx), retry after a brief delay
+      if (res.status >= 500 && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+        continue;
+      }
+
+      return; // Client error (4xx) — don't retry
+    } catch (e) {
+      // Network failure — try sendBeacon as last resort on final attempt
+      if (attempt === retries) {
+        try {
+          if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+            navigator.sendBeacon(url, new Blob([bodyStr], { type: 'application/json' }));
+          }
+        } catch (beaconErr) {
+          // Silently fail — tracking should never break the user experience
+        }
+        return;
+      }
+      // Wait before retry
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    }
+  }
+}
+
 export function VisitorTracker() {
   const pathname = usePathname();
   const lastTrackedPath = useRef<string>('');
@@ -62,14 +106,7 @@ export function VisitorTracker() {
         referrer: document.referrer || '',
       };
 
-      try {
-        fetch('/api/app-sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          keepalive: true, // Help ensure request finishes on mobile navigation
-        }).catch(() => {});
-      } catch (e) {}
+      sendTrackingData(payload);
     };
 
     // Track on route mount

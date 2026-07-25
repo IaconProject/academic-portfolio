@@ -4,27 +4,16 @@ import React, { useEffect, useState } from 'react';
 import { VisitorSession } from '@/lib/types';
 import {
   Activity,
-  Users,
-  Smartphone,
-  Globe2,
   RefreshCw,
   Search,
   Download,
   Trash2,
-  MapPin,
-  Wifi,
-  Cpu,
-  Monitor,
-  Calendar,
-  Clock,
   ChevronRight,
   Route,
-  Navigation,
   Compass,
   Zap,
   CheckSquare,
   Square,
-  Check,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 

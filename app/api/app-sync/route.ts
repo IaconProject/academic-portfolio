@@ -2,15 +2,69 @@ import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getClientIp, lookupGeo, parseDeviceAndBrowser } from '@/lib/visitor-helpers.server';
 import { VisitorSession, PageNavStep } from '@/lib/types';
+import fs from 'fs';
+import path from 'path';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+// ── Local Fallback Store (In-Memory + /tmp persistence) ──
+const TMP_SESSIONS_PATH = path.join('/tmp', 'academic_portfolio_visitor_sessions_v2.json');
+let inMemorySessions: Record<string, any> = {};
+let localStoreLoaded = false;
+
+function loadLocalSessions(): void {
+  if (localStoreLoaded) return;
+  try {
+    if (fs.existsSync(TMP_SESSIONS_PATH)) {
+      const content = fs.readFileSync(TMP_SESSIONS_PATH, 'utf-8');
+      if (content) {
+        const parsed = JSON.parse(content);
+        if (parsed && typeof parsed === 'object') {
+          inMemorySessions = parsed;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[app-sync] Failed to load local sessions:', e);
+  }
+  localStoreLoaded = true;
+}
+
+function persistLocalSessions(): void {
+  try {
+    // Keep max 500 sessions to avoid unbounded growth
+    const keys = Object.keys(inMemorySessions);
+    if (keys.length > 500) {
+      const sorted = keys
+        .map((k) => ({ key: k, updatedAt: inMemorySessions[k]?.updated_at || '' }))
+        .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+      const removeCount = keys.length - 500;
+      for (let i = 0; i < removeCount; i++) {
+        delete inMemorySessions[sorted[i].key];
+      }
+    }
+    fs.writeFileSync(TMP_SESSIONS_PATH, JSON.stringify(inMemorySessions), 'utf-8');
+  } catch (e) {
+    console.warn('[app-sync] Failed to persist local sessions:', e);
+  }
+}
+
+/** Exported for the visitors GET API to read local fallback data */
+export function getLocalSessions(): any[] {
+  loadLocalSessions();
+  return Object.values(inMemorySessions).sort(
+    (a: any, b: any) => (b.updated_at || '').localeCompare(a.updated_at || '')
+  );
+}
+
+// ── POST Handler ──
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const sessionId = (body.sessionId || '').trim();
-    const path = (body.path || '/').trim();
+    const reqPath = (body.path || '/').trim();
     const title = (body.title || 'Portfolyo').trim();
     const screenResolution = (body.screenResolution || '').trim();
     const gpuRenderer = (body.gpuRenderer || '').trim();
@@ -22,78 +76,167 @@ export async function POST(request: Request) {
     const ip = getClientIp(request);
     const userAgent = request.headers.get('user-agent') || '';
     const nowIso = new Date().toISOString();
-    const newPageStep: PageNavStep = { path, title, timestamp: nowIso };
+    const newPageStep: PageNavStep = { path: reqPath, title, timestamp: nowIso };
 
-    if (!isSupabaseConfigured || !supabase) {
-      return NextResponse.json({ success: false, error: 'Supabase devredışı.' }, { status: 500 });
+    // ── Supabase Active Path ──
+    if (isSupabaseConfigured && supabase) {
+      try {
+        // 1. Query Supabase directly for existing session
+        const { data: existingRows, error: selectErr } = await supabase
+          .from('visitor_sessions')
+          .select('*')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (!selectErr && existingRows && existingRows.length > 0) {
+          const row = existingRows[0];
+          const existingPages = Array.isArray(row.pages) ? [...row.pages] : [];
+
+          // Avoid duplicate consecutive page logs if under 2 seconds
+          const lastStep = existingPages[existingPages.length - 1];
+          const isDuplicate = lastStep && lastStep.path === reqPath && (Date.now() - new Date(lastStep.timestamp).getTime() < 2000);
+
+          if (!isDuplicate) {
+            if (existingPages.length >= 100) {
+              existingPages.shift(); // FIFO trim if capped at 100
+            }
+            existingPages.push(newPageStep);
+          }
+
+          const { error: updateErr } = await supabase
+            .from('visitor_sessions')
+            .update({
+              pages: existingPages,
+              updated_at: nowIso,
+            })
+            .eq('session_id', sessionId);
+
+          if (updateErr) {
+            console.warn('[app-sync] Supabase update error:', updateErr);
+          }
+
+          return NextResponse.json({ success: true, isNewSession: false });
+        }
+
+        // 2. New Session -> Full Instant Edge Geo Lookup & Hardware Parsing
+        const geo = await lookupGeo(ip, request);
+        const device = parseDeviceAndBrowser(userAgent, gpuRenderer, screenResolution);
+
+        const newSessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+        const { error: insertErr } = await supabase.from('visitor_sessions').insert({
+          id: newSessionId,
+          session_id: sessionId,
+          ip: ip,
+          country: geo.country,
+          country_code: geo.countryCode,
+          city: geo.city,
+          region: geo.region,
+          isp: geo.isp,
+          is_mobile_network: geo.isMobileNetwork,
+          device_brand: device.deviceBrand,
+          device_model: device.deviceModel,
+          device_type: device.deviceType,
+          os_name: device.osName,
+          os_version: device.osVersion,
+          browser_name: device.browserName,
+          browser_version: device.browserVersion,
+          user_agent: userAgent,
+          lat: geo.lat,
+          lon: geo.lon,
+          pages: [newPageStep],
+          created_at: nowIso,
+          updated_at: nowIso,
+        });
+
+        if (insertErr) {
+          console.warn('[app-sync] Supabase insert error:', insertErr);
+        }
+
+        return NextResponse.json({ success: true, isNewSession: true });
+      } catch (supabaseErr) {
+        console.warn('[app-sync] Supabase operation failed, falling through to local store:', supabaseErr);
+        // Fall through to local store below
+      }
     }
 
-    // 1. Query Supabase directly for existing session
-    const { data: existingRows, error: selectErr } = await supabase
-      .from('visitor_sessions')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // ── Local Fallback Path (Supabase disabled or failed) ──
+    loadLocalSessions();
 
-    if (!selectErr && existingRows && existingRows.length > 0) {
-      const row = existingRows[0];
-      const existingPages = Array.isArray(row.pages) ? [...row.pages] : [];
+    // Check for existing local session
+    const existingLocal = inMemorySessions[sessionId];
+
+    if (existingLocal) {
+      const existingPages: PageNavStep[] = Array.isArray(existingLocal.pages) ? [...existingLocal.pages] : [];
 
       // Avoid duplicate consecutive page logs if under 2 seconds
       const lastStep = existingPages[existingPages.length - 1];
-      const isDuplicate = lastStep && lastStep.path === path && (Date.now() - new Date(lastStep.timestamp).getTime() < 2000);
+      const isDuplicate = lastStep && lastStep.path === reqPath && (Date.now() - new Date(lastStep.timestamp).getTime() < 2000);
 
       if (!isDuplicate) {
         if (existingPages.length >= 100) {
-          existingPages.shift(); // FIFO trim if capped at 100
+          existingPages.shift();
         }
         existingPages.push(newPageStep);
       }
 
-      await supabase
-        .from('visitor_sessions')
-        .update({
-          pages: existingPages,
-          updated_at: nowIso,
-        })
-        .eq('session_id', sessionId);
+      existingLocal.pages = existingPages;
+      existingLocal.updated_at = nowIso;
+      existingLocal.updatedAt = nowIso;
+      inMemorySessions[sessionId] = existingLocal;
+      persistLocalSessions();
 
-      return NextResponse.json({ success: true, isNewSession: false });
+      return NextResponse.json({ success: true, isNewSession: false, store: 'local' });
     }
 
-    // 2. New Session -> Full Instant Edge Geo Lookup & Hardware Parsing
+    // New local session
     const geo = await lookupGeo(ip, request);
     const device = parseDeviceAndBrowser(userAgent, gpuRenderer, screenResolution);
+    const newId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-    const newSessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-    await supabase.from('visitor_sessions').insert({
-      id: newSessionId,
+    const newSession = {
+      id: newId,
       session_id: sessionId,
+      sessionId: sessionId,
       ip: ip,
       country: geo.country,
       country_code: geo.countryCode,
+      countryCode: geo.countryCode,
       city: geo.city,
       region: geo.region,
       isp: geo.isp,
       is_mobile_network: geo.isMobileNetwork,
+      isMobileNetwork: geo.isMobileNetwork,
       device_brand: device.deviceBrand,
+      deviceBrand: device.deviceBrand,
       device_model: device.deviceModel,
+      deviceModel: device.deviceModel,
       device_type: device.deviceType,
+      deviceType: device.deviceType,
       os_name: device.osName,
+      osName: device.osName,
       os_version: device.osVersion,
+      osVersion: device.osVersion,
       browser_name: device.browserName,
+      browserName: device.browserName,
       browser_version: device.browserVersion,
+      browserVersion: device.browserVersion,
       user_agent: userAgent,
+      userAgent: userAgent,
       lat: geo.lat,
       lon: geo.lon,
       pages: [newPageStep],
       created_at: nowIso,
+      createdAt: nowIso,
       updated_at: nowIso,
-    });
+      updatedAt: nowIso,
+    };
 
-    return NextResponse.json({ success: true, isNewSession: true });
+    inMemorySessions[sessionId] = newSession;
+    persistLocalSessions();
+
+    return NextResponse.json({ success: true, isNewSession: true, store: 'local' });
   } catch (err) {
     console.error('POST /api/app-sync error:', err);
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
