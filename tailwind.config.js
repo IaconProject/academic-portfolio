@@ -8,12 +8,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'academic-navy': '#041627',
-        'academic-blue': '#1a2b3c',
-        'academic-bg': '#f8f9ff',
+        'academic-navy': '#1c1917',
+        'academic-blue': '#292524',
+        'academic-bg': '#f7f5f0',
         'academic-surface': '#ffffff',
-        'academic-slate': '#505f76',
-        'academic-border': '#e2e8f0',
+        'academic-slate': '#57534e',
+        'academic-border': '#e7e3d8',
       },
       fontFamily: {
         serif: ['var(--font-serif)', 'Lora', 'serif'],

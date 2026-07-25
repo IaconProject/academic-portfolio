@@ -21,14 +21,14 @@ export const AcademicCard: React.FC<AcademicCardProps> = ({
   return (
     <section
       id={id}
-      className={`bg-white rounded-xl shadow-sm border border-slate-200/80 p-6 md:p-8 mb-8 transition-all duration-200 hover:shadow-md ${className}`}
+      className={`bg-white/95 rounded-2xl shadow-sm border border-[#e7e3d8] p-6 md:p-8 mb-8 transition-all duration-200 hover:shadow-md ${className}`}
     >
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-6">
-        <div className="flex items-center gap-3 text-academic-navy">
-          <div className="p-2 bg-slate-100 rounded-lg text-academic-navy">
+      <div className="flex items-center justify-between border-b border-stone-100 pb-4 mb-6">
+        <div className="flex items-center gap-3 text-stone-900">
+          <div className="p-2 bg-stone-100 rounded-xl text-stone-800">
             <Icon className="w-5 h-5" />
           </div>
-          <h2 className="font-serif text-xl md:text-2xl font-bold tracking-tight">
+          <h2 className="font-serif text-xl md:text-2xl font-bold tracking-tight text-stone-900">
             {title}
           </h2>
         </div>
