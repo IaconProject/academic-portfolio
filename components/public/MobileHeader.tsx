@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Menu, X, User, School, BookOpen, GitBranch, Mic, ListOrdered, Users, Mail } from 'lucide-react';
+import { Menu, User, School, BookOpen, GitBranch, Mic, ListOrdered, Users, Mail } from 'lucide-react';
 import { Profile } from '@/lib/types';
 
 interface MobileHeaderProps {
@@ -28,7 +28,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
 
   return (
     <>
-      {/* Floating Minimal Burger Button only (No Full Bar, No PORTFOLYO text) */}
+      {/* Floating Minimal Burger Button on top-left */}
       <button
         onClick={toggleMenu}
         aria-label="Menüyü Aç"
@@ -45,24 +45,13 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
         />
       )}
 
-      {/* Sliding Mobile Navigation Drawer */}
+      {/* Sliding Mobile Navigation Drawer (Minimal Modern Design) */}
       <nav
-        className={`lg:hidden fixed top-0 left-0 h-full w-72 bg-white z-[70] shadow-2xl p-6 overflow-y-auto transform transition-transform duration-300 ease-in-out ${
+        className={`lg:hidden fixed top-0 left-0 h-full w-72 bg-white z-[70] shadow-2xl p-6 pt-10 overflow-y-auto transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-4">
-          <span className="font-serif font-bold text-xl text-academic-navy">Menü</span>
-          <button
-            onClick={closeMenu}
-            aria-label="Kapat"
-            className="w-9 h-9 flex items-center justify-center text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <ul className="space-y-1.5">
+        <ul className="space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;

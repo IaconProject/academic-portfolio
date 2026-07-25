@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     }
 
     // 2. New Session -> Full Geo Lookup & Hardware Parsing
-    const geo = await lookupGeo(ip);
+    const geo = await lookupGeo(ip, request);
     const device = parseDeviceAndBrowser(userAgent, gpuRenderer, screenResolution);
 
     const newSession: VisitorSession = {

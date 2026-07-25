@@ -71,7 +71,7 @@ export function formatTurkishCarrier(ispName: string, orgName: string = ''): { i
   return { isp: ispName || 'Bilinmeyen Servis Sağlayıcı', isMobileNetwork: isMobile };
 }
 
-export async function lookupGeo(ip: string): Promise<GeoLocationResult> {
+export async function lookupGeo(ip: string, request?: Request): Promise<GeoLocationResult> {
   const defaultGeo: GeoLocationResult = {
     country: 'Türkiye',
     countryCode: 'TR',
@@ -83,10 +83,52 @@ export async function lookupGeo(ip: string): Promise<GeoLocationResult> {
     lon: 30.5206,
   };
 
-  // Primary: ipapi.co (HTTPS)
+  // 1. Primary: Instant Vercel & Cloudflare Edge Headers (0ms latency, 100% reliable on Vercel)
+  if (request) {
+    const headers = request.headers;
+    const rawCity = headers.get('x-vercel-ip-city') || headers.get('cf-ipcity');
+    const countryCode = headers.get('x-vercel-ip-country') || headers.get('cf-ipcountry') || 'TR';
+    const region = headers.get('x-vercel-ip-country-region') || headers.get('cf-region') || '';
+    const latStr = headers.get('x-vercel-ip-latitude') || headers.get('cf-iplatitude');
+    const lonStr = headers.get('x-vercel-ip-longitude') || headers.get('cf-iplongitude');
+    const userAgent = headers.get('user-agent') || '';
+
+    if (rawCity) {
+      let city = rawCity;
+      try {
+        city = decodeURIComponent(rawCity);
+      } catch (e) {}
+
+      const lat = latStr ? parseFloat(latStr) : 39.7767;
+      const lon = lonStr ? parseFloat(lonStr) : 30.5206;
+
+      const uaLower = userAgent.toLowerCase();
+      const isMobile = Boolean(
+        uaLower.includes('iphone') ||
+        uaLower.includes('android') ||
+        uaLower.includes('mobile') ||
+        uaLower.includes('cellular')
+      );
+
+      const carrierInfo = formatTurkishCarrier(isMobile ? 'Mobil GSM Ağ (4G/5G)' : 'Sabit Telekom İnternet');
+
+      return {
+        country: countryCode === 'TR' ? 'Türkiye' : countryCode,
+        countryCode,
+        city: city || 'Bilinmiyor',
+        region: region || 'Türkiye',
+        isp: carrierInfo.isp,
+        isMobileNetwork: isMobile || carrierInfo.isMobileNetwork,
+        lat,
+        lon,
+      };
+    }
+  }
+
+  // 2. Secondary: ipapi.co (HTTPS)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
 
     const res = await fetch(`https://ipapi.co/${ip}/json/`, {
       signal: controller.signal,
@@ -112,10 +154,10 @@ export async function lookupGeo(ip: string): Promise<GeoLocationResult> {
     }
   } catch (e) {}
 
-  // Secondary: ipwho.is (HTTPS)
+  // 3. Tertiary: ipwho.is (HTTPS)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const timeoutId = setTimeout(() => controller.abort(), 1500);
 
     const res = await fetch(`https://ipwho.is/${ip}`, {
       signal: controller.signal,
