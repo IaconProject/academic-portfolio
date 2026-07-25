@@ -14,23 +14,23 @@ export const ReferencesSection: React.FC<ReferencesSectionProps> = ({ references
     <AcademicCard id="referanslar" title="Referanslar" icon={Users}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {references.map((ref, idx) => {
-          const isDark = idx === 0;
+          const isFeatured = idx === 0;
           return (
             <div
               key={ref.id}
               className={`p-5 rounded-xl transition-all duration-150 ${
-                isDark
-                  ? 'bg-academic-navy text-white shadow-md'
-                  : 'bg-white border border-slate-200 text-slate-800 shadow-sm'
+                isFeatured
+                  ? 'bg-[#1c2128] text-stone-100 shadow-md border border-[#2d333b]'
+                  : 'bg-[#f5f2ea]/80 border border-[#e6e2d5] text-[#24211e] shadow-sm hover:bg-[#efece4]'
               }`}
             >
-              <h3 className={`font-serif font-bold text-base md:text-lg ${isDark ? 'text-white' : 'text-academic-navy'}`}>
+              <h3 className={`font-serif font-bold text-base md:text-lg ${isFeatured ? 'text-[#f0ebe1]' : 'text-[#24211e]'}`}>
                 {ref.name}
               </h3>
-              <p className={`text-xs mt-1 font-medium ${isDark ? 'text-slate-300' : 'text-academic-slate'}`}>
+              <p className={`text-xs mt-1 font-medium ${isFeatured ? 'text-[#adbac7]' : 'text-[#57534e]'}`}>
                 {ref.title}
               </p>
-              <div className={`flex items-center gap-1.5 text-xs mt-3 pt-3 border-t ${isDark ? 'border-white/10 text-slate-400' : 'border-slate-100 text-slate-500'}`}>
+              <div className={`flex items-center gap-1.5 text-xs mt-3 pt-3 border-t ${isFeatured ? 'border-[#2d333b] text-[#adbac7]' : 'border-[#ece8dc] text-[#78716c]'}`}>
                 <Building2 className="w-3.5 h-3.5 shrink-0" />
                 <span>{ref.institution}</span>
               </div>

@@ -15,18 +15,18 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
       <div className="space-y-6">
         {projects.map((project, idx) => (
           <React.Fragment key={project.id}>
-            {idx > 0 && <hr className="border-slate-100 my-6" />}
+            {idx > 0 && <hr className="border-[#ece8dc] my-6" />}
             <div className="group">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
-                <h3 className="font-bold text-academic-navy text-base md:text-lg">
+                <h3 className="font-bold text-[#24211e] text-base md:text-lg">
                   {project.title}
                 </h3>
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full w-fit">
-                  <Calendar className="w-3 h-3 text-slate-400" />
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#57534e] bg-[#efece4] px-2.5 py-1 rounded-lg border border-[#ded9cb] w-fit">
+                  <Calendar className="w-3 h-3 text-[#78716c]" />
                   {project.years}
                 </span>
               </div>
-              <p className="text-sm text-slate-600 leading-relaxed mb-3 text-justify font-sans">
+              <p className="text-sm text-[#57534e] leading-relaxed mb-3 text-justify font-sans">
                 {project.description}
               </p>
 
@@ -35,9 +35,9 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
                   {project.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="inline-flex items-center gap-1 text-[11px] font-medium bg-slate-100 text-slate-700 px-2.5 py-1 rounded-md border border-slate-200/60"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold bg-[#efece4] text-[#2c2825] px-2.5 py-1 rounded-lg border border-[#ded9cb] hover:border-[#b0a999] transition-colors"
                     >
-                      <Tag className="w-3 h-3 text-slate-400" />
+                      <Tag className="w-3 h-3 text-[#78716c]" />
                       {tag}
                     </span>
                   ))}

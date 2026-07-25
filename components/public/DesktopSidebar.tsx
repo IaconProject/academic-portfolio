@@ -27,7 +27,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
   const [imgError, setImgError] = useState(false);
 
   return (
-    <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 bg-[#1c2128] text-[#e6e1d6] flex-col z-50 shadow-2xl border-r border-[#2d333b] overflow-hidden">
+    <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 bg-[#1c2128] text-[#e6e1d6] flex-col z-50 shadow-2xl border-r border-[#2d333b] overflow-hidden font-sans">
       {/* Header Profile Section */}
       <div className="p-8 flex flex-col items-center border-b border-[#2d333b] text-center">
         <div
@@ -67,7 +67,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
 
       {/* Navigation List */}
       <nav className="flex-1 overflow-y-auto py-6 px-4">
-        <ul className="space-y-1">
+        <ul className="space-y-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
@@ -75,14 +75,19 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
-                  className={`flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-[#2d333b] text-white font-bold border-l-4 border-amber-500 pl-3 shadow-sm'
-                      : 'text-[#adbac7] hover:bg-[#252b33] hover:text-white'
+                      ? 'bg-[#2d3540] text-white font-semibold shadow-sm border border-[#3c4755]'
+                      : 'text-[#adbac7] hover:bg-[#232932] hover:text-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4 shrink-0 opacity-80" />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3.5">
+                    <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-amber-400' : 'text-[#768390] group-hover:text-[#adbac7]'}`} />
+                    <span>{item.label}</span>
+                  </div>
+                  {isActive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.7)]" />
+                  )}
                 </a>
               </li>
             );
