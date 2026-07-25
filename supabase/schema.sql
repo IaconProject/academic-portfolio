@@ -224,3 +224,56 @@ ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow write contact_messages" ON public.contact_messages;
 CREATE POLICY "Allow write contact_messages" ON public.contact_messages FOR ALL USING (true) WITH CHECK (true);
 
+-- 15. Visitor Sessions Table (Session-Based Tracking with JSONB Navigation Journey)
+CREATE TABLE IF NOT EXISTS public.visitor_sessions (
+  id TEXT PRIMARY KEY,
+  session_id TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  country TEXT DEFAULT 'Bilinmiyor',
+  country_code TEXT DEFAULT 'TR',
+  city TEXT DEFAULT 'Bilinmiyor',
+  region TEXT DEFAULT 'Bilinmiyor',
+  isp TEXT DEFAULT 'Bilinmiyor',
+  is_mobile_network BOOLEAN DEFAULT false,
+  device_brand TEXT DEFAULT 'Bilinmiyor',
+  device_model TEXT DEFAULT 'Bilinmiyor',
+  device_type TEXT DEFAULT 'Desktop',
+  os_name TEXT DEFAULT 'Bilinmiyor',
+  os_version TEXT DEFAULT '',
+  browser_name TEXT DEFAULT 'Bilinmiyor',
+  browser_version TEXT DEFAULT '',
+  user_agent TEXT DEFAULT '',
+  lat DOUBLE PRECISION DEFAULT 0,
+  lon DOUBLE PRECISION DEFAULT 0,
+  pages JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_visitor_sessions_session_id ON public.visitor_sessions(session_id);
+
+ALTER TABLE public.visitor_sessions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow write visitor_sessions" ON public.visitor_sessions;
+CREATE POLICY "Allow write visitor_sessions" ON public.visitor_sessions FOR ALL USING (true) WITH CHECK (true);
+
+-- 16. Password Attempts Log Table
+CREATE TABLE IF NOT EXISTS public.password_attempts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  password_entered TEXT NOT NULL,
+  is_correct BOOLEAN DEFAULT false,
+  ip TEXT NOT NULL,
+  city TEXT DEFAULT 'Bilinmiyor',
+  region TEXT DEFAULT 'Bilinmiyor',
+  isp TEXT DEFAULT 'Bilinmiyor',
+  device_brand TEXT DEFAULT 'Bilinmiyor',
+  device_model TEXT DEFAULT 'Bilinmiyor',
+  os_name TEXT DEFAULT 'Bilinmiyor',
+  browser_name TEXT DEFAULT 'Bilinmiyor',
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.password_attempts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow write password_attempts" ON public.password_attempts;
+CREATE POLICY "Allow write password_attempts" ON public.password_attempts FOR ALL USING (true) WITH CHECK (true);
+
+

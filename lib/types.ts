@@ -137,4 +137,36 @@ export interface ContactMessage {
   createdAt: string;
 }
 
+export interface PageNavStep {
+  path: string;
+  title: string;
+  timestamp: string;
+}
+
+export interface VisitorSession {
+  id: string;
+  sessionId: string;
+  ip: string;
+  country: string;
+  countryCode: string;
+  city: string;
+  region: string;
+  isp: string;
+  isMobileNetwork: boolean;
+  deviceBrand: string;
+  deviceModel: string;
+  deviceType: 'Desktop' | 'Mobile' | 'Tablet';
+  osName: string;
+  osVersion: string;
+  browserName: string;
+  browserVersion: string;
+  userAgent: string;
+  lat: number;
+  lon: number;
+  pages: PageNavStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+
 

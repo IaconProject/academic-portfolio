@@ -1,550 +1,532 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { VisitorLog } from '@/lib/types';
+import React, { useEffect, useState } from 'react';
+import { VisitorSession } from '@/lib/types';
 import {
   Activity,
-  Globe,
+  Users,
   Smartphone,
-  Laptop,
-  Wifi,
-  Search,
+  Globe2,
   RefreshCw,
-  Trash2,
+  Search,
   Download,
-  Info,
+  Trash2,
+  MapPin,
+  Wifi,
+  Cpu,
+  Monitor,
   Calendar,
-  X,
-  Filter,
-  Eye,
-  ShieldAlert,
-  Server,
-  Sparkles,
-  ExternalLink,
+  Clock,
+  ChevronRight,
+  Route,
+  Navigation,
+  Compass,
+  Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export const VisitorLogsManager: React.FC = () => {
-  const [logs, setLogs] = useState<VisitorLog[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [deviceFilter, setDeviceFilter] = useState<'All' | 'Mobile' | 'Desktop' | 'Tablet'>('All');
-  const [selectedLog, setSelectedLog] = useState<VisitorLog | null>(null);
+  const [sessions, setSessions] = useState<VisitorSession[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [filterType, setFilterType] = useState<'all' | 'mobile' | 'active' | 'desktop'>('all');
+  const [selectedSession, setSelectedSession] = useState<VisitorSession | null>(null);
 
   const fetchLogs = async () => {
-    setIsLoading(true);
+    setLoading(true);
     try {
-      const res = await fetch('/api/visitors', { cache: 'no-store' });
+      const res = await fetch('/api/visitors?t=' + Date.now());
       if (res.ok) {
         const data = await res.json();
-        setLogs(data.logs || []);
-      } else {
-        toast.error('Loglar alınamadı.');
+        if (data.sessions) {
+          setSessions(data.sessions);
+          setStats(data.stats);
+        }
       }
     } catch (e) {
-      console.error('Error fetching logs:', e);
-      toast.error('Bağlantı hatası.');
+      toast.error('Ziyaretçi logları çekilemedi.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchLogs();
+    const interval = setInterval(fetchLogs, 20000); // Auto-refresh every 20s
+    return () => clearInterval(interval);
   }, []);
 
-  const handleDeleteLog = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm('Bu log kaydını silmek istediğinize emin misiniz?')) return;
+  const handleDeleteSession = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (!confirm('Bu ziyaretçi oturumunu silmek istediğinize emin misiniz?')) return;
+
+    setSessions((prev) => prev.filter((s) => s.id !== id && s.sessionId !== id));
+    if (selectedSession?.id === id || selectedSession?.sessionId === id) {
+      setSelectedSession(null);
+    }
+    toast.success('Oturum silindi.');
 
     try {
-      const res = await fetch(`/api/visitors?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        setLogs((prev) => prev.filter((l) => l.id !== id));
-        toast.success('Log kaydı silindi.');
-        if (selectedLog?.id === id) setSelectedLog(null);
-      }
-    } catch (err) {
-      toast.error('Silme hatası.');
-    }
+      await fetch(`/api/visitors?id=${id}`, { method: 'DELETE' });
+    } catch (e) {}
   };
 
-  const handleClearAllLogs = async () => {
-    if (!confirm('TÜM ziyaretçi log verilerini kalıcı olarak silmek istediğinize emin misiniz?')) return;
+  const handleClearAll = async () => {
+    if (!confirm('TÜM ziyaretçi oturum kayıtlarını silmek istediğinize emin misiniz?')) return;
+
+    setSessions([]);
+    setStats(null);
+    setSelectedSession(null);
+    toast.success('Tüm loglar silindi.');
 
     try {
-      const res = await fetch('/api/visitors?clearAll=true', { method: 'DELETE' });
-      if (res.ok) {
-        setLogs([]);
-        setSelectedLog(null);
-        toast.success('Tüm loglar temizlendi.');
-      }
-    } catch (err) {
-      toast.error('Temizleme hatası.');
-    }
+      await fetch('/api/visitors?clearAll=true', { method: 'DELETE' });
+    } catch (e) {}
   };
 
   const handleExportCSV = () => {
-    if (logs.length === 0) {
-      toast.error('Dışa aktarılacak log bulunamadı.');
+    if (sessions.length === 0) {
+      toast.error('İndirilecek oturum verisi yok.');
       return;
     }
 
     const headers = [
-      'Tarih/Saat',
+      'Oturum ID',
+      'Tarih',
+      'Son Aktivite',
       'IP Adresi',
       'Ülke',
       'Şehir',
-      'Operatör/ISP',
-      'Mobil Ağ mı?',
-      'Cihaz Türü',
-      'Marka',
-      'Model',
+      'Servis Sağlayıcı (ISP)',
+      'Mobil Ağ',
+      'Cihaz Tipi',
+      'Cihaz Markası',
+      'Cihaz Modeli',
       'İşletim Sistemi',
       'Tarayıcı',
-      'Ekran',
-      'Dil',
-      'Sayfa',
-      'Referrer',
+      'Gezilen Sayfa Sayısı',
+      'Gezinti Yolu',
     ];
 
-    const rows = logs.map((l) => [
-      new Date(l.timestamp).toLocaleString('tr-TR'),
-      l.ipAddress,
-      l.country,
-      l.city,
-      `"${l.isp}"`,
-      l.isMobileNetwork ? 'Evet' : 'Hayır',
-      l.deviceType,
-      `"${l.deviceBrand}"`,
-      `"${l.deviceModel}"`,
-      `"${l.osName} ${l.osVersion}"`,
-      `"${l.browserName} ${l.browserVersion}"`,
-      l.screenResolution,
-      l.language,
-      l.pagePath,
-      `"${l.referrer}"`,
-    ]);
+    const rows = sessions.map((s) => {
+      const journeyStr = (s.pages || []).map((p) => `${p.path} (${new Date(p.timestamp).toLocaleTimeString()})`).join(' -> ');
+      return [
+        s.id,
+        new Date(s.createdAt).toLocaleString('tr-TR'),
+        new Date(s.updatedAt).toLocaleString('tr-TR'),
+        s.ip,
+        `"${s.country}"`,
+        `"${s.city}"`,
+        `"${s.isp.replace(/"/g, '""')}"`,
+        s.isMobileNetwork ? 'Evet' : 'Hayır',
+        s.deviceType,
+        `"${s.deviceBrand}"`,
+        `"${s.deviceModel}"`,
+        `"${s.osName} ${s.osVersion}"`,
+        `"${s.browserName} ${s.browserVersion}"`,
+        (s.pages || []).length,
+        `"${journeyStr.replace(/"/g, '""')}"`,
+      ];
+    });
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `ziyaretci_loglari_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `ziyaretci_oturum_loglari_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
-    document.body.removeChild(link);
-    toast.success('CSV log raporu indirildi.');
+    toast.success('Oturum logları CSV olarak indirildi.');
   };
 
-  // Filtered Logs
-  const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      const matchesDevice = deviceFilter === 'All' || log.deviceType === deviceFilter;
+  // Filtered list
+  const fifteenMinsAgo = Date.now() - 15 * 60 * 1000;
+  const filteredSessions = sessions.filter((s) => {
+    if (filterType === 'mobile' && !s.isMobileNetwork && s.deviceType !== 'Mobile') return false;
+    if (filterType === 'desktop' && s.deviceType !== 'Desktop') return false;
+    if (filterType === 'active') {
+      const updated = new Date(s.updatedAt || s.createdAt).getTime();
+      if (updated < fifteenMinsAgo) return false;
+    }
 
-      const term = searchTerm.toLowerCase();
-      const matchesSearch =
-        !searchTerm ||
-        log.ipAddress.toLowerCase().includes(term) ||
-        log.city.toLowerCase().includes(term) ||
-        log.country.toLowerCase().includes(term) ||
-        log.isp.toLowerCase().includes(term) ||
-        log.deviceBrand.toLowerCase().includes(term) ||
-        log.deviceModel.toLowerCase().includes(term) ||
-        log.browserName.toLowerCase().includes(term) ||
-        log.osName.toLowerCase().includes(term) ||
-        log.pagePath.toLowerCase().includes(term);
-
-      return matchesDevice && matchesSearch;
-    });
-  }, [logs, searchTerm, deviceFilter]);
-
-  // Aggregate Analytics Metrics
-  const stats = useMemo(() => {
-    const totalVisits = logs.length;
-    const uniqueIPs = new Set(logs.map((l) => l.ipAddress)).size;
-
-    // Top Operator / ISP
-    const ispCounts: Record<string, number> = {};
-    const brandCounts: Record<string, number> = {};
-    const cityCounts: Record<string, number> = {};
-
-    logs.forEach((l) => {
-      if (l.isp) ispCounts[l.isp] = (ispCounts[l.isp] || 0) + 1;
-      if (l.deviceBrand) brandCounts[l.deviceBrand] = (brandCounts[l.deviceBrand] || 0) + 1;
-      if (l.city) cityCounts[l.city] = (cityCounts[l.city] || 0) + 1;
-    });
-
-    const topIsp = Object.entries(ispCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Bilinmiyor';
-    const topBrand = Object.entries(brandCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Bilinmiyor';
-    const topCity = Object.entries(cityCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Bilinmiyor';
-    const mobileRatio = totalVisits > 0 ? Math.round((logs.filter((l) => l.deviceType === 'Mobile').length / totalVisits) * 100) : 0;
-
-    return { totalVisits, uniqueIPs, topIsp, topBrand, topCity, mobileRatio };
-  }, [logs]);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const journeyMatch = (s.pages || []).some((p) => p.path.toLowerCase().includes(q) || p.title.toLowerCase().includes(q));
+      return (
+        s.ip.toLowerCase().includes(q) ||
+        s.city.toLowerCase().includes(q) ||
+        s.country.toLowerCase().includes(q) ||
+        s.isp.toLowerCase().includes(q) ||
+        s.deviceBrand.toLowerCase().includes(q) ||
+        s.deviceModel.toLowerCase().includes(q) ||
+        s.osName.toLowerCase().includes(q) ||
+        s.browserName.toLowerCase().includes(q) ||
+        journeyMatch
+      );
+    }
+    return true;
+  });
 
   return (
-    <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-slate-900/90 border border-cyan-500/30 p-6 rounded-2xl shadow-2xl backdrop-blur-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+    <div className="bg-slate-950/80 p-6 md:p-8 rounded-2xl border border-cyan-500/20 shadow-2xl backdrop-blur-md space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <div className="flex items-center gap-2.5 text-cyan-400 font-mono text-xs uppercase tracking-widest font-bold mb-1">
-            <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
-            <span>ZİYARETÇİ LOGLARI & ANALİTİK MERKEZİ // AUDIT_TRAIL_NODE</span>
+          <div className="flex items-center gap-3">
+            <Activity className="w-6 h-6 text-cyan-400" />
+            <h2 className="text-xl font-mono font-bold text-slate-100 uppercase tracking-wider">
+              Ziyaretçi Takip & Cihaz Analitiği
+            </h2>
+            {stats?.activeNow > 0 && (
+              <span className="px-2.5 py-0.5 bg-emerald-500 text-slate-950 text-xs font-mono font-extrabold rounded-full animate-pulse shadow-lg shadow-emerald-500/20 flex items-center gap-1">
+                <Zap className="w-3 h-3 fill-slate-950" />
+                <span>{stats.activeNow} CANLI</span>
+              </span>
+            )}
           </div>
-          <h2 className="text-xl md:text-2xl font-black font-sans text-white tracking-tight">
-            Canlı Ziyaretçi Trafigi ve Cihaz Detayları
-          </h2>
           <p className="text-xs font-mono text-slate-400 mt-1">
-            Sitenizi ziyaret eden kullanıcıların konum, IP, telefon markası/modeli, operatör ve tarayıcı verilerini anlık izleyin ve yönetin.
+            Oturum bazlı ziyaretçi akışı, kronolojik sayfa gezinti haritası ve cihaz donanım analitiği.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 self-stretch md:self-auto">
+        <div className="flex items-center gap-2">
           <button
-            type="button"
             onClick={fetchLogs}
-            disabled={isLoading}
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 font-mono text-xs font-bold rounded-xl border border-cyan-500/30 transition-all shadow-md disabled:opacity-50"
+            disabled={loading}
+            className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition-colors"
+            title="Yenile"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Yenile</span>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
           </button>
-
           <button
-            type="button"
             onClick={handleExportCSV}
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-cyan-950/60 hover:bg-cyan-900/80 text-cyan-300 font-mono text-xs font-bold rounded-xl border border-cyan-500/40 transition-all shadow-md"
+            className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-mono font-bold rounded-xl border border-slate-800 transition-colors"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>CSV İndir</span>
+            <Download className="w-4 h-4 text-cyan-400" />
+            <span>CSV İNDİR</span>
           </button>
+        </div>
+      </div>
 
+      {/* Analytics Summary Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 font-mono">
+        <div className="p-3.5 bg-slate-900/80 border border-cyan-500/30 rounded-xl space-y-1">
+          <span className="text-[10px] text-slate-400 uppercase font-bold">GEZİLEN SAYFA</span>
+          <div className="text-xl font-bold text-cyan-400">{stats?.totalVisits || 0}</div>
+        </div>
+
+        <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
+          <span className="text-[10px] text-slate-400 uppercase font-bold">TEKİL ZİYARETÇİ</span>
+          <div className="text-xl font-bold text-slate-100">{stats?.uniqueVisitors || 0}</div>
+        </div>
+
+        <div className="p-3.5 bg-slate-900/80 border border-emerald-500/30 rounded-xl space-y-1">
+          <span className="text-[10px] text-emerald-400 uppercase font-bold">ŞU AN CANLI</span>
+          <div className="text-xl font-bold text-emerald-400 flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>{stats?.activeNow || 0}</span>
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
+          <span className="text-[10px] text-slate-400 uppercase font-bold">EN ÇOK ŞEHİR</span>
+          <div className="text-xs font-bold text-slate-200 truncate">
+            {stats?.topCities?.[0]?.name || 'Eskişehir'}
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
+          <span className="text-[10px] text-slate-400 uppercase font-bold">TOP CİHAZ</span>
+          <div className="text-xs font-bold text-amber-400 truncate">
+            {stats?.topDevices?.[0]?.name || 'iPhone'}
+          </div>
+        </div>
+
+        <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
+          <span className="text-[10px] text-slate-400 uppercase font-bold">TOP OPERATÖR</span>
+          <div className="text-xs font-bold text-purple-400 truncate">
+            {stats?.topISPs?.[0]?.name || 'Turkcell'}
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Tabs & Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 font-mono">
+        <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
           <button
-            type="button"
-            onClick={handleClearAllLogs}
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-2.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-mono text-xs font-bold rounded-xl border border-red-500/30 transition-all shadow-md"
+            onClick={() => setFilterType('all')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              filterType === 'all' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'
+            }`}
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span>Temizle</span>
+            TÜMÜ ({sessions.length})
+          </button>
+          <button
+            onClick={() => setFilterType('active')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              filterType === 'active' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-emerald-400'
+            }`}
+          >
+            CANLI AKTİF ({stats?.activeNow || 0})
+          </button>
+          <button
+            onClick={() => setFilterType('mobile')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              filterType === 'mobile' ? 'bg-purple-500 text-slate-950' : 'text-slate-400 hover:text-purple-400'
+            }`}
+          >
+            MOBİL / GSM
+          </button>
+          <button
+            onClick={() => setFilterType('desktop')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+              filterType === 'desktop' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-amber-400'
+            }`}
+          >
+            MASAÜSTÜ
           </button>
         </div>
-      </div>
 
-      {/* Analytics Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* Card 1: Total Visits */}
-        <div className="bg-slate-950/80 border border-cyan-500/20 p-4 rounded-2xl shadow-xl backdrop-blur-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Toplam Ziyaret</span>
-            <Activity className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div className="text-2xl font-black font-mono text-white">{stats.totalVisits}</div>
-          <div className="text-[10px] font-mono text-cyan-400/80 mt-1">Kayıtlı Oturum</div>
-        </div>
-
-        {/* Card 2: Unique IPs */}
-        <div className="bg-slate-950/80 border border-emerald-500/20 p-4 rounded-2xl shadow-xl backdrop-blur-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Tekil IP Sayısı</span>
-            <Server className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-black font-mono text-emerald-400">{stats.uniqueIPs}</div>
-          <div className="text-[10px] font-mono text-slate-400 mt-1">Farklı Bağlantı</div>
-        </div>
-
-        {/* Card 3: Top ISP / Mobile Carrier */}
-        <div className="bg-slate-950/80 border border-amber-500/20 p-4 rounded-2xl shadow-xl backdrop-blur-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Popüler Operatör</span>
-            <Wifi className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="text-sm font-bold font-mono text-amber-300 truncate" title={stats.topIsp}>
-            {stats.topIsp}
-          </div>
-          <div className="text-[10px] font-mono text-slate-400 mt-1">En Çok Kullanılan Ağ</div>
-        </div>
-
-        {/* Card 4: Top Device & Brand */}
-        <div className="bg-slate-950/80 border border-purple-500/20 p-4 rounded-2xl shadow-xl backdrop-blur-sm">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Lider Marka</span>
-            <Smartphone className="w-4 h-4 text-purple-400" />
-          </div>
-          <div className="text-sm font-bold font-mono text-purple-300 truncate">
-            {stats.topBrand} (%{stats.mobileRatio} Mobil)
-          </div>
-          <div className="text-[10px] font-mono text-slate-400 mt-1">Donanım Oranı</div>
-        </div>
-
-        {/* Card 5: Top City */}
-        <div className="bg-slate-950/80 border border-cyan-500/20 p-4 rounded-2xl shadow-xl backdrop-blur-sm col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider">Yoğun Konum</span>
-            <Globe className="w-4 h-4 text-cyan-400" />
-          </div>
-          <div className="text-sm font-bold font-mono text-cyan-300 truncate">{stats.topCity}</div>
-          <div className="text-[10px] font-mono text-slate-400 mt-1">Lider Şehir</div>
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="bg-slate-900/80 border border-cyan-500/30 p-4 rounded-2xl backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-4">
-        {/* Search Input */}
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        {/* Search */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
           <input
             type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="IP, Şehir, Operatör, Marka, Model veya Tarayıcı ara..."
-            className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl pl-9 pr-4 py-2 text-xs font-mono text-slate-200 placeholder-slate-500 focus:outline-none transition-colors"
+            placeholder="IP, şehir, operatör, cihaz veya sayfada ara..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono text-slate-100 focus:border-cyan-400 outline-none"
           />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Device Filter Tabs */}
-        <div className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 w-full sm:w-auto overflow-x-auto">
-          {(['All', 'Mobile', 'Desktop', 'Tablet'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setDeviceFilter(tab)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all shrink-0 ${
-                deviceFilter === tab
-                  ? 'bg-cyan-500 text-slate-950 font-extrabold shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              {tab === 'All' ? 'Tümü' : tab === 'Mobile' ? '📱 Mobil' : tab === 'Desktop' ? '💻 Masaüstü' : 'Tablet'}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Log Table / List */}
-      <div className="bg-slate-950/90 border border-cyan-500/30 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md">
-        {isLoading ? (
-          <div className="p-12 text-center font-mono text-xs text-cyan-400 flex flex-col items-center gap-3">
-            <RefreshCw className="w-8 h-8 animate-spin text-cyan-400" />
-            <span>ZİYARETÇİ LOGLARI YÜKLENİYOR...</span>
+      {/* Quick Info & Clear Button */}
+      {sessions.length > 0 && (
+        <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-1">
+          <span>Gösterilen Oturum: <strong className="text-slate-200">{filteredSessions.length}</strong> / {sessions.length}</span>
+          <button
+            onClick={handleClearAll}
+            className="hover:text-red-400 inline-flex items-center gap-1 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Tüm Logları Temizle</span>
+          </button>
+        </div>
+      )}
+
+      {/* Sessions List */}
+      <div className="space-y-3 font-mono">
+        {loading ? (
+          <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-3">
+            <RefreshCw className="w-6 h-6 animate-spin text-cyan-400" />
+            <span>OTURUM LOGLARI YÜKLENİYOR...</span>
           </div>
-        ) : filteredLogs.length === 0 ? (
-          <div className="p-12 text-center font-mono text-xs text-slate-400 flex flex-col items-center gap-3">
-            <ShieldAlert className="w-8 h-8 text-slate-600" />
-            <span>Henüz bir ziyaretçi log kaydı bulunamadı.</span>
+        ) : filteredSessions.length === 0 ? (
+          <div className="p-12 text-center bg-slate-900/40 border border-slate-800 rounded-xl text-slate-500 text-xs">
+            {searchQuery ? 'Aramanıza uygun ziyaretçi oturumu bulunamadı.' : 'Henüz kaydedilmiş ziyaretçi oturumu bulunmuyor.'}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-mono border-collapse">
-              <thead>
-                <tr className="bg-slate-900/90 border-b border-cyan-500/20 text-slate-400 text-[11px] uppercase tracking-wider">
-                  <th className="py-3.5 px-4">Tarih / Saat</th>
-                  <th className="py-3.5 px-4">IP & Operatör (ISP)</th>
-                  <th className="py-3.5 px-4">Konum</th>
-                  <th className="py-3.5 px-4">Cihaz & Telefon Model</th>
-                  <th className="py-3.5 px-4">Tarayıcı & OS</th>
-                  <th className="py-3.5 px-4 text-right">İşlem</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {filteredLogs.map((log) => {
-                  const isMobile = log.deviceType === 'Mobile';
-                  const dateStr = new Date(log.timestamp).toLocaleString('tr-TR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  });
+          filteredSessions.map((sess) => {
+            const pageSteps = Array.isArray(sess.pages) ? sess.pages : [];
+            const isLive = new Date(sess.updatedAt || sess.createdAt).getTime() >= fifteenMinsAgo;
 
-                  return (
-                    <tr
-                      key={log.id}
-                      onClick={() => setSelectedLog(log)}
-                      className="hover:bg-cyan-950/20 transition-colors cursor-pointer group"
+            return (
+              <div
+                key={sess.id}
+                onClick={() => setSelectedSession(sess)}
+                className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                  isLive
+                    ? 'bg-slate-900/90 border-emerald-500/40 shadow-lg shadow-emerald-500/5 hover:border-emerald-400'
+                    : 'bg-slate-950/60 border-slate-800/80 hover:border-cyan-500/30'
+                }`}
+              >
+                {/* Left Info Column */}
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-slate-100 text-sm">{sess.ip}</span>
+                    {isLive && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-950 text-emerald-400 px-2 py-0.5 border border-emerald-500/30 rounded">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        CANLI AKTİF
+                      </span>
+                    )}
+                    <span className="text-[10px] font-bold bg-cyan-950 text-cyan-300 px-2 py-0.5 border border-cyan-500/30 rounded">
+                      📍 {sess.city}, {sess.countryCode}
+                    </span>
+                    <span className="text-[10px] font-bold bg-slate-900 text-slate-300 px-2 py-0.5 border border-slate-800 rounded">
+                      ⚡ {sess.isp}
+                    </span>
+                  </div>
+
+                  {/* Device & OS */}
+                  <div className="flex items-center gap-3 text-xs text-slate-400 flex-wrap">
+                    <span className="text-amber-400 font-semibold">📱 {sess.deviceBrand} ({sess.deviceModel})</span>
+                    <span>•</span>
+                    <span className="text-cyan-300 font-semibold">💻 {sess.osName} {sess.osVersion} / {sess.browserName}</span>
+                  </div>
+
+                  {/* Navigation Steps Preview */}
+                  <div className="flex items-center gap-2 text-xs text-slate-300 pt-1">
+                    <Route className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                    <span className="font-bold text-cyan-400">{pageSteps.length} Sayfa Gezindi:</span>
+                    <div className="flex items-center gap-1.5 overflow-hidden text-[11px] text-slate-400">
+                      {pageSteps.slice(0, 3).map((step, idx) => (
+                        <span key={idx} className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300 font-mono">
+                          {step.path}
+                        </span>
+                      ))}
+                      {pageSteps.length > 3 && (
+                        <span className="text-cyan-400 font-bold">+{pageSteps.length - 3} daha</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Action Column */}
+                <div className="flex items-center gap-3 shrink-0 justify-between md:justify-end border-t md:border-t-0 border-slate-800 pt-2 md:pt-0">
+                  <div className="text-right text-[11px] text-slate-400 space-y-0.5">
+                    <div>{new Date(sess.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</div>
+                    <div className="text-[10px] text-slate-500">Giriş Yapıldı</div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSelectedSession(sess)}
+                      className="inline-flex items-center gap-1 py-1.5 px-3 bg-cyan-950/80 hover:bg-cyan-950 text-cyan-400 text-xs font-bold rounded-lg border border-cyan-500/30"
                     >
-                      {/* Date */}
-                      <td className="py-3.5 px-4 text-slate-300 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-cyan-400/70" />
-                          <span>{dateStr}</span>
-                        </div>
-                      </td>
+                      <span>Gezinti Akışı</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
 
-                      {/* IP & Carrier */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-bold text-cyan-300">{log.ipAddress}</div>
-                        <div className="text-[11px] text-amber-400/90 flex items-center gap-1 mt-0.5">
-                          <Wifi className="w-3 h-3 text-amber-400 shrink-0" />
-                          <span className="truncate max-w-[180px]">{log.isp || 'Bilinmiyor'}</span>
-                          {log.isMobileNetwork && (
-                            <span className="ml-1 bg-amber-950 border border-amber-500/40 text-amber-300 px-1 py-0.2 rounded text-[9px] font-bold">
-                              4G/5G
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Location */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="text-slate-200 font-semibold flex items-center gap-1.5">
-                          <span className="text-base">🇹🇷</span>
-                          <span>{log.city || 'Bilinmiyor'}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400">{log.country}</div>
-                      </td>
-
-                      {/* Device & Phone Model */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 text-slate-200 font-bold">
-                          {isMobile ? (
-                            <Smartphone className="w-3.5 h-3.5 text-purple-400" />
-                          ) : (
-                            <Laptop className="w-3.5 h-3.5 text-cyan-400" />
-                          )}
-                          <span>{log.deviceBrand}</span>
-                          <span className="text-purple-300 font-normal">({log.deviceModel})</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
-                          {log.deviceType} • {log.screenResolution || 'Çözünürlük Belli Değil'}
-                        </div>
-                      </td>
-
-                      {/* Browser & OS */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="text-slate-300 font-medium">
-                          {log.browserName} <span className="text-slate-500 text-[10px]">{log.browserVersion}</span>
-                        </div>
-                        <div className="text-[10px] text-slate-400">
-                          {log.osName} {log.osVersion}
-                        </div>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedLog(log);
-                            }}
-                            className="p-1.5 bg-cyan-950/60 hover:bg-cyan-900 text-cyan-300 rounded-lg border border-cyan-500/30 transition-colors"
-                            title="Detayları İncele"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeleteLog(log.id, e)}
-                            className="p-1.5 bg-red-950/40 hover:bg-red-900 text-red-300 rounded-lg border border-red-500/30 transition-colors"
-                            title="Logu Sil"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    <button
+                      onClick={(e) => handleDeleteSession(sess.id, e)}
+                      className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+                      title="Oturumu Sil"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* Detailed Log Modal */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-cyan-500/40 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-6 text-slate-200 font-mono">
+      {/* Session Journey Drawer Modal */}
+      {selectedSession && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-3xl bg-slate-950 border border-cyan-500/40 rounded-2xl p-6 md:p-8 space-y-6 shadow-2xl font-mono text-slate-100 max-h-[90vh] overflow-y-auto relative">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-cyan-500/20 pb-4">
-              <div className="flex items-center gap-2.5 text-cyan-400">
-                <Sparkles className="w-5 h-5 text-cyan-400" />
-                <h3 className="text-base font-bold uppercase tracking-wider">
-                  ZİYARETÇİ LOG DETAY RAPORU // {selectedLog.id}
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">// OTURUM GEZİNTİ AKIŞI</span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/30">
+                    ID: {selectedSession.id}
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-100 mt-1 flex items-center gap-2">
+                  <span>{selectedSession.ip}</span>
+                  <span className="text-xs text-slate-400">({selectedSession.city}, {selectedSession.country})</span>
                 </h3>
               </div>
+
               <button
-                onClick={() => setSelectedLog(null)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
+                onClick={() => setSelectedSession(null)}
+                className="p-2 text-slate-400 hover:text-slate-100 bg-slate-900 rounded-xl border border-slate-800 text-xs font-bold"
               >
-                <X className="w-5 h-5" />
+                ✕ KAPAT
               </button>
             </div>
 
-            {/* Grid Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase font-bold">IP Adresi & Zaman</span>
-                <div className="text-sm font-bold text-cyan-300">{selectedLog.ipAddress}</div>
-                <div className="text-slate-400 text-[11px]">
-                  {new Date(selectedLog.timestamp).toLocaleString('tr-TR')}
-                </div>
+            {/* Hardware & Location Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs p-4 bg-slate-900/80 border border-slate-800 rounded-xl">
+              <div>
+                <span className="text-slate-500 text-[10px] uppercase font-bold block">SERVİS SAĞLAYICI</span>
+                <span className="text-slate-200 font-bold">{selectedSession.isp}</span>
               </div>
-
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase font-bold">Operatör / ISP</span>
-                <div className="text-sm font-bold text-amber-300">{selectedLog.isp}</div>
-                <div className="text-slate-400 text-[11px]">
-                  Ağ Türü: {selectedLog.isMobileNetwork ? 'Mobil Hücresel Ağ (4G/5G)' : 'Sabit Geniş Bant / Wi-Fi'}
-                </div>
+              <div>
+                <span className="text-slate-500 text-[10px] uppercase font-bold block">CİHAZ MARKA / MODEL</span>
+                <span className="text-amber-400 font-bold">{selectedSession.deviceBrand} ({selectedSession.deviceModel})</span>
               </div>
-
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase font-bold">Cihaz & Telefon Model</span>
-                <div className="text-sm font-bold text-purple-300">
-                  {selectedLog.deviceBrand} - {selectedLog.deviceModel}
-                </div>
-                <div className="text-slate-400 text-[11px]">
-                  Kategori: {selectedLog.deviceType} | Ekran: {selectedLog.screenResolution || 'Bilinmiyor'}
-                </div>
+              <div>
+                <span className="text-slate-500 text-[10px] uppercase font-bold block">İŞLETİM SİSTEMİ</span>
+                <span className="text-cyan-300 font-bold">{selectedSession.osName} {selectedSession.osVersion}</span>
               </div>
-
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1">
-                <span className="text-[10px] text-slate-400 uppercase font-bold">Tarayıcı & İşletim Sistemi</span>
-                <div className="text-sm font-bold text-slate-200">
-                  {selectedLog.browserName} {selectedLog.browserVersion}
-                </div>
-                <div className="text-slate-400 text-[11px]">
-                  OS: {selectedLog.osName} {selectedLog.osVersion} | Dil: {selectedLog.language}
-                </div>
-              </div>
-
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1 sm:col-span-2">
-                <span className="text-[10px] text-slate-400 uppercase font-bold">Ziyaret Edilen Sayfa & Referrer</span>
-                <div className="text-cyan-300 font-bold">{selectedLog.pagePath}</div>
-                <div className="text-slate-400 text-[11px] truncate">
-                  Yönlendiren: {selectedLog.referrer}
-                </div>
-              </div>
-
-              <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1 sm:col-span-2">
-                <span className="text-[10px] text-slate-400 uppercase font-bold">Ham User-Agent İmzası</span>
-                <div className="text-[11px] font-mono text-slate-400 break-all bg-slate-900 p-2 rounded border border-slate-800/80">
-                  {selectedLog.userAgent}
-                </div>
+              <div>
+                <span className="text-slate-500 text-[10px] uppercase font-bold block">TARAYICI</span>
+                <span className="text-slate-200 font-bold">{selectedSession.browserName} {selectedSession.browserVersion}</span>
               </div>
             </div>
 
-            {/* Modal Actions */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Chronological Navigation Timeline */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                <Compass className="w-4 h-4" />
+                <span>KRONOLOJİK SAYFA GEZİNTİ YOLU (TIMELINE)</span>
+              </h4>
+
+              <div className="relative pl-6 border-l-2 border-cyan-500/30 space-y-4 pt-2">
+                {(selectedSession.pages || []).map((step, idx) => {
+                  const stepTime = new Date(step.timestamp);
+                  const isFirst = idx === 0;
+                  const isLast = idx === (selectedSession.pages || []).length - 1;
+
+                  return (
+                    <div key={idx} className="relative group">
+                      {/* Timeline Node Icon */}
+                      <span className={`absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                        isFirst
+                          ? 'bg-emerald-500 border-emerald-400 ring-4 ring-emerald-500/20'
+                          : isLast
+                          ? 'bg-cyan-500 border-cyan-400 ring-4 ring-cyan-500/20'
+                          : 'bg-slate-900 border-slate-700'
+                      }`} />
+
+                      <div className="p-3.5 bg-slate-900/90 border border-slate-800 rounded-xl space-y-1 hover:border-cyan-500/40 transition-colors">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-100">{step.path}</span>
+                            <span className="text-[10px] text-slate-400">({step.title})</span>
+                          </div>
+                          <span className="text-[11px] text-cyan-400 font-bold">
+                            {stepTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </span>
+                        </div>
+
+                        {isFirst && (
+                          <span className="inline-block text-[10px] text-emerald-400 font-bold bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/30 mt-1">
+                            🏁 SİTEYE GİRİŞ ADIMI
+                          </span>
+                        )}
+                        {isLast && (
+                          <span className="inline-block text-[10px] text-cyan-300 font-bold bg-cyan-950 px-2 py-0.5 rounded border border-cyan-500/30 mt-1">
+                            📍 SON GÖRÜNTÜLENEN ADIM
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer Action */}
+            <div className="pt-4 border-t border-slate-800 flex justify-between items-center">
               <button
-                type="button"
-                onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-mono text-xs font-bold rounded-xl"
+                onClick={() => handleDeleteSession(selectedSession.id)}
+                className="py-2 px-4 bg-red-950/60 hover:bg-red-900 text-red-300 text-xs font-bold rounded-xl border border-red-500/30"
               >
-                Kapat
+                Oturumu Sil
+              </button>
+
+              <button
+                onClick={() => setSelectedSession(null)}
+                className="py-2 px-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg shadow-cyan-500/20"
+              >
+                KAPAT
               </button>
             </div>
           </div>

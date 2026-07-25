@@ -1,96 +1,81 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+
+export function getOrCreateSessionId(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    let s = localStorage.getItem('tracker_session_id');
+    if (!s) {
+      s = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      localStorage.setItem('tracker_session_id', s);
+    }
+    return s;
+  } catch (e) {
+    return `sess_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+  }
+}
 
 function getGpuRenderer(): string {
   try {
     const canvas = document.createElement('canvas');
-    const gl = (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')) as WebGLRenderingContext | null;
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
     if (gl) {
-      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+      const debugInfo = (gl as any).getExtension('WEBGL_debug_renderer_info');
       if (debugInfo) {
-        return gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
+        return (gl as any).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
       }
     }
-  } catch (e) {
-    // WebGL not available or blocked
-  }
+  } catch (e) {}
   return '';
 }
 
 export function VisitorTracker() {
   const pathname = usePathname();
+  const lastTrackedPath = useRef<string>('');
 
   useEffect(() => {
-    // Only run in browser
-    if (typeof window === 'undefined') return;
+    const trackCurrentPage = () => {
+      if (typeof window === 'undefined') return;
 
-    // Do not log admin dashboard visits to avoid cluttering public traffic stats
-    if (pathname && pathname.startsWith('/admin')) return;
+      const currentPath = `${pathname}${window.location.hash || ''}`;
+      if (lastTrackedPath.current === currentPath) return;
+      lastTrackedPath.current = currentPath;
 
-    // Throttle logging slightly per session (30 seconds)
-    const sessionKey = `visitor_log_session_${pathname}`;
-    const lastLogged = sessionStorage.getItem(sessionKey);
-    const now = Date.now();
+      const sessionId = getOrCreateSessionId();
+      const screenResolution = `${window.screen.width}x${window.screen.height}`;
+      const gpuRenderer = getGpuRenderer();
+      const pageTitle = document.title || 'Muhammed AKAN | Akademik Portfolyo';
 
-    if (lastLogged && now - parseInt(lastLogged, 10) < 30 * 1000) {
-      return;
-    }
+      const payload = {
+        sessionId,
+        path: currentPath || '/',
+        title: pageTitle,
+        screenResolution,
+        gpuRenderer,
+        referrer: document.referrer || '',
+      };
 
-    const sendLog = async () => {
       try {
-        sessionStorage.setItem(sessionKey, now.toString());
-
-        let clientHintModel = '';
-        let clientHintPlatform = '';
-        
-        // Extract High Entropy Client Hints if available (Chrome / Android / Chromium)
-        const uaData = (navigator as any).userAgentData;
-        if (uaData && typeof uaData.getHighEntropyValues === 'function') {
-          try {
-            const hints = await uaData.getHighEntropyValues(['model', 'platform', 'platformVersion']);
-            if (hints.model) clientHintModel = hints.model;
-            if (hints.platform) clientHintPlatform = hints.platform;
-          } catch (e) {
-            // Ignore
-          }
-        }
-
-        const nav = navigator as any;
-        const connectionType = nav.connection?.effectiveType || nav.connection?.type || '';
-        const isMobileConnection = nav.connection?.type === 'cellular' || nav.connection?.saveData === true;
-
-        const payload = {
-          screenResolution: `${window.screen.width}x${window.screen.height}`,
-          viewportSize: `${window.innerWidth}x${window.innerHeight}`,
-          devicePixelRatio: window.devicePixelRatio || 1,
-          gpuRenderer: getGpuRenderer(),
-          platform: navigator.platform || '',
-          maxTouchPoints: navigator.maxTouchPoints || 0,
-          connectionType,
-          isMobileConnection,
-          clientHintModel,
-          clientHintPlatform,
-          language: navigator.language || '',
-          pagePath: pathname || '/',
-          referrer: document.referrer || 'Direkt Giriş',
-          userAgent: navigator.userAgent,
-        };
-
-        fetch('/api/visitors/log', {
+        fetch('/api/visitors/track', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        }).catch((err) => {
-          console.warn('Visitor tracking request error:', err);
-        });
-      } catch (e) {
-        console.warn('Visitor tracker error:', e);
-      }
+        }).catch(() => {});
+      } catch (e) {}
     };
 
-    sendLog();
+    // Track on route mount
+    trackCurrentPage();
+
+    // Track hash navigation
+    const handleHashChange = () => trackCurrentPage();
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, [pathname]);
 
   return null;
