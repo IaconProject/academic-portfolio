@@ -268,16 +268,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                   placeholder="İletinizi buraya detaylı bir şekilde yazabilirsiniz..."
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:border-academic-navy focus:bg-white focus:ring-1 focus:ring-academic-navy outline-none transition-colors leading-relaxed"
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:border-academic-navy focus:bg-white focus:ring-1 focus:ring-academic-navy outline-none transition-colors leading-relaxed resize-none"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>256-bit SSL Korumalı Güvenli İletim</span>
-                </div>
-
+              <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
                   disabled={loading}

@@ -2,15 +2,15 @@
 
 import React, { useState } from 'react';
 import { ActivityItem } from '@/lib/types';
-import { Plus, Trash2, Edit2, Save, ListOrdered, Building2 } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, ListOrdered } from 'lucide-react';
 
 interface ActivitiesEditorProps {
   activities: ActivityItem[];
-  onSave: (updated: ActivityItem[]) => void;
+  onSave: (updatedActivities: ActivityItem[]) => void;
 }
 
-export const ActivitiesEditor: React.FC<ActivitiesEditorProps> = ({ activities: initialItems, onSave }) => {
-  const [items, setItems] = useState<ActivityItem[]>(initialItems || []);
+export const ActivitiesEditor: React.FC<ActivitiesEditorProps> = ({ activities, onSave }) => {
+  const [items, setItems] = useState<ActivityItem[]>(activities);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] = useState<Partial<ActivityItem>>({});
 
@@ -19,7 +19,7 @@ export const ActivitiesEditor: React.FC<ActivitiesEditorProps> = ({ activities: 
     setFormState({
       title: '',
       organization: '',
-      years: '',
+      years: new Date().getFullYear().toString(),
       description: '',
     });
   };
@@ -65,139 +65,125 @@ export const ActivitiesEditor: React.FC<ActivitiesEditorProps> = ({ activities: 
   };
 
   return (
-    <div className="bg-slate-950/80 p-6 md:p-8 rounded-2xl border border-cyan-500/20 shadow-2xl backdrop-blur-md space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md space-y-6 transition-colors duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
         <div>
-          <h2 className="text-xl font-mono font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <ListOrdered className="w-5 h-5 text-cyan-400" />
-            <span>Faaliyetler & Deneyim Yönetimi</span>
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight flex items-center gap-2">
+            <ListOrdered className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <span>Akademik Faaliyetler Yönetimi</span>
           </h2>
-          <p className="text-xs font-mono text-slate-400 mt-1">
-            Akademik kulüp, topluluk koordinatörlükleri ve profesyonel eğitmenlik deneyimlerinizi ekleyin.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+            Topluluk yöneticilikleri, atölye ve akademik görevlerinizi ekleyin.
           </p>
         </div>
         <button
           onClick={startAdd}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl transition-all shadow-md disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
-          <span>YENİ FAALİYET EKLE</span>
+          <span>Yeni Faaliyet Ekle</span>
         </button>
       </div>
 
-      {/* Editing Form */}
       {editingId && (
-        <div className="p-5 bg-slate-900/90 border border-cyan-500/30 rounded-xl space-y-4 font-mono">
-          <h3 className="text-xs font-mono font-bold uppercase text-cyan-400 border-b border-slate-800 pb-2">
-            {editingId === 'new' ? '// YENİ FAALİYET KAYDI' : '// FAALİYET KAYDINI DÜZENLE'}
+        <div className="p-5 bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-xl space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 border-b border-stone-200 dark:border-stone-700 pb-2">
+            {editingId === 'new' ? 'Yeni Faaliyet Kaydı' : 'Faaliyet Kaydını Düzenle'}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Faaliyet / Görev Başlığı</label>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Göreviniz / Unvan</label>
               <input
                 type="text"
-                placeholder="Örn: Google Siber Güvenlik Eğitmenliği / Fıkıh Atölyesi Coordinatörlüğü"
+                placeholder="Örn: Kulüp Başkanı / Editör"
                 value={formState.title || ''}
                 onChange={(e) => setFormState({ ...formState, title: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Kurum / Organizasyon</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Kurum / Topluluk</label>
               <input
                 type="text"
-                placeholder="Örn: Google Kamu İlişkileri Ekibi"
+                placeholder="Örn: İlahiyat Araştırmaları Kulübü"
                 value={formState.organization || ''}
                 onChange={(e) => setFormState({ ...formState, organization: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Tarih / Yıllar</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Tarih / Yıllar</label>
               <input
                 type="text"
-                placeholder="Örn: 2016 - 2020"
+                placeholder="Örn: 2022 - Devam Ediyor"
                 value={formState.years || ''}
                 onChange={(e) => setFormState({ ...formState, years: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
+          </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Açıklama (Opsiyonel)</label>
-              <textarea
-                rows={3}
-                placeholder="Faaliyetin kapsamı ve üstlenilen sorumluluklar..."
-                value={formState.description || ''}
-                onChange={(e) => setFormState({ ...formState, description: e.target.value })}
-                className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Açıklama</label>
+            <textarea
+              rows={2}
+              value={formState.description || ''}
+              onChange={(e) => setFormState({ ...formState, description: e.target.value })}
+              className="w-full p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={cancelEdit}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-semibold rounded-xl"
+              className="px-3.5 py-2 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-200 text-xs font-semibold rounded-xl"
             >
               İptal
             </button>
             <button
               onClick={handleSaveItem}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>KAYDET</span>
+              <span>Kaydet</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Item List */}
-      <div className="space-y-3 font-mono">
-        {items.length === 0 ? (
-          <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-xl text-slate-500 text-xs">
-            Henüz faaliyet veya deneyim kaydı eklenmedi.
-          </div>
-        ) : (
-          items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl hover:border-cyan-500/30 transition-colors"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-100 text-sm">{item.title}</h4>
-                  <span className="text-[10px] font-bold bg-cyan-950 text-cyan-400 px-2 py-0.5 border border-cyan-500/30 rounded">
-                    {item.years}
-                  </span>
-                </div>
-                <p className="text-xs text-amber-400">{item.organization}</p>
-                {item.description && <p className="text-xs text-slate-400 pt-0.5">{item.description}</p>}
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-800/60 border border-stone-200/80 dark:border-stone-700/80 rounded-xl hover:border-stone-400 dark:hover:border-stone-600 transition-colors"
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm">{item.title}</h4>
+                <span className="text-[10px] font-bold bg-stone-200 dark:bg-stone-700 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">
+                  {item.years}
+                </span>
               </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => startEdit(item)}
-                  className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"
-                  title="Düzenle"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors"
-                  title="Sil"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{item.organization}</p>
             </div>
-          ))
-        )}
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => startEdit(item)}
+                className="p-2 text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDelete(item.id)}
+                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

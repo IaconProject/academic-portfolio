@@ -2,15 +2,15 @@
 
 import React, { useState } from 'react';
 import { ConferenceItem } from '@/lib/types';
-import { Plus, Trash2, Edit2, Save, Mic, MapPin, Calendar, UserCheck } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, Mic } from 'lucide-react';
 
 interface ConferencesEditorProps {
   conferences: ConferenceItem[];
-  onSave: (updated: ConferenceItem[]) => void;
+  onSave: (updatedConfs: ConferenceItem[]) => void;
 }
 
-export const ConferencesEditor: React.FC<ConferencesEditorProps> = ({ conferences: initialItems, onSave }) => {
-  const [items, setItems] = useState<ConferenceItem[]>(initialItems || []);
+export const ConferencesEditor: React.FC<ConferencesEditorProps> = ({ conferences, onSave }) => {
+  const [items, setItems] = useState<ConferenceItem[]>(conferences);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formState, setFormState] = useState<Partial<ConferenceItem>>({});
 
@@ -20,8 +20,8 @@ export const ConferencesEditor: React.FC<ConferencesEditorProps> = ({ conference
       title: '',
       eventName: '',
       location: '',
-      year: '',
-      role: 'Konuşmacı / Bildiri Sunumu',
+      year: new Date().getFullYear().toString(),
+      role: 'Tebliğ Sunucusu',
     });
   };
 
@@ -45,7 +45,7 @@ export const ConferencesEditor: React.FC<ConferencesEditorProps> = ({ conference
         eventName: formState.eventName || '',
         location: formState.location || '',
         year: formState.year || '',
-        role: formState.role || 'Konuşmacı',
+        role: formState.role || 'Katılımcı',
       };
       const updated = [...items, newItem];
       setItems(updated);
@@ -67,86 +67,71 @@ export const ConferencesEditor: React.FC<ConferencesEditorProps> = ({ conference
   };
 
   return (
-    <div className="bg-slate-950/80 p-6 md:p-8 rounded-2xl border border-cyan-500/20 shadow-2xl backdrop-blur-md space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md space-y-6 transition-colors duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
         <div>
-          <h2 className="text-xl font-mono font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <Mic className="w-5 h-5 text-cyan-400" />
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight flex items-center gap-2">
+            <Mic className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <span>Sempozyum & Konferans Yönetimi</span>
           </h2>
-          <p className="text-xs font-mono text-slate-400 mt-1">
-            Sunum yaptığınız veya katıldığınız akademik sempozyum, panel ve kongre bilgilerini ekleyin.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+            Katıldığınız veya sunum yaptığınız sempozyum ve akademik toplantıları yönetin.
           </p>
         </div>
         <button
           onClick={startAdd}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl transition-all shadow-md disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
-          <span>YENİ ETKİNLİK EKLE</span>
+          <span>Yeni Sempozyum Ekle</span>
         </button>
       </div>
 
-      {/* Editing Form */}
       {editingId && (
-        <div className="p-5 bg-slate-900/90 border border-cyan-500/30 rounded-xl space-y-4 font-mono">
-          <h3 className="text-xs font-mono font-bold uppercase text-cyan-400 border-b border-slate-800 pb-2">
-            {editingId === 'new' ? '// YENİ ETKİNLİK KAYDI' : '// ETKİNLİK KAYDINI DÜZENLE'}
+        <div className="p-5 bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-xl space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 border-b border-stone-200 dark:border-stone-700 pb-2">
+            {editingId === 'new' ? 'Yeni Sempozyum Kaydı' : 'Sempozyum Kaydını Düzenle'}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Bildiri / Sunum Başlığı</label>
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Tebliğ / Sunum Başlığı</label>
               <input
                 type="text"
-                placeholder="Örn: Dijitalleşen Dünyada Fıkıh ve Teknoloji Sempozyumu"
+                placeholder="Tebliğ başlığınızı girin..."
                 value={formState.title || ''}
                 onChange={(e) => setFormState({ ...formState, title: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Kongre / Sempozyum Adı</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Sempozyum / Etkinlik Adı</label>
               <input
                 type="text"
-                placeholder="Örn: Ulusal İlahiyat Araştırmaları Kongresi"
+                placeholder="Örn: Uluslararası İslam Hukuku Sempozyumu"
                 value={formState.eventName || ''}
                 onChange={(e) => setFormState({ ...formState, eventName: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Rolünüz / Göreviniz</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Konum / Şehir</label>
               <input
                 type="text"
-                placeholder="Örn: Konuşmacı / Bildiri Sunumu"
-                value={formState.role || ''}
-                onChange={(e) => setFormState({ ...formState, role: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Konum / Şehir</label>
-              <input
-                type="text"
-                placeholder="Örn: Eskişehir"
+                placeholder="Örn: İstanbul / Türkiye"
                 value={formState.location || ''}
                 onChange={(e) => setFormState({ ...formState, location: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
-
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-300 mb-1">Yıl</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Tarih / Yıl</label>
               <input
                 type="text"
-                placeholder="Örn: 2023"
+                placeholder="Örn: 2024"
                 value={formState.year || ''}
                 onChange={(e) => setFormState({ ...formState, year: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
           </div>
@@ -154,67 +139,53 @@ export const ConferencesEditor: React.FC<ConferencesEditorProps> = ({ conference
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={cancelEdit}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-semibold rounded-xl"
+              className="px-3.5 py-2 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-200 text-xs font-semibold rounded-xl"
             >
               İptal
             </button>
             <button
               onClick={handleSaveItem}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>KAYDET</span>
+              <span>Kaydet</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Item List */}
-      <div className="space-y-3 font-mono">
-        {items.length === 0 ? (
-          <div className="p-8 text-center bg-slate-900/40 border border-slate-800 rounded-xl text-slate-500 text-xs">
-            Henüz sempozyum veya konferans kaydı eklenmedi.
-          </div>
-        ) : (
-          items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl hover:border-cyan-500/30 transition-colors"
-            >
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-slate-100 text-sm">{item.title}</h4>
-                  <span className="text-[10px] font-bold bg-cyan-950 text-cyan-400 px-2 py-0.5 border border-cyan-500/30 rounded">
-                    {item.year}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300">{item.eventName}</p>
-                <div className="flex items-center gap-3 text-[11px] text-slate-400 pt-0.5">
-                  <span>📍 {item.location || 'Bilinmiyor'}</span>
-                  <span>•</span>
-                  <span className="text-amber-400">{item.role}</span>
-                </div>
+      <div className="space-y-3">
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-800/60 border border-stone-200/80 dark:border-stone-700/80 rounded-xl hover:border-stone-400 dark:hover:border-stone-600 transition-colors"
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm">{item.title}</h4>
+                <span className="text-[10px] font-bold bg-stone-200 dark:bg-stone-700 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">
+                  {item.year}
+                </span>
               </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => startEdit(item)}
-                  className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"
-                  title="Düzenle"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors"
-                  title="Sil"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{item.eventName} {item.location ? `• ${item.location}` : ''}</p>
             </div>
-          ))
-        )}
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => startEdit(item)}
+                className="p-2 text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDelete(item.id)}
+                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

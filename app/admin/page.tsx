@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PortfolioData } from '@/lib/types';
 import { getPortfolioData, savePortfolioDataLocally, fetchPortfolioFromSupabase } from '@/lib/cms-store';
 import { AdminNavbar } from '@/components/admin/AdminNavbar';
@@ -18,7 +18,21 @@ import { MessagesManager } from '@/components/admin/MessagesManager';
 import { VisitorLogsManager } from '@/components/admin/VisitorLogsManager';
 import { SocialLinksEditor } from '@/components/admin/SocialLinksEditor';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
-import { User, School, BookOpen, Search, ShieldCheck, RefreshCw, KeyRound, Terminal, Activity, Share2, GitBranch, Mic, ListOrdered, Users, Inbox } from 'lucide-react';
+import {
+  User,
+  School,
+  BookOpen,
+  Search,
+  RefreshCw,
+  KeyRound,
+  Activity,
+  Share2,
+  GitBranch,
+  Mic,
+  ListOrdered,
+  Users,
+  Inbox,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type AdminTab =
@@ -35,12 +49,73 @@ type AdminTab =
   | 'security'
   | 'visitors';
 
-export default function AdminDashboardPage() {
+const VALID_TABS: AdminTab[] = [
+  'profile',
+  'messages',
+  'social',
+  'education',
+  'publications',
+  'projects',
+  'conferences',
+  'activities',
+  'references',
+  'seo',
+  'visitors',
+  'security',
+];
+
+function AdminDashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [data, setData] = useState<PortfolioData | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>('profile');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [unreadMsgCount, setUnreadMsgCount] = useState<number>(0);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  // Load theme preference
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = (localStorage.getItem('admin_theme') as 'light' | 'dark') || 'light';
+      setTheme(savedTheme);
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('admin_theme', nextTheme);
+      if (nextTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  };
+
+  // Sync activeTab with URL search param
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab') as AdminTab;
+    if (tabParam && VALID_TABS.includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
+  const handleSelectTab = (tab: AdminTab) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', tab);
+      window.history.replaceState({}, '', url.toString());
+    }
+  };
 
   useEffect(() => {
     // Auth Check
@@ -83,7 +158,7 @@ export default function AdminDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updated),
       });
-      toast.success('Değişiklikler sunucuya ve veritabanına kaydedildi!');
+      toast.success('Değişiklikler kaydedildi!');
     } catch (e) {
       toast.success('Yerel depolamaya kaydedildi.');
     } finally {
@@ -101,264 +176,163 @@ export default function AdminDashboardPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-[#0b0f19] flex items-center justify-center text-cyan-400 relative">
-        <BlockchainCanvasAnimation />
-        <div className="flex flex-col items-center gap-3 relative z-10">
-          <RefreshCw className="w-10 h-10 animate-spin text-cyan-400" />
-          <span className="font-mono text-xs text-slate-400 tracking-widest uppercase animate-pulse">
-            INITIALIZING_BLOCKCHAIN_NODE...
+      <div className="min-h-screen bg-[#f7f5f0] dark:bg-[#121110] flex items-center justify-center text-stone-700 dark:text-stone-300 relative font-sans">
+        <BlockchainCanvasAnimation theme={theme} />
+        <div className="flex flex-col items-center gap-3 relative z-10 p-8 rounded-2xl bg-white/80 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800 shadow-lg backdrop-blur-md">
+          <RefreshCw className="w-8 h-8 animate-spin text-stone-800 dark:text-amber-500" />
+          <span className="text-xs font-semibold text-stone-600 dark:text-stone-400 tracking-wider uppercase">
+            Yönetim Paneli Yükleniyor...
           </span>
         </div>
       </div>
     );
   }
 
+  const tabsConfig = [
+    { id: 'profile' as AdminTab, label: 'PROFİL', icon: User },
+    { id: 'messages' as AdminTab, label: 'GELEN MESAJLAR', icon: Inbox, badge: unreadMsgCount },
+    { id: 'social' as AdminTab, label: 'SOSYAL MEDYA', icon: Share2 },
+    { id: 'education' as AdminTab, label: 'EĞİTİM', icon: School },
+    { id: 'publications' as AdminTab, label: 'YAYINLAR', icon: BookOpen },
+    { id: 'projects' as AdminTab, label: 'PROJELER', icon: GitBranch },
+    { id: 'conferences' as AdminTab, label: 'SEMPOZYUM', icon: Mic },
+    { id: 'activities' as AdminTab, label: 'FAALİYETLER', icon: ListOrdered },
+    { id: 'references' as AdminTab, label: 'REFERANSLAR', icon: Users },
+    { id: 'seo' as AdminTab, label: 'SEO', icon: Search },
+    { id: 'visitors' as AdminTab, label: 'ZİYARETÇİ LOGLARI', icon: Activity },
+    { id: 'security' as AdminTab, label: 'GÜVENLİK & GİRİŞ', icon: KeyRound },
+  ];
+
   return (
-    <div className="min-h-screen bg-[#0b0f19] text-slate-200 font-sans selection:bg-cyan-500 selection:text-black relative">
-      {/* Interactive Node Line Canvas Background */}
-      <BlockchainCanvasAnimation />
+    <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
+      <div className="min-h-screen bg-[#f7f5f0] dark:bg-[#121110] text-stone-900 dark:text-stone-100 font-sans selection:bg-amber-200 dark:selection:bg-amber-900 relative transition-colors duration-300">
+        {/* Interactive Mouse Particle Canvas */}
+        <BlockchainCanvasAnimation theme={theme} />
 
-      <div className="relative z-10">
-        <AdminNavbar onLogout={handleLogout} onSelectTab={(t) => setActiveTab(t as any)} />
+        <div className="relative z-10">
+          <AdminNavbar
+            onLogout={handleLogout}
+            onSelectTab={(t) => handleSelectTab(t as AdminTab)}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
 
-        <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
-          {/* Terminal Quick Metrics Bar */}
-          <div className="bg-slate-950/85 border border-cyan-500/30 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 font-mono text-xs backdrop-blur-md shadow-xl">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Terminal className="w-4 h-4 text-cyan-400" />
-              <span>NODE_STATUS:</span>
-              <span className="text-emerald-400 font-bold">ONLINE</span>
+          <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+            {/* Navigation Tabs Bar */}
+            <div className="flex overflow-x-auto gap-1.5 bg-[#eae6dc] dark:bg-[#1a1917] p-1.5 rounded-2xl border border-stone-300/70 dark:border-stone-800 shadow-sm backdrop-blur-md">
+              {tabsConfig.map((tabItem) => {
+                const Icon = tabItem.icon;
+                const isActive = activeTab === tabItem.id;
+                return (
+                  <button
+                    key={tabItem.id}
+                    onClick={() => handleSelectTab(tabItem.id)}
+                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 relative ${
+                      isActive
+                        ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950 shadow-md font-extrabold'
+                        : 'text-stone-700 dark:text-stone-400 hover:bg-stone-200/80 dark:hover:bg-stone-800/80 hover:text-stone-950 dark:hover:text-stone-100'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{tabItem.label}</span>
+                    {Boolean(tabItem.badge && tabItem.badge > 0) && (
+                      <span className="ml-1 px-1.5 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full shadow-sm animate-pulse">
+                        {tabItem.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
-            <div className="flex items-center gap-4 text-slate-400 text-[11px]">
-              <span>LAST_SYNC: <strong className="text-slate-200">{new Date().toLocaleTimeString()}</strong></span>
-              <span className="hidden sm:inline">DATA_HASH: <strong className="text-cyan-400">0x8F9...A3C</strong></span>
-            </div>
-          </div>
-
-          {/* Cyber Navigation Tabs */}
-          <div className="flex overflow-x-auto gap-2 bg-slate-950/90 p-2 rounded-2xl border border-cyan-500/30 shadow-2xl backdrop-blur-md">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'profile'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-              }`}
-            >
-              <User className="w-4 h-4" />
-              <span>PROFİL</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('messages')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 relative ${
-                activeTab === 'messages'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
-              }`}
-            >
-              <Inbox className="w-4 h-4 text-cyan-400" />
-              <span>GELEN MESAJLAR</span>
-              {unreadMsgCount > 0 && (
-                <span className="ml-1 px-2 py-0.5 bg-emerald-500 text-slate-950 text-[10px] font-mono font-extrabold rounded-full animate-pulse shadow-md">
-                  {unreadMsgCount}
-                </span>
+            {/* Tab Content Panels */}
+            <div className="transition-all duration-200">
+              {activeTab === 'profile' && (
+                <ProfileForm
+                  profile={data.profile}
+                  onSave={(updatedProfile) => handleSaveData({ ...data, profile: updatedProfile })}
+                />
               )}
-            </button>
 
-            <button
-              onClick={() => setActiveTab('social')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'social'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
-              }`}
-            >
-              <Share2 className="w-4 h-4 text-pink-400" />
-              <span>SOSYAL MEDYA</span>
-            </button>
+              {activeTab === 'messages' && <MessagesManager />}
 
-            <button
-              onClick={() => setActiveTab('education')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'education'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-              }`}
-            >
-              <School className="w-4 h-4" />
-              <span>EĞİTİM</span>
-            </button>
+              {activeTab === 'social' && (
+                <SocialLinksEditor
+                  socialLinks={data.socialLinks || []}
+                  onSave={(updatedSocial) => handleSaveData({ ...data, socialLinks: updatedSocial })}
+                />
+              )}
 
-            <button
-              onClick={() => setActiveTab('publications')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'publications'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>YAYINLAR</span>
-            </button>
+              {activeTab === 'education' && (
+                <EducationEditor
+                  education={data.education}
+                  onSave={(updatedEducation) => handleSaveData({ ...data, education: updatedEducation })}
+                />
+              )}
 
-            <button
-              onClick={() => setActiveTab('projects')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'projects'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
-              }`}
-            >
-              <GitBranch className="w-4 h-4 text-purple-400" />
-              <span>PROJELER</span>
-            </button>
+              {activeTab === 'publications' && (
+                <PublicationsEditor
+                  publications={data.publications}
+                  onSave={(updatedPubs) => handleSaveData({ ...data, publications: updatedPubs })}
+                />
+              )}
 
-            <button
-              onClick={() => setActiveTab('conferences')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'conferences'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-amber-400'
-              }`}
-            >
-              <Mic className="w-4 h-4 text-amber-400" />
-              <span>SEMPOZYUM</span>
-            </button>
+              {activeTab === 'projects' && (
+                <ProjectsEditor
+                  projects={data.projects || []}
+                  onSave={(updatedProjects) => handleSaveData({ ...data, projects: updatedProjects })}
+                />
+              )}
 
-            <button
-              onClick={() => setActiveTab('activities')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'activities'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-              }`}
-            >
-              <ListOrdered className="w-4 h-4 text-blue-400" />
-              <span>FAALİYETLER</span>
-            </button>
+              {activeTab === 'conferences' && (
+                <ConferencesEditor
+                  conferences={data.conferences || []}
+                  onSave={(updatedConfs) => handleSaveData({ ...data, conferences: updatedConfs })}
+                />
+              )}
 
-            <button
-              onClick={() => setActiveTab('references')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'references'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-emerald-400'
-              }`}
-            >
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span>REFERANSLAR</span>
-            </button>
+              {activeTab === 'activities' && (
+                <ActivitiesEditor
+                  activities={data.activities || []}
+                  onSave={(updatedActivities) => handleSaveData({ ...data, activities: updatedActivities })}
+                />
+              )}
 
-            <button
-              onClick={() => setActiveTab('seo')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'seo'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
-              }`}
-            >
-              <Search className="w-4 h-4" />
-              <span>SEO</span>
-            </button>
+              {activeTab === 'references' && (
+                <ReferencesEditor
+                  references={data.references || []}
+                  onSave={(updatedRefs) => handleSaveData({ ...data, references: updatedRefs })}
+                />
+              )}
 
-            <button
-              onClick={() => setActiveTab('visitors')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'visitors'
-                  ? 'bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-cyan-400'
-              }`}
-            >
-              <Activity className="w-4 h-4 text-cyan-400" />
-              <span>ZİYARETÇİ LOGLARI</span>
-            </button>
+              {activeTab === 'seo' && (
+                <SeoEditor
+                  seoSettings={data.seoSettings}
+                  onSave={(updatedSeo) => handleSaveData({ ...data, seoSettings: updatedSeo })}
+                />
+              )}
 
-            <button
-              onClick={() => setActiveTab('security')}
-              className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-xs md:text-sm font-mono font-bold transition-all shrink-0 ${
-                activeTab === 'security'
-                  ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20 font-extrabold'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-emerald-400'
-              }`}
-            >
-              <KeyRound className="w-4 h-4 text-emerald-400" />
-              <span>GÜVENLİK & GİRİŞ</span>
-            </button>
-          </div>
+              {activeTab === 'visitors' && <VisitorLogsManager />}
 
-          {/* Tab Content */}
-          {activeTab === 'profile' && (
-            <ProfileForm
-              profile={data.profile}
-              onSave={(updatedProfile) => handleSaveData({ ...data, profile: updatedProfile })}
-            />
-          )}
-
-          {activeTab === 'messages' && <MessagesManager />}
-
-          {activeTab === 'social' && (
-            <SocialLinksEditor
-              socialLinks={data.socialLinks || []}
-              onSave={(updatedSocial) => handleSaveData({ ...data, socialLinks: updatedSocial })}
-            />
-          )}
-
-          {activeTab === 'education' && (
-            <EducationEditor
-              education={data.education}
-              onSave={(updatedEducation) => handleSaveData({ ...data, education: updatedEducation })}
-            />
-          )}
-
-          {activeTab === 'publications' && (
-            <PublicationsEditor
-              publications={data.publications}
-              onSave={(updatedPubs) => handleSaveData({ ...data, publications: updatedPubs })}
-            />
-          )}
-
-          {activeTab === 'projects' && (
-            <ProjectsEditor
-              projects={data.projects || []}
-              onSave={(updatedProjects) => handleSaveData({ ...data, projects: updatedProjects })}
-            />
-          )}
-
-          {activeTab === 'conferences' && (
-            <ConferencesEditor
-              conferences={data.conferences || []}
-              onSave={(updatedConfs) => handleSaveData({ ...data, conferences: updatedConfs })}
-            />
-          )}
-
-          {activeTab === 'activities' && (
-            <ActivitiesEditor
-              activities={data.activities || []}
-              onSave={(updatedActivities) => handleSaveData({ ...data, activities: updatedActivities })}
-            />
-          )}
-
-          {activeTab === 'references' && (
-            <ReferencesEditor
-              references={data.references || []}
-              onSave={(updatedRefs) => handleSaveData({ ...data, references: updatedRefs })}
-            />
-          )}
-
-          {activeTab === 'seo' && (
-            <SeoEditor
-              seoSettings={data.seoSettings}
-              onSave={(updatedSeo) => handleSaveData({ ...data, seoSettings: updatedSeo })}
-            />
-          )}
-
-          {activeTab === 'visitors' && <VisitorLogsManager />}
-
-          {activeTab === 'security' && <CredentialsEditor />}
-        </main>
+              {activeTab === 'security' && <CredentialsEditor />}
+            </div>
+          </main>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function AdminDashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#f7f5f0] flex items-center justify-center text-stone-700">
+          <RefreshCw className="w-8 h-8 animate-spin" />
+        </div>
+      }
+    >
+      <AdminDashboardContent />
+    </Suspense>
   );
 }

@@ -1,16 +1,23 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Eye, LogOut, Cpu, Activity, Bell, Mail, ChevronRight, X } from 'lucide-react';
+import { Eye, LogOut, LayoutDashboard, Bell, Mail, ChevronRight, X, Sun, Moon } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { ContactMessage } from '@/lib/types';
 
 interface AdminNavbarProps {
   onLogout: () => void;
   onSelectTab?: (tab: string) => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
-export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout, onSelectTab }) => {
+export const AdminNavbar: React.FC<AdminNavbarProps> = ({
+  onLogout,
+  onSelectTab,
+  theme,
+  onToggleTheme,
+}) => {
   const [unreadMessages, setUnreadMessages] = useState<ContactMessage[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showDropdown, setShowDropdown] = useState<boolean>(false);
@@ -31,7 +38,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout, onSelectTab 
 
   useEffect(() => {
     fetchUnreadMessages();
-    const interval = setInterval(fetchUnreadMessages, 15000); // Auto refresh every 15s
+    const interval = setInterval(fetchUnreadMessages, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -43,50 +50,66 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout, onSelectTab 
   };
 
   return (
-    <header className="bg-slate-950 text-white px-4 sm:px-6 py-4 border-b border-cyan-500/20 shadow-xl flex items-center justify-between backdrop-blur-md bg-opacity-90 sticky top-0 z-50">
+    <header className="bg-[#fcfbf9] dark:bg-[#181716] text-stone-800 dark:text-stone-100 px-4 sm:px-6 py-3.5 border-b border-stone-200/80 dark:border-stone-800/80 shadow-sm flex items-center justify-between backdrop-blur-md bg-opacity-95 sticky top-0 z-50 transition-colors duration-300">
+      {/* Left Logo / Branding */}
       <div className="flex items-center gap-3">
-        <div className="p-2.5 bg-cyan-950/60 border border-cyan-500/40 rounded-xl text-cyan-400 shadow-md shadow-cyan-500/10 shrink-0">
-          <Cpu className="w-5 h-5 animate-pulse text-cyan-400" />
+        <div className="p-2 bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950 rounded-xl shadow-sm shrink-0">
+          <LayoutDashboard className="w-5 h-5" />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-mono font-bold text-sm sm:text-base md:text-lg tracking-wider text-slate-100 uppercase">
-              CMS // CYBER_PANEL
+            <h1 className="font-sans font-bold text-sm sm:text-base tracking-tight text-stone-900 dark:text-stone-100">
+              Yönetim Paneli
             </h1>
-            <span className="hidden sm:inline-block text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-500/30">
-              v2.5_BLOCKCHAIN
+            <span className="hidden sm:inline-block text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
+              CMS
             </span>
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2 font-mono">
-            <span className="flex items-center gap-1">
+          <div className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 flex items-center gap-2">
+            <span className="flex items-center gap-1.5">
               <span
-                className={`w-2 h-2 rounded-full animate-ping ${
-                  isSupabaseConfigured ? 'bg-emerald-400' : 'bg-amber-400'
+                className={`w-2 h-2 rounded-full ${
+                  isSupabaseConfigured ? 'bg-emerald-500' : 'bg-amber-500'
                 }`}
               />
-              <span className={isSupabaseConfigured ? 'text-emerald-400 font-semibold' : 'text-amber-400 font-semibold'}>
-                {isSupabaseConfigured ? 'SUPABASE_SYNC: ACTIVE' : 'LOCAL_STORE: DEMO_MODE'}
+              <span className={isSupabaseConfigured ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-amber-700 dark:text-amber-400 font-medium'}>
+                {isSupabaseConfigured ? 'Supabase Canlı Veritabanı' : 'Yerel Depolama (Demo)'}
               </span>
             </span>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-2.5 sm:gap-3">
+      {/* Right Controls */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Theme Toggle Button */}
+        <button
+          onClick={onToggleTheme}
+          className="p-2.5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors shadow-sm"
+          title={theme === 'light' ? 'Koyu Temaya Geç' : 'Açık Bej Temaya Geç'}
+          aria-label="Tema Değiştir"
+        >
+          {theme === 'light' ? (
+            <Moon className="w-4 h-4 text-stone-700" />
+          ) : (
+            <Sun className="w-4 h-4 text-amber-400" />
+          )}
+        </button>
+
         {/* Notification Bell Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
             className={`relative p-2.5 rounded-xl border transition-all ${
               unreadCount > 0
-                ? 'bg-slate-900 border-cyan-500/40 text-cyan-400 hover:border-cyan-400 shadow-lg shadow-cyan-500/10'
-                : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:text-slate-200'
+                ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 shadow-sm'
+                : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white'
             }`}
             title="Gelen Mesaj Bildirimleri"
           >
-            <Bell className={`w-4 h-4 ${unreadCount > 0 ? 'animate-bounce text-cyan-400' : ''}`} />
+            <Bell className={`w-4 h-4 ${unreadCount > 0 ? 'text-amber-600 dark:text-amber-400' : ''}`} />
             {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-slate-950 text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded-full animate-pulse shadow-md">
+              <span className="absolute -top-1.5 -right-1.5 bg-amber-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
                 {unreadCount}
               </span>
             )}
@@ -94,17 +117,17 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout, onSelectTab 
 
           {/* Dropdown Panel */}
           {showDropdown && (
-            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-slate-950 border border-cyan-500/40 rounded-2xl shadow-2xl p-4 space-y-3 font-mono text-slate-100 z-50 backdrop-blur-xl animate-fadeIn">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-xl p-4 space-y-3 text-stone-900 dark:text-stone-100 z-50 animate-fadeIn">
+              <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-cyan-400" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-100">
-                    BİLDİRİMLER ({unreadCount})
+                  <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200">
+                    Bildirimler ({unreadCount})
                   </span>
                 </div>
                 <button
                   onClick={() => setShowDropdown(false)}
-                  className="text-slate-400 hover:text-slate-100 text-xs p-1"
+                  className="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 text-xs p-1"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -113,7 +136,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout, onSelectTab 
               {/* Unread List */}
               <div className="max-h-64 overflow-y-auto space-y-2 text-xs">
                 {unreadCount === 0 ? (
-                  <div className="py-6 text-center text-slate-500 text-xs">
+                  <div className="py-6 text-center text-stone-400 text-xs font-sans">
                     Okunmamış yeni mesajınız bulunmuyor.
                   </div>
                 ) : (
@@ -121,27 +144,27 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout, onSelectTab 
                     <div
                       key={msg.id}
                       onClick={handleOpenMessages}
-                      className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl hover:border-cyan-400 cursor-pointer transition-colors space-y-1"
+                      className="p-3 bg-stone-50 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 rounded-xl hover:border-amber-500 cursor-pointer transition-colors space-y-1"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-200 truncate">{msg.name}</span>
-                        <span className="text-[10px] text-slate-400">
+                        <span className="font-bold text-stone-900 dark:text-stone-100 truncate">{msg.name}</span>
+                        <span className="text-[10px] text-stone-400">
                           {new Date(msg.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <div className="text-[11px] text-cyan-400 font-semibold truncate">{msg.subject}</div>
-                      <p className="text-[11px] text-slate-400 truncate font-sans">{msg.message}</p>
+                      <div className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold truncate">{msg.subject}</div>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">{msg.message}</p>
                     </div>
                   ))
                 )}
               </div>
 
-              <div className="pt-2 border-t border-slate-800 text-center">
+              <div className="pt-2 border-t border-stone-100 dark:border-stone-800 text-center">
                 <button
                   onClick={handleOpenMessages}
-                  className="w-full py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                 >
-                  <span>TÜM MESAJLARI İNCELE ({unreadCount})</span>
+                  <span>Tüm Mesajları İncele ({unreadCount})</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -149,21 +172,23 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({ onLogout, onSelectTab 
           )}
         </div>
 
+        {/* Public Portfolio Preview */}
         <a
           href="/"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-cyan-300 text-xs font-mono font-semibold rounded-xl transition-all border border-cyan-500/30 hover:border-cyan-400 shadow-sm"
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-semibold rounded-xl transition-all border border-stone-200 dark:border-stone-800 shadow-sm"
         >
-          <Eye className="w-4 h-4 text-cyan-400" />
-          <span className="hidden sm:inline">Portfolyo Önizle</span>
+          <Eye className="w-4 h-4 text-stone-500 dark:text-stone-400" />
+          <span className="hidden sm:inline">Portfolyoyu Gör</span>
         </a>
 
+        {/* Logout */}
         <button
           onClick={onLogout}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-950/40 hover:bg-red-900/60 text-red-300 text-xs font-mono font-semibold rounded-xl transition-all border border-red-500/30 shadow-sm"
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-semibold rounded-xl transition-all border border-rose-200 dark:border-rose-900/50 shadow-sm"
         >
-          <LogOut className="w-4 h-4 text-red-400" />
+          <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400" />
           <span className="hidden sm:inline">Çıkış Yap</span>
         </button>
       </div>

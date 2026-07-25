@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
-import { Upload, Camera, Trash2, CheckCircle, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
+import { Upload, Camera, Trash2, CheckCircle, AlertCircle, RefreshCw, User } from 'lucide-react';
 import { uploadAvatarImage } from '@/lib/cms-store';
 
 interface ImageUploaderProps {
@@ -54,15 +54,15 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
   };
 
   return (
-    <div className="bg-slate-900/90 p-6 rounded-2xl border border-cyan-500/30 shadow-xl backdrop-blur-md">
-      <label className="block text-xs font-mono font-bold uppercase tracking-wider text-cyan-400 mb-4 flex items-center gap-2">
-        <Sparkles className="w-4 h-4 text-cyan-400" />
-        <span>PROFİL FOTOĞRAFI YÜKLE & DEĞİŞTİR // AVATAR_NODE</span>
+    <div className="bg-stone-50 dark:bg-stone-800/80 p-6 rounded-2xl border border-stone-200/80 dark:border-stone-700 shadow-sm transition-colors duration-300">
+      <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-4 flex items-center gap-2">
+        <User className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+        <span>Profil Fotoğrafı Yükle & Değiştir</span>
       </label>
 
       <div className="flex flex-col sm:flex-row items-center gap-6">
         {/* Avatar Preview */}
-        <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-cyan-500/40 shadow-xl ring-2 ring-cyan-500/20 shrink-0 bg-slate-950 flex items-center justify-center">
+        <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white dark:border-stone-700 shadow-md shrink-0 bg-stone-200 dark:bg-stone-900 flex items-center justify-center">
           {previewUrl ? (
             <Image
               src={previewUrl}
@@ -73,21 +73,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
               unoptimized
             />
           ) : (
-            <div className="w-full h-full bg-slate-950 text-slate-500 flex items-center justify-center">
-              <Camera className="w-8 h-8 text-cyan-500/60" />
+            <div className="w-full h-full bg-stone-200 dark:bg-stone-800 text-stone-400 flex items-center justify-center">
+              <Camera className="w-8 h-8 text-stone-400" />
             </div>
           )}
 
           {isUploading && (
-            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex items-center justify-center text-cyan-400">
-              <RefreshCw className="w-7 h-7 animate-spin text-cyan-400" />
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center text-white">
+              <RefreshCw className="w-7 h-7 animate-spin text-white" />
             </div>
           )}
         </div>
 
         {/* Action Controls */}
         <div className="flex-1 space-y-3 text-center sm:text-left">
-          <p className="text-xs font-mono text-slate-400 leading-relaxed">
+          <p className="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
             Akademik görünüm için dairesel kırpılan 1:1 oranında net vesikalık veya portre fotoğrafı yükleyin. PNG, JPG veya WEBP. Max 5MB.
           </p>
 
@@ -96,10 +96,10 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
               type="button"
               onClick={triggerSelect}
               disabled={isUploading}
-              className="inline-flex items-center gap-2 py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs font-extrabold rounded-xl transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+              className="inline-flex items-center gap-2 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl transition-all shadow-md disabled:opacity-50"
             >
               <Upload className="w-4 h-4" />
-              <span>YENİ FOTOĞRAFA GÖZ AT</span>
+              <span>Yeni Fotoğraf Seç</span>
             </button>
 
             {previewUrl && (
@@ -109,7 +109,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
                   setPreviewUrl('');
                   onImageUploaded('');
                 }}
-                className="inline-flex items-center gap-1.5 py-2.5 px-3.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 font-mono text-xs font-semibold rounded-xl border border-red-500/30 transition-colors"
+                className="inline-flex items-center gap-1.5 py-2.5 px-3.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/60 text-rose-700 dark:text-rose-300 text-xs font-semibold rounded-xl border border-rose-200 dark:border-rose-900/50 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Kaldır</span>
@@ -126,15 +126,15 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ currentUrl, onImag
           />
 
           {uploadSuccess && (
-            <div className="inline-flex items-center gap-1.5 text-xs font-mono text-emerald-400 font-semibold bg-emerald-950/60 border border-emerald-500/40 px-3 py-1.5 rounded-lg shadow-sm">
-              <CheckCircle className="w-4 h-4 text-emerald-400" />
-              <span>Fotoğraf başarıyla yüklendi ve senkronize edildi.</span>
+            <div className="inline-flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 px-3 py-1.5 rounded-lg shadow-sm">
+              <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Fotoğraf başarıyla yüklendi.</span>
             </div>
           )}
 
           {errorMsg && (
-            <div className="inline-flex items-center gap-1.5 text-xs font-mono text-red-400 font-semibold bg-red-950/60 border border-red-500/40 px-3 py-1.5 rounded-lg shadow-sm">
-              <AlertCircle className="w-4 h-4 text-red-400" />
+            <div className="inline-flex items-center gap-1.5 text-xs text-rose-700 dark:text-rose-400 font-semibold bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 px-3 py-1.5 rounded-lg shadow-sm">
+              <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
               <span>{errorMsg}</span>
             </div>
           )}

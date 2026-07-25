@@ -7,17 +7,13 @@ import {
   Mail,
   Star,
   Trash2,
-  CheckCircle2,
   RefreshCw,
   Search,
   Download,
   Calendar,
   Phone,
-  User,
   ExternalLink,
-  MessageSquare,
   ShieldCheck,
-  Eye,
   CheckCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -161,7 +157,6 @@ export const MessagesManager: React.FC = () => {
     toast.success('Mesajlar CSV olarak indirildi.');
   };
 
-  // Metrics
   const totalMessages = messages.length;
   const unreadCount = messages.filter((m) => !m.isRead).length;
   const starredCount = messages.filter((m) => m.isStarred).length;
@@ -175,7 +170,6 @@ export const MessagesManager: React.FC = () => {
     );
   }).length;
 
-  // Filtered List
   const filteredMessages = messages.filter((msg) => {
     if (filterTab === 'unread' && msg.isRead) return false;
     if (filterTab === 'starred' && !msg.isStarred) return false;
@@ -193,23 +187,23 @@ export const MessagesManager: React.FC = () => {
   });
 
   return (
-    <div className="bg-slate-950/80 p-6 md:p-8 rounded-2xl border border-cyan-500/20 shadow-2xl backdrop-blur-md space-y-6">
+    <div className="bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md space-y-6 transition-colors duration-300">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
         <div>
           <div className="flex items-center gap-3">
-            <Inbox className="w-6 h-6 text-cyan-400" />
-            <h2 className="text-xl font-mono font-bold text-slate-100 uppercase tracking-wider">
+            <Inbox className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">
               Gelen Mesajlar Yönetimi
             </h2>
             {unreadCount > 0 && (
-              <span className="px-2.5 py-0.5 bg-emerald-500 text-slate-950 text-xs font-mono font-extrabold rounded-full animate-pulse shadow-lg shadow-emerald-500/30">
-                {unreadCount} YENİ
+              <span className="px-2.5 py-0.5 bg-amber-600 text-white text-xs font-bold rounded-full shadow-sm">
+                {unreadCount} Yeni
               </span>
             )}
           </div>
-          <p className="text-xs font-mono text-slate-400 mt-1">
-            Ziyaretçilerin web siteniz üzerinden gönderdikleri mesajları anlık takip edin ve yanıtlayın.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+            Ziyaretçilerin web siteniz üzerinden gönderdikleri mesajları takip edin ve yanıtlayın.
           </p>
         </div>
 
@@ -217,96 +211,96 @@ export const MessagesManager: React.FC = () => {
           <button
             onClick={fetchMessages}
             disabled={loading}
-            className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-300 rounded-xl border border-slate-800 transition-colors"
+            className="p-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl border border-stone-200 dark:border-stone-700 transition-colors"
             title="Yenile"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-cyan-400' : ''}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-amber-600 dark:text-amber-400' : ''}`} />
           </button>
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-mono font-bold rounded-xl border border-slate-800 transition-colors"
+            className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold rounded-xl border border-stone-200 dark:border-stone-700 transition-colors"
           >
-            <Download className="w-4 h-4 text-cyan-400" />
-            <span>CSV İNDİR</span>
+            <Download className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span>CSV İndir</span>
           </button>
         </div>
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono">
-        <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-1">
-          <span className="text-[11px] text-slate-400 uppercase font-bold">TOPLAM MESAJ</span>
-          <div className="text-2xl font-bold text-slate-100">{totalMessages}</div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="p-4 bg-stone-50 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 rounded-xl space-y-1">
+          <span className="text-[11px] text-stone-500 dark:text-stone-400 uppercase font-bold">Toplam Mesaj</span>
+          <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{totalMessages}</div>
         </div>
 
-        <div className="p-4 bg-slate-900/80 border border-emerald-500/30 rounded-xl space-y-1">
-          <span className="text-[11px] text-emerald-400 uppercase font-bold">OKUNMAMIŞ</span>
-          <div className="text-2xl font-bold text-emerald-400">{unreadCount}</div>
+        <div className="p-4 bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50 rounded-xl space-y-1">
+          <span className="text-[11px] text-amber-800 dark:text-amber-400 uppercase font-bold">Okunmamış</span>
+          <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">{unreadCount}</div>
         </div>
 
-        <div className="p-4 bg-slate-900/80 border border-amber-500/30 rounded-xl space-y-1">
-          <span className="text-[11px] text-amber-400 uppercase font-bold">YILDIZLI</span>
-          <div className="text-2xl font-bold text-amber-400">{starredCount}</div>
+        <div className="p-4 bg-stone-50 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 rounded-xl space-y-1">
+          <span className="text-[11px] text-stone-500 dark:text-stone-400 uppercase font-bold">Yıldızlı</span>
+          <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{starredCount}</div>
         </div>
 
-        <div className="p-4 bg-slate-900/80 border border-cyan-500/30 rounded-xl space-y-1">
-          <span className="text-[11px] text-cyan-400 uppercase font-bold">BUGÜN GELEN</span>
-          <div className="text-2xl font-bold text-cyan-400">{todayCount}</div>
+        <div className="p-4 bg-stone-50 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 rounded-xl space-y-1">
+          <span className="text-[11px] text-stone-500 dark:text-stone-400 uppercase font-bold">Bugün Gelen</span>
+          <div className="text-2xl font-bold text-stone-900 dark:text-stone-100">{todayCount}</div>
         </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 font-mono">
-        <div className="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200 dark:border-stone-700 shrink-0">
           <button
             onClick={() => setFilterTab('all')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-              filterTab === 'all' ? 'bg-cyan-500 text-slate-950' : 'text-slate-400 hover:text-slate-200'
+              filterTab === 'all' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
-            TÜMÜ ({totalMessages})
+            Tümü ({totalMessages})
           </button>
           <button
             onClick={() => setFilterTab('unread')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-              filterTab === 'unread' ? 'bg-emerald-500 text-slate-950' : 'text-slate-400 hover:text-emerald-400'
+              filterTab === 'unread' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
-            OKUNMAMIŞ ({unreadCount})
+            Okunmamış ({unreadCount})
           </button>
           <button
             onClick={() => setFilterTab('starred')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
-              filterTab === 'starred' ? 'bg-amber-500 text-slate-950' : 'text-slate-400 hover:text-amber-400'
+              filterTab === 'starred' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
-            YILDIZLI ({starredCount})
+            Yıldızlı ({starredCount})
           </button>
         </div>
 
         {/* Search */}
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+          <Search className="w-4 h-4 text-stone-400 absolute left-3.5 top-3" />
           <input
             type="text"
             placeholder="Mesajlarda veya kişide ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-mono text-slate-100 focus:border-cyan-400 outline-none"
+            className="w-full pl-10 pr-4 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-xs text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
           />
         </div>
       </div>
 
       {/* Quick Actions Bar */}
       {messages.length > 0 && (
-        <div className="flex items-center justify-between text-xs font-mono text-slate-400 pt-1">
-          <span>Gösterilen: <strong className="text-slate-200">{filteredMessages.length}</strong> / {totalMessages}</span>
+        <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 pt-1">
+          <span>Gösterilen: <strong className="text-stone-800 dark:text-stone-200">{filteredMessages.length}</strong> / {totalMessages}</span>
 
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}
-                className="hover:text-emerald-400 inline-flex items-center gap-1 transition-colors"
+                className="hover:text-stone-900 dark:hover:text-stone-100 inline-flex items-center gap-1 transition-colors"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
                 <span>Tümünü Okundu İşaretle</span>
@@ -314,7 +308,7 @@ export const MessagesManager: React.FC = () => {
             )}
             <button
               onClick={handleDeleteAllRead}
-              className="hover:text-red-400 inline-flex items-center gap-1 transition-colors"
+              className="hover:text-rose-600 dark:hover:text-rose-400 inline-flex items-center gap-1 transition-colors"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Okunanları Temizle</span>
@@ -323,15 +317,15 @@ export const MessagesManager: React.FC = () => {
         </div>
       )}
 
-      {/* Message List Table / Cards */}
-      <div className="space-y-2.5 font-mono">
+      {/* Message List */}
+      <div className="space-y-2.5">
         {loading ? (
-          <div className="p-12 text-center text-slate-400 text-xs flex flex-col items-center gap-3">
-            <RefreshCw className="w-6 h-6 animate-spin text-cyan-400" />
-            <span>MESAJLAR YÜKLENİYOR...</span>
+          <div className="p-12 text-center text-stone-400 text-xs flex flex-col items-center gap-3">
+            <RefreshCw className="w-6 h-6 animate-spin text-amber-600 dark:text-amber-400" />
+            <span>Mesajlar yükleniyor...</span>
           </div>
         ) : filteredMessages.length === 0 ? (
-          <div className="p-12 text-center bg-slate-900/40 border border-slate-800 rounded-xl text-slate-500 text-xs">
+          <div className="p-12 text-center bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800 rounded-xl text-stone-500 text-xs">
             {searchQuery ? 'Aramanıza uygun mesaj bulunamadı.' : 'Gelen kutunuzda henüz mesaj bulunmuyor.'}
           </div>
         ) : (
@@ -341,16 +335,15 @@ export const MessagesManager: React.FC = () => {
               onClick={() => handleOpenDetail(msg)}
               className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                 !msg.isRead
-                  ? 'bg-slate-900/90 border-cyan-500/40 shadow-lg shadow-cyan-500/5 hover:border-cyan-400'
-                  : 'bg-slate-950/60 border-slate-800/80 hover:border-slate-700 opacity-90'
+                  ? 'bg-amber-50/50 dark:bg-stone-800/90 border-amber-200 dark:border-amber-700/60 shadow-sm'
+                  : 'bg-stone-50/60 dark:bg-stone-800/40 border-stone-200/80 dark:border-stone-700/60 hover:border-stone-300'
               }`}
             >
               <div className="flex items-start gap-3 min-w-0 flex-1">
-                {/* Star & Unread Dot */}
                 <div className="flex items-center gap-2 pt-1 sm:pt-0 shrink-0">
                   <button
                     onClick={(e) => handleToggleStar(msg, e)}
-                    className="text-slate-600 hover:text-amber-400 transition-colors"
+                    className="text-stone-400 hover:text-amber-500 transition-colors"
                   >
                     <Star
                       className={`w-4 h-4 ${
@@ -359,27 +352,26 @@ export const MessagesManager: React.FC = () => {
                     />
                   </button>
                   {!msg.isRead && (
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+                    <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                   )}
                 </div>
 
                 <div className="min-w-0 space-y-1 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-slate-100 text-sm truncate">{msg.name}</span>
-                    <span className="text-[11px] text-slate-400 truncate">&lt;{msg.email}&gt;</span>
-                    <span className="text-[10px] bg-slate-900 border border-slate-800 text-cyan-400 px-2 py-0.5 rounded font-bold">
+                    <span className="font-bold text-stone-900 dark:text-stone-100 text-sm truncate">{msg.name}</span>
+                    <span className="text-[11px] text-stone-400 truncate">&lt;{msg.email}&gt;</span>
+                    <span className="text-[10px] bg-stone-200 dark:bg-stone-700 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded font-bold">
                       {msg.subject}
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-300 truncate max-w-2xl font-sans">
+                  <p className="text-xs text-stone-600 dark:text-stone-300 truncate max-w-2xl">
                     {msg.message}
                   </p>
                 </div>
               </div>
 
-              {/* Date & Actions */}
-              <div className="flex items-center gap-3 shrink-0 text-xs text-slate-400 sm:self-center justify-between sm:justify-end border-t sm:border-t-0 border-slate-800/80 pt-2 sm:pt-0">
+              <div className="flex items-center gap-3 shrink-0 text-xs text-stone-400 sm:self-center justify-between sm:justify-end border-t sm:border-t-0 border-stone-200 dark:border-stone-700 pt-2 sm:pt-0">
                 <span className="text-[11px]">
                   {new Date(msg.createdAt).toLocaleDateString('tr-TR', {
                     day: 'numeric',
@@ -393,14 +385,14 @@ export const MessagesManager: React.FC = () => {
                   <a
                     href={`mailto:${msg.email}?subject=Re: ${encodeURIComponent(msg.subject)}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="p-1.5 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"
+                    className="p-1.5 text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg transition-colors"
                     title="E-posta ile Yanıtla"
                   >
                     <Mail className="w-4 h-4" />
                   </a>
                   <button
                     onClick={(e) => handleDelete(msg.id, e)}
-                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-950/40 rounded-lg transition-colors"
+                    className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
                     title="Sil"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -414,93 +406,89 @@ export const MessagesManager: React.FC = () => {
 
       {/* Message Reader Modal */}
       {selectedMessage && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-2xl bg-slate-950 border border-cyan-500/40 rounded-2xl p-6 md:p-8 space-y-6 shadow-2xl font-mono text-slate-100 max-h-[90vh] overflow-y-auto relative">
-            {/* Modal Header */}
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-6 md:p-8 space-y-6 shadow-2xl text-stone-900 dark:text-stone-100 max-h-[90vh] overflow-y-auto relative">
+            <div className="flex items-start justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-cyan-400 uppercase tracking-widest">// MESAJ DETAYI</span>
-                  <span className="text-[10px] bg-slate-900 border border-cyan-500/30 text-cyan-300 px-2 py-0.5 rounded">
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase">Mesaj Detayı</span>
+                  <span className="text-[10px] bg-stone-100 dark:bg-stone-800 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded font-bold">
                     {selectedMessage.subject}
                   </span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-100">{selectedMessage.name}</h3>
+                <h3 className="text-lg font-bold text-stone-900 dark:text-stone-100">{selectedMessage.name}</h3>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleToggleStar(selectedMessage)}
-                  className="p-2 text-slate-400 hover:text-amber-400 bg-slate-900 rounded-xl border border-slate-800"
+                  className="p-2 text-stone-400 hover:text-amber-500 bg-stone-100 dark:bg-stone-800 rounded-xl"
                 >
                   <Star className={`w-4 h-4 ${selectedMessage.isStarred ? 'fill-amber-400 text-amber-400' : ''}`} />
                 </button>
                 <button
                   onClick={() => setSelectedMessage(null)}
-                  className="p-2 text-slate-400 hover:text-slate-100 bg-slate-900 rounded-xl border border-slate-800 text-xs font-bold"
+                  className="p-2 text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 bg-stone-100 dark:bg-stone-800 rounded-xl text-xs font-bold"
                 >
-                  ✕ KAPAT
+                  ✕ Kapat
                 </button>
               </div>
             </div>
 
-            {/* Sender Meta Box */}
-            <div className="p-4 bg-slate-900/80 border border-slate-800 rounded-xl space-y-2 text-xs">
+            <div className="p-4 bg-stone-50 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 rounded-xl space-y-2 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-cyan-400" />
-                  <span>E-posta: <a href={`mailto:${selectedMessage.email}`} className="text-cyan-400 underline font-bold">{selectedMessage.email}</a></span>
+                  <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>E-posta: <a href={`mailto:${selectedMessage.email}`} className="text-amber-700 dark:text-amber-400 underline font-bold">{selectedMessage.email}</a></span>
                 </div>
 
                 {selectedMessage.phone && (
                   <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-emerald-400" />
-                    <span>Telefon: <strong className="text-slate-200">{selectedMessage.phone}</strong></span>
+                    <Phone className="w-4 h-4 text-stone-500" />
+                    <span>Telefon: <strong className="text-stone-800 dark:text-stone-200">{selectedMessage.phone}</strong></span>
                   </div>
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60 text-slate-400 text-[11px]">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone-200/60 dark:border-stone-700/60 text-stone-500 dark:text-stone-400 text-[11px]">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                  <Calendar className="w-3.5 h-3.5 text-stone-400" />
                   <span>Gönderim Tarihi: {new Date(selectedMessage.createdAt).toLocaleString('tr-TR')}</span>
                 </div>
 
                 {selectedMessage.ipAddress && (
                   <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
+                    <ShieldCheck className="w-3.5 h-3.5 text-stone-400" />
                     <span>IP: {selectedMessage.ipAddress}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Message Content Body */}
             <div className="space-y-2">
-              <label className="block text-xs font-bold uppercase text-slate-400">MESAJ İÇERİĞİ:</label>
-              <div className="p-5 bg-slate-900/90 border border-slate-800 rounded-xl text-sm font-sans text-slate-200 leading-relaxed whitespace-pre-wrap selection:bg-cyan-500 selection:text-black">
+              <label className="block text-xs font-bold uppercase text-stone-500 dark:text-stone-400">Mesaj İçeriği:</label>
+              <div className="p-5 bg-stone-50 dark:bg-stone-800/90 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 leading-relaxed whitespace-pre-wrap">
                 {selectedMessage.message}
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div className="pt-4 border-t border-stone-100 dark:border-stone-800 flex flex-wrap items-center justify-between gap-3">
               <button
                 onClick={() => handleDelete(selectedMessage.id)}
-                className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-red-950/60 hover:bg-red-900/80 text-red-300 text-xs font-mono font-bold rounded-xl border border-red-500/30 transition-colors"
+                className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-xl border border-rose-200 dark:border-rose-900/50 transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>MESAJI SİL</span>
+                <span>Mesajı Sil</span>
               </button>
 
               <a
                 href={`mailto:${selectedMessage.email}?subject=Re: ${encodeURIComponent(selectedMessage.subject)}&body=${encodeURIComponent(`Sayın ${selectedMessage.name},\n\n`)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 py-2.5 px-5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl transition-all shadow-lg shadow-cyan-500/20"
+                className="inline-flex items-center gap-2 py-2.5 px-5 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl transition-all shadow-md"
               >
                 <Mail className="w-4 h-4" />
-                <span>E-POSTA İLE YANITLA</span>
+                <span>E-posta ile Yanıtla</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>

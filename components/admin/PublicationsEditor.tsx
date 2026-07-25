@@ -6,7 +6,7 @@ import { Plus, Trash2, Edit2, Save, BookOpen } from 'lucide-react';
 
 interface PublicationsEditorProps {
   publications: PublicationItem[];
-  onSave: (updatedPublications: PublicationItem[]) => void;
+  onSave: (updatedPubs: PublicationItem[]) => void;
 }
 
 export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publications, onSave }) => {
@@ -17,11 +17,12 @@ export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publicat
   const startAdd = () => {
     setEditingId('new');
     setFormState({
-      type: 'Akademik Makale',
+      type: 'Makale',
       title: '',
       publisher: '',
       year: new Date().getFullYear().toString(),
       url: '',
+      doi: '',
     });
   };
 
@@ -36,16 +37,17 @@ export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publicat
   };
 
   const handleSaveItem = () => {
-    if (!formState.title || !formState.type || !formState.year) return;
+    if (!formState.title || !formState.year) return;
 
     if (editingId === 'new') {
       const newItem: PublicationItem = {
         id: `pub-${Date.now()}`,
-        type: formState.type || 'Akademik Makale',
+        type: formState.type || 'Makale',
         title: formState.title || '',
         publisher: formState.publisher || '',
         year: formState.year || '',
         url: formState.url || '',
+        doi: formState.doi || '',
       };
       const updated = [...items, newItem];
       setItems(updated);
@@ -67,85 +69,85 @@ export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publicat
   };
 
   return (
-    <div className="bg-slate-950/80 p-6 md:p-8 rounded-2xl border border-cyan-500/20 shadow-2xl backdrop-blur-md space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md space-y-6 transition-colors duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
         <div>
-          <h2 className="text-xl font-mono font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-cyan-400" />
-            <span>Yayınlar & Makaleler Yönetimi</span>
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <span>Akademik Yayınlar Yönetimi</span>
           </h2>
-          <p className="text-xs font-mono text-slate-400 mt-1">
-            Akademik makalelerinizi, kitap bölümlerinizi ve tebliğlerinizi yönetin.
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+            Makale, kitap bölümü, bildiri ve araştırma yayınlarınızı yönetin.
           </p>
         </div>
         <button
           onClick={startAdd}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl transition-all shadow-md disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
-          <span>YENİ YAYIN EKLE</span>
+          <span>Yeni Yayın Ekle</span>
         </button>
       </div>
 
-      {/* Editing Form */}
       {editingId && (
-        <div className="p-5 bg-slate-900/90 border border-cyan-500/30 rounded-xl space-y-4">
-          <h3 className="text-xs font-mono font-bold uppercase text-cyan-400 border-b border-slate-800 pb-2">
-            {editingId === 'new' ? '// YENİ YAYIN EKLE' : '// YAYIN BİLGİSİNİ DÜZENLE'}
+        <div className="p-5 bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-xl space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 border-b border-stone-200 dark:border-stone-700 pb-2">
+            {editingId === 'new' ? 'Yeni Yayın Kaydı' : 'Yayın Kaydını Düzenle'}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Yayın Türü</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Yayın Türü</label>
               <select
-                value={formState.type || 'Akademik Makale'}
+                value={formState.type || 'Makale'}
                 onChange={(e) => setFormState({ ...formState, type: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               >
-                <option value="Akademik Makale">Akademik Makale</option>
+                <option value="Makale">Makale</option>
                 <option value="Kitap Bölümü">Kitap Bölümü</option>
-                <option value="Bildiri / Tebliğ">Bildiri / Tebliğ</option>
-                <option value="Tez">Tez</option>
-                <option value="Makale / Araştırma">Makale / Araştırma</option>
+                <option value="Bildiri">Bildiri / Sempozyum</option>
+                <option value="Tez">Akademik Tez</option>
+                <option value="Diğer">Diğer</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Yayın Yılı</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Yayımlandığı Yıl</label>
               <input
                 type="text"
+                placeholder="Örn: 2024"
                 value={formState.year || ''}
                 onChange={(e) => setFormState({ ...formState, year: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Yayın Başlığı</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Yayın Başlığı</label>
               <input
                 type="text"
-                placeholder="Örn: Din ve Yapay Zeka Kapsamında Yapay Zeka Etiği"
+                placeholder="Yayın tam adını girin..."
                 value={formState.title || ''}
                 onChange={(e) => setFormState({ ...formState, title: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Yayınevi / Dergi</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Yayıncı / Dergi Adı</label>
               <input
                 type="text"
-                placeholder="Örn: Dijital Çağda İslami Finans Yayınları"
+                placeholder="Örn: İslam Hukuku Araştırmaları Dergisi"
                 value={formState.publisher || ''}
                 onChange={(e) => setFormState({ ...formState, publisher: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Erişim Linki / DOI (Opsiyonel)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">DOI veya Yayın Bağlantısı (URL)</label>
               <input
-                type="url"
-                placeholder="https://doi.org/..."
-                value={formState.url || ''}
-                onChange={(e) => setFormState({ ...formState, url: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                type="text"
+                placeholder="https://doi.org/... veya https://..."
+                value={formState.url || formState.doi || ''}
+                onChange={(e) => setFormState({ ...formState, url: e.target.value, doi: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
           </div>
@@ -153,49 +155,47 @@ export const PublicationsEditor: React.FC<PublicationsEditorProps> = ({ publicat
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={cancelEdit}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-semibold rounded-xl"
+              className="px-3.5 py-2 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-200 text-xs font-semibold rounded-xl"
             >
               İptal
             </button>
             <button
               onClick={handleSaveItem}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>KAYDET</span>
+              <span>Kaydet</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Item List */}
       <div className="space-y-3">
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl hover:border-cyan-500/30 transition-colors"
+            className="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-800/60 border border-stone-200/80 dark:border-stone-700/80 rounded-xl hover:border-stone-400 dark:hover:border-stone-600 transition-colors"
           >
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono font-bold uppercase bg-cyan-950 text-cyan-400 px-2 py-0.5 border border-cyan-500/30 rounded">
-                  {item.type}
+                <span className="text-[10px] font-bold bg-stone-200 dark:bg-stone-700 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">
+                  {item.type} ({item.year})
                 </span>
-                <span className="text-xs font-mono text-slate-400">{item.year}</span>
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm">{item.title}</h4>
               </div>
-              <h4 className="font-serif font-bold text-slate-100 text-sm mt-1">&quot;{item.title}&quot;</h4>
-              {item.publisher && <p className="text-xs font-mono text-slate-400 italic mt-0.5">{item.publisher}</p>}
+              {item.publisher && <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{item.publisher}</p>}
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => startEdit(item)}
-                className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-2 text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleDelete(item.id)}
-                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors"
+                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

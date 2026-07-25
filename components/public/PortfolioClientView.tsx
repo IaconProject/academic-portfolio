@@ -127,9 +127,9 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
           <ReferencesSection references={references} />
           <ContactSection profile={profile} />
 
-          {/* Footer */}
-          <footer className="text-center py-8 opacity-60 text-xs font-bold uppercase tracking-widest text-slate-500 border-t border-slate-200/50 mt-12">
-            © {new Date().getFullYear()} {profile.fullName} | Tüm Hakları Saklıdır
+          {/* Minimalist Footer */}
+          <footer className="text-center py-6 text-[11px] font-medium text-slate-400 border-t border-slate-200/40 mt-12">
+            © {new Date().getFullYear()} {profile.fullName}
           </footer>
         </main>
       </div>

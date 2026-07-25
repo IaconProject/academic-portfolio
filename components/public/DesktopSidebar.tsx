@@ -79,13 +79,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
           })}
         </ul>
       </nav>
-
-      {/* Clean Footer */}
-      <div className="p-6 border-t border-white/10 text-center bg-black/10">
-        <div className="text-[10px] text-slate-400 uppercase tracking-widest font-mono">
-          © {new Date().getFullYear()} {profile.fullName}
-        </div>
-      </div>
     </aside>
   );
 };

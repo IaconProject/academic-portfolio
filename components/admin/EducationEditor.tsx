@@ -69,71 +69,71 @@ export const EducationEditor: React.FC<EducationEditorProps> = ({ education, onS
   };
 
   return (
-    <div className="bg-slate-950/80 p-6 md:p-8 rounded-2xl border border-cyan-500/20 shadow-2xl backdrop-blur-md space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+    <div className="bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md space-y-6 transition-colors duration-300">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
         <div>
-          <h2 className="text-xl font-mono font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-            <School className="w-5 h-5 text-cyan-400" />
+          <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight flex items-center gap-2">
+            <School className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <span>Eğitim Geçmişi Yönetimi</span>
           </h2>
-          <p className="text-xs font-mono text-slate-400 mt-1">
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
             Lisans, lisansüstü ve akademik öğrenim bilgilerinizi ekleyin.
           </p>
         </div>
         <button
           onClick={startAdd}
           disabled={editingId !== null}
-          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl transition-all shadow-md disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
-          <span>YENİ EĞİTİM EKLE</span>
+          <span>Yeni Eğitim Ekle</span>
         </button>
       </div>
 
       {/* Editing Form */}
       {editingId && (
-        <div className="p-5 bg-slate-900/90 border border-cyan-500/30 rounded-xl space-y-4">
-          <h3 className="text-xs font-mono font-bold uppercase text-cyan-400 border-b border-slate-800 pb-2">
-            {editingId === 'new' ? '// YENİ EĞİTİM KAYDI' : '// EĞİTİM KAYDINI DÜZENLE'}
+        <div className="p-5 bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-xl space-y-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 border-b border-stone-200 dark:border-stone-700 pb-2">
+            {editingId === 'new' ? 'Yeni Eğitim Kaydı' : 'Eğitim Kaydını Düzenle'}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Derece / Unvan</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Derece / Unvan</label>
               <input
                 type="text"
                 placeholder="Örn: Lisans (Devam Ediyor)"
                 value={formState.degree || ''}
                 onChange={(e) => setFormState({ ...formState, degree: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Üniversite / Fakülte</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Üniversite / Fakülte</label>
               <input
                 type="text"
                 placeholder="Örn: Eskişehir Osmangazi Üniversitesi"
                 value={formState.institution || ''}
                 onChange={(e) => setFormState({ ...formState, institution: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
             <div>
-              <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Tarih / Yıllar</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Tarih / Yıllar</label>
               <input
                 type="text"
                 placeholder="Örn: 2020 - Devam Ediyor"
                 value={formState.years || ''}
                 onChange={(e) => setFormState({ ...formState, years: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
               />
             </div>
             <div className="flex items-center gap-4 pt-6">
-              <label className="flex items-center gap-2 text-xs font-mono font-bold text-slate-300 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs font-bold text-stone-700 dark:text-stone-300 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formState.isCurrent || false}
                   onChange={(e) => setFormState({ ...formState, isCurrent: e.target.checked })}
-                  className="rounded bg-slate-950 border-slate-700 text-cyan-400 focus:ring-cyan-400"
+                  className="rounded border-stone-300 dark:border-stone-700 text-stone-900 dark:text-amber-500 focus:ring-stone-900"
                 />
                 <span>Aktif Öğrenim (Devam Ediyor)</span>
               </label>
@@ -141,28 +141,28 @@ export const EducationEditor: React.FC<EducationEditorProps> = ({ education, onS
           </div>
 
           <div>
-            <label className="block text-xs font-mono font-bold uppercase text-slate-300 mb-1">Açıklama (Opsiyonel)</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-1">Açıklama (Opsiyonel)</label>
             <textarea
               rows={2}
               value={formState.description || ''}
               onChange={(e) => setFormState({ ...formState, description: e.target.value })}
-              className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-sm font-mono text-slate-100 focus:border-cyan-400 outline-none"
+              className="w-full p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button
               onClick={cancelEdit}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-semibold rounded-xl"
+              className="px-3.5 py-2 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-200 text-xs font-semibold rounded-xl"
             >
               İptal
             </button>
             <button
               onClick={handleSaveItem}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-mono font-extrabold rounded-xl"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 text-xs font-bold rounded-xl"
             >
               <Save className="w-3.5 h-3.5" />
-              <span>KAYDET</span>
+              <span>Kaydet</span>
             </button>
           </div>
         </div>
@@ -173,28 +173,28 @@ export const EducationEditor: React.FC<EducationEditorProps> = ({ education, onS
         {items.map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800/80 rounded-xl hover:border-cyan-500/30 transition-colors"
+            className="flex items-center justify-between p-4 bg-stone-50 dark:bg-stone-800/60 border border-stone-200/80 dark:border-stone-700/80 rounded-xl hover:border-stone-400 dark:hover:border-stone-600 transition-colors"
           >
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-mono font-bold text-slate-100 text-sm">{item.degree}</h4>
-                <span className="text-[10px] font-mono font-bold bg-cyan-950 text-cyan-400 px-2 py-0.5 border border-cyan-500/30 rounded">
+                <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm">{item.degree}</h4>
+                <span className="text-[10px] font-bold bg-stone-200 dark:bg-stone-700 text-stone-800 dark:text-stone-200 px-2 py-0.5 rounded">
                   {item.years}
                 </span>
               </div>
-              <p className="text-xs font-mono text-slate-400 mt-1">{item.institution}</p>
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">{item.institution}</p>
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => startEdit(item)}
-                className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-2 text-stone-500 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-200 dark:hover:bg-stone-700 rounded-lg transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
                 onClick={() => handleDelete(item.id)}
-                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg transition-colors"
+                className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

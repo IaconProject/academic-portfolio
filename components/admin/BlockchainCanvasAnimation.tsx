@@ -2,7 +2,11 @@
 
 import React, { useEffect, useRef } from 'react';
 
-export const BlockchainCanvasAnimation: React.FC = () => {
+interface CanvasAnimationProps {
+  theme?: 'light' | 'dark';
+}
+
+export const BlockchainCanvasAnimation: React.FC<CanvasAnimationProps> = ({ theme = 'light' }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -19,7 +23,7 @@ export const BlockchainCanvasAnimation: React.FC = () => {
       x: width / 2,
       y: height / 2,
       active: false,
-      radius: 180,
+      radius: 160,
     };
 
     const handleResize = () => {
@@ -42,21 +46,15 @@ export const BlockchainCanvasAnimation: React.FC = () => {
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseleave', handleMouseLeave);
 
-    // Node particles definition
-    const nodeCount = Math.min(Math.floor((width * height) / 16000), 50);
+    const nodeCount = Math.min(Math.floor((width * height) / 18000), 45);
     const nodes: {
       x: number;
       y: number;
-      baseX: number;
-      baseY: number;
       vx: number;
       vy: number;
       radius: number;
-      color: string;
       pulse: number;
     }[] = [];
-
-    const colors = ['#06b6d4', '#10b981', '#3b82f6', '#0284c7', '#34d399'];
 
     for (let i = 0; i < nodeCount; i++) {
       const rx = Math.random() * width;
@@ -64,12 +62,9 @@ export const BlockchainCanvasAnimation: React.FC = () => {
       nodes.push({
         x: rx,
         y: ry,
-        baseX: rx,
-        baseY: ry,
-        vx: (Math.random() - 0.5) * 0.9,
-        vy: (Math.random() - 0.5) * 0.9,
-        radius: Math.random() * 2.2 + 1.5,
-        color: colors[Math.floor(Math.random() * colors.length)],
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: Math.random() * 1.8 + 1.2,
         pulse: Math.random() * Math.PI * 2,
       });
     }
@@ -77,7 +72,12 @@ export const BlockchainCanvasAnimation: React.FC = () => {
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Mouse interactive magnetic connections
+      const isDark = theme === 'dark' || document.documentElement.classList.contains('dark');
+
+      const particleColor = isDark ? 'rgba(217, 119, 6, 0.4)' : 'rgba(120, 105, 90, 0.35)';
+      const lineColorRgb = isDark ? '217, 119, 6' : '140, 120, 100';
+
+      // Mouse subtle aura
       if (mouse.active) {
         ctx.beginPath();
         const grad = ctx.createRadialGradient(
@@ -88,15 +88,15 @@ export const BlockchainCanvasAnimation: React.FC = () => {
           mouse.y,
           mouse.radius
         );
-        grad.addColorStop(0, 'rgba(6, 182, 212, 0.15)');
-        grad.addColorStop(1, 'rgba(6, 182, 212, 0)');
+        grad.addColorStop(0, isDark ? 'rgba(217, 119, 6, 0.08)' : 'rgba(140, 120, 100, 0.06)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = grad;
         ctx.arc(mouse.x, mouse.y, mouse.radius, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      // Draw node connection lines
-      const maxDistance = 140;
+      // Draw faint connections
+      const maxDistance = 130;
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           const dx = nodes[i].x - nodes[j].x;
@@ -104,34 +104,32 @@ export const BlockchainCanvasAnimation: React.FC = () => {
           const dist = Math.sqrt(dx * dx + dy * dy);
 
           if (dist < maxDistance) {
-            let alpha = (1 - dist / maxDistance) * 0.28;
+            let alpha = (1 - dist / maxDistance) * (isDark ? 0.15 : 0.12);
 
-            // Extra glow if near cursor
             if (mouse.active) {
               const mDist = Math.hypot(
                 (nodes[i].x + nodes[j].x) / 2 - mouse.x,
                 (nodes[i].y + nodes[j].y) / 2 - mouse.y
               );
               if (mDist < mouse.radius) {
-                alpha += (1 - mDist / mouse.radius) * 0.35;
+                alpha += (1 - mDist / mouse.radius) * 0.18;
               }
             }
 
             ctx.beginPath();
             ctx.moveTo(nodes[i].x, nodes[i].y);
             ctx.lineTo(nodes[j].x, nodes[j].y);
-            ctx.strokeStyle = `rgba(6, 182, 212, ${Math.min(1, alpha)})`;
-            ctx.lineWidth = alpha > 0.3 ? 1.2 : 0.8;
+            ctx.strokeStyle = `rgba(${lineColorRgb}, ${Math.min(0.4, alpha)})`;
+            ctx.lineWidth = 0.8;
             ctx.stroke();
           }
         }
       }
 
-      // Update and draw nodes with mouse repulsion/attraction physics
+      // Update & draw particles
       for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
 
-        // Mouse force
         if (mouse.active) {
           const mdx = mouse.x - node.x;
           const mdy = mouse.y - node.y;
@@ -140,28 +138,24 @@ export const BlockchainCanvasAnimation: React.FC = () => {
           if (mDist < mouse.radius) {
             const force = (mouse.radius - mDist) / mouse.radius;
             const angle = Math.atan2(mdy, mdx);
-            node.x -= Math.cos(angle) * force * 2.5;
-            node.y -= Math.sin(angle) * force * 2.5;
+            node.x -= Math.cos(angle) * force * 1.2;
+            node.y -= Math.sin(angle) * force * 1.2;
           }
         }
 
-        // Standard movement
         node.x += node.vx;
         node.y += node.vy;
 
         if (node.x < 0 || node.x > width) node.vx *= -1;
         if (node.y < 0 || node.y > height) node.vy *= -1;
 
-        node.pulse += 0.04;
-        const currentRadius = node.radius + Math.sin(node.pulse) * 0.6;
+        node.pulse += 0.03;
+        const currentRadius = node.radius + Math.sin(node.pulse) * 0.4;
 
         ctx.beginPath();
         ctx.arc(node.x, node.y, Math.max(1, currentRadius), 0, Math.PI * 2);
-        ctx.fillStyle = node.color;
-        ctx.shadowColor = node.color;
-        ctx.shadowBlur = 12;
+        ctx.fillStyle = particleColor;
         ctx.fill();
-        ctx.shadowBlur = 0;
       }
 
       animationFrameId = requestAnimationFrame(draw);
@@ -175,12 +169,12 @@ export const BlockchainCanvasAnimation: React.FC = () => {
       window.removeEventListener('mouseleave', handleMouseLeave);
       cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, [theme]);
 
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-0 opacity-55 transition-opacity duration-500"
+      className="fixed inset-0 pointer-events-none z-0 opacity-60 transition-opacity duration-500"
     />
   );
 };
