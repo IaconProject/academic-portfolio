@@ -56,11 +56,56 @@ export async function POST(request: Request) {
     const newPageStep: PageNavStep = { path, title, timestamp: nowIso };
 
     let localSessions = readLocalSessions();
-    const existingIndex = localSessions.findIndex((s) => s.sessionId === sessionId);
+    let existingIndex = localSessions.findIndex((s) => s.sessionId === sessionId);
+    let currentSession = existingIndex !== -1 ? localSessions[existingIndex] : null;
 
-    if (existingIndex !== -1) {
-      // 1. Existing Session -> Append page step & update timestamp (No Geo Lookup Overhead!)
-      const currentSession = localSessions[existingIndex];
+    // VERY IMPORTANT: If not found in stateless Vercel memory, query Supabase directly!
+    // This prevents fragmented journeys and duplicate rows on Vercel cold starts.
+    if (!currentSession && isSupabaseConfigured && supabase) {
+      try {
+        const { data } = await supabase
+          .from('visitor_sessions')
+          .select('*')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (data && data.length > 0) {
+          const row = data[0];
+          currentSession = {
+            id: row.id,
+            sessionId: row.session_id,
+            ip: row.ip,
+            country: row.country,
+            countryCode: row.country_code,
+            city: row.city,
+            region: row.region,
+            isp: row.isp,
+            isMobileNetwork: row.is_mobile_network,
+            deviceBrand: row.device_brand,
+            deviceModel: row.device_model,
+            deviceType: row.device_type,
+            osName: row.os_name,
+            osVersion: row.os_version,
+            browserName: row.browser_name,
+            browserVersion: row.browser_version,
+            userAgent: row.user_agent,
+            lat: row.lat,
+            lon: row.lon,
+            pages: Array.isArray(row.pages) ? row.pages : [],
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+          };
+          localSessions.push(currentSession);
+          existingIndex = localSessions.length - 1;
+        }
+      } catch (e) {
+        console.warn('Supabase session fetch error:', e);
+      }
+    }
+
+    if (currentSession) {
+      // 1. Existing Session -> Append page step & update timestamp
       const updatedPages = Array.isArray(currentSession.pages) ? [...currentSession.pages] : [];
 
       // Avoid duplicate consecutive page logs if under 2 seconds
@@ -76,7 +121,10 @@ export async function POST(request: Request) {
 
       currentSession.pages = updatedPages;
       currentSession.updatedAt = nowIso;
-      localSessions[existingIndex] = currentSession;
+      
+      if (existingIndex !== -1) {
+        localSessions[existingIndex] = currentSession;
+      }
       writeLocalSessions(localSessions);
 
       // Async update Supabase

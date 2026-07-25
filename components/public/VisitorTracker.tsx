@@ -63,7 +63,7 @@ export function VisitorTracker() {
       };
 
       try {
-        fetch('/api/visitors/track', {
+        fetch('/api/app-sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

@@ -74,9 +74,11 @@ export async function GET() {
         }));
         writeLocalSessions(sessions);
       } else {
+        console.error('Supabase fetch error:', error);
         sessions = readLocalSessions();
       }
     } catch (e) {
+      console.error('Supabase fetch catch error:', e);
       sessions = readLocalSessions();
     }
   } else {
