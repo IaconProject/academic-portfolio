@@ -1,40 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { VisitorSession } from '@/lib/types';
-import fs from 'fs';
-import path from 'path';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-const SESSIONS_TMP_FILE = path.join('/tmp', 'academic_visitor_sessions_v2.json');
-
-let memorySessions: VisitorSession[] = [];
-
-function readLocalSessions(): VisitorSession[] {
-  if (memorySessions.length > 0) return memorySessions;
-  try {
-    if (fs.existsSync(SESSIONS_TMP_FILE)) {
-      const content = fs.readFileSync(SESSIONS_TMP_FILE, 'utf-8');
-      if (content) {
-        memorySessions = JSON.parse(content);
-        return memorySessions;
-      }
-    }
-  } catch (e) {
-    console.error('Failed reading local visitor sessions:', e);
-  }
-  return [];
-}
-
-function writeLocalSessions(sessions: VisitorSession[]): void {
-  memorySessions = sessions;
-  try {
-    fs.writeFileSync(SESSIONS_TMP_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
-  } catch (e) {
-    console.error('Failed writing local visitor sessions:', e);
-  }
-}
 
 export async function GET() {
   let sessions: VisitorSession[] = [];
@@ -52,11 +21,11 @@ export async function GET() {
           id: row.id,
           sessionId: row.session_id,
           ip: row.ip,
-          country: row.country || 'Bilinmiyor',
+          country: row.country || 'Türkiye',
           countryCode: row.country_code || 'TR',
           city: row.city || 'Bilinmiyor',
           region: row.region || 'Bilinmiyor',
-          isp: row.isp || 'Bilinmiyor',
+          isp: row.isp || 'Bilinmeyen Operatör',
           isMobileNetwork: row.is_mobile_network ?? false,
           deviceBrand: row.device_brand || 'Bilinmiyor',
           deviceModel: row.device_model || 'Bilinmiyor',
@@ -72,17 +41,12 @@ export async function GET() {
           createdAt: row.created_at,
           updatedAt: row.updated_at,
         }));
-        writeLocalSessions(sessions);
       } else {
-        console.error('Supabase fetch error:', error);
-        sessions = readLocalSessions();
+        console.error('Supabase GET visitor_sessions error:', error);
       }
     } catch (e) {
-      console.error('Supabase fetch catch error:', e);
-      sessions = readLocalSessions();
+      console.error('Supabase GET visitor_sessions catch error:', e);
     }
-  } else {
-    sessions = readLocalSessions();
   }
 
   // Calculate Dashboard Statistics
@@ -107,9 +71,9 @@ export async function GET() {
       activeNow++;
     }
 
-    if (sess.city) cityCounts[sess.city] = (cityCounts[sess.city] || 0) + 1;
+    if (sess.city && sess.city !== 'Bilinmiyor') cityCounts[sess.city] = (cityCounts[sess.city] || 0) + 1;
     if (sess.country) countryCounts[sess.country] = (countryCounts[sess.country] || 0) + 1;
-    if (sess.isp) ispCounts[sess.isp] = (ispCounts[sess.isp] || 0) + 1;
+    if (sess.isp && sess.isp !== 'Bilinmeyen Operatör') ispCounts[sess.isp] = (ispCounts[sess.isp] || 0) + 1;
 
     const devLabel = `${sess.deviceBrand} (${sess.deviceType})`;
     deviceCounts[devLabel] = (deviceCounts[devLabel] || 0) + 1;
@@ -153,7 +117,7 @@ export async function DELETE(request: Request) {
     let idsParam = searchParams.get('ids');
     const clearAll = searchParams.get('clearAll');
 
-    // Also support JSON body if passed
+    // Support JSON body if passed
     try {
       if (request.headers.get('content-type')?.includes('application/json')) {
         const body = await request.json();
@@ -163,11 +127,7 @@ export async function DELETE(request: Request) {
       }
     } catch (e) {}
 
-    let current = readLocalSessions();
-
     if (clearAll === 'true') {
-      writeLocalSessions([]);
-
       if (isSupabaseConfigured && supabase) {
         try {
           await supabase.from('visitor_sessions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -179,16 +139,10 @@ export async function DELETE(request: Request) {
 
     const idsToDelete = idsParam ? idsParam.split(',').map((x) => x.trim()).filter(Boolean) : id ? [id] : [];
 
-    if (idsToDelete.length > 0) {
-      const deleteSet = new Set(idsToDelete);
-      current = current.filter((s) => !deleteSet.has(s.id) && !deleteSet.has(s.sessionId));
-      writeLocalSessions(current);
-
-      if (isSupabaseConfigured && supabase) {
-        try {
-          await supabase.from('visitor_sessions').delete().in('id', idsToDelete);
-        } catch (e) {}
-      }
+    if (idsToDelete.length > 0 && isSupabaseConfigured && supabase) {
+      try {
+        await supabase.from('visitor_sessions').delete().in('id', idsToDelete);
+      } catch (e) {}
 
       return NextResponse.json({ success: true, count: idsToDelete.length });
     }

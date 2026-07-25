@@ -2,40 +2,9 @@ import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getClientIp, lookupGeo, parseDeviceAndBrowser } from '@/lib/visitor-helpers.server';
 import { VisitorSession, PageNavStep } from '@/lib/types';
-import fs from 'fs';
-import path from 'path';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-const SESSIONS_TMP_FILE = path.join('/tmp', 'academic_visitor_sessions_v2.json');
-
-let memorySessions: VisitorSession[] = [];
-
-function readLocalSessions(): VisitorSession[] {
-  if (memorySessions.length > 0) return memorySessions;
-  try {
-    if (fs.existsSync(SESSIONS_TMP_FILE)) {
-      const content = fs.readFileSync(SESSIONS_TMP_FILE, 'utf-8');
-      if (content) {
-        memorySessions = JSON.parse(content);
-        return memorySessions;
-      }
-    }
-  } catch (e) {
-    console.error('Failed reading local visitor sessions:', e);
-  }
-  return [];
-}
-
-function writeLocalSessions(sessions: VisitorSession[]): void {
-  memorySessions = sessions;
-  try {
-    fs.writeFileSync(SESSIONS_TMP_FILE, JSON.stringify(sessions, null, 2), 'utf-8');
-  } catch (e) {
-    console.error('Failed writing local visitor sessions:', e);
-  }
-}
 
 export async function POST(request: Request) {
   try {
@@ -55,162 +24,78 @@ export async function POST(request: Request) {
     const nowIso = new Date().toISOString();
     const newPageStep: PageNavStep = { path, title, timestamp: nowIso };
 
-    let localSessions = readLocalSessions();
-    let existingIndex = localSessions.findIndex((s) => s.sessionId === sessionId);
-    let currentSession = existingIndex !== -1 ? localSessions[existingIndex] : null;
-
-    // VERY IMPORTANT: If not found in stateless Vercel memory, query Supabase directly!
-    // This prevents fragmented journeys and duplicate rows on Vercel cold starts.
-    if (!currentSession && isSupabaseConfigured && supabase) {
-      try {
-        const { data } = await supabase
-          .from('visitor_sessions')
-          .select('*')
-          .eq('session_id', sessionId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-
-        if (data && data.length > 0) {
-          const row = data[0];
-          currentSession = {
-            id: row.id,
-            sessionId: row.session_id,
-            ip: row.ip,
-            country: row.country,
-            countryCode: row.country_code,
-            city: row.city,
-            region: row.region,
-            isp: row.isp,
-            isMobileNetwork: row.is_mobile_network,
-            deviceBrand: row.device_brand,
-            deviceModel: row.device_model,
-            deviceType: row.device_type,
-            osName: row.os_name,
-            osVersion: row.os_version,
-            browserName: row.browser_name,
-            browserVersion: row.browser_version,
-            userAgent: row.user_agent,
-            lat: row.lat,
-            lon: row.lon,
-            pages: Array.isArray(row.pages) ? row.pages : [],
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-          };
-          localSessions.push(currentSession);
-          existingIndex = localSessions.length - 1;
-        }
-      } catch (e) {
-        console.warn('Supabase session fetch error:', e);
-      }
+    if (!isSupabaseConfigured || !supabase) {
+      return NextResponse.json({ success: false, error: 'Supabase devredışı.' }, { status: 500 });
     }
 
-    if (currentSession) {
-      // 1. Existing Session -> Append page step & update timestamp
-      const updatedPages = Array.isArray(currentSession.pages) ? [...currentSession.pages] : [];
+    // 1. Query Supabase directly for existing session
+    const { data: existingRows, error: selectErr } = await supabase
+      .from('visitor_sessions')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (!selectErr && existingRows && existingRows.length > 0) {
+      const row = existingRows[0];
+      const existingPages = Array.isArray(row.pages) ? [...row.pages] : [];
 
       // Avoid duplicate consecutive page logs if under 2 seconds
-      const lastStep = updatedPages[updatedPages.length - 1];
+      const lastStep = existingPages[existingPages.length - 1];
       const isDuplicate = lastStep && lastStep.path === path && (Date.now() - new Date(lastStep.timestamp).getTime() < 2000);
 
       if (!isDuplicate) {
-        if (updatedPages.length >= 100) {
-          updatedPages.shift(); // FIFO trim if capped at 100
+        if (existingPages.length >= 100) {
+          existingPages.shift(); // FIFO trim if capped at 100
         }
-        updatedPages.push(newPageStep);
+        existingPages.push(newPageStep);
       }
 
-      currentSession.pages = updatedPages;
-      currentSession.updatedAt = nowIso;
-      
-      if (existingIndex !== -1) {
-        localSessions[existingIndex] = currentSession;
-      }
-      writeLocalSessions(localSessions);
-
-      // Async update Supabase
-      if (isSupabaseConfigured && supabase) {
-        try {
-          await supabase
-            .from('visitor_sessions')
-            .update({
-              pages: updatedPages,
-              updated_at: nowIso,
-            })
-            .eq('session_id', sessionId);
-        } catch (e) {
-          console.warn('Supabase session append error:', e);
-        }
-      }
+      await supabase
+        .from('visitor_sessions')
+        .update({
+          pages: existingPages,
+          updated_at: nowIso,
+        })
+        .eq('session_id', sessionId);
 
       return NextResponse.json({ success: true, isNewSession: false });
     }
 
-    // 2. New Session -> Full Geo Lookup & Hardware Parsing
+    // 2. New Session -> Full Instant Edge Geo Lookup & Hardware Parsing
     const geo = await lookupGeo(ip, request);
     const device = parseDeviceAndBrowser(userAgent, gpuRenderer, screenResolution);
 
-    const newSession: VisitorSession = {
-      id: `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      sessionId,
-      ip,
+    const newSessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    await supabase.from('visitor_sessions').insert({
+      id: newSessionId,
+      session_id: sessionId,
+      ip: ip,
       country: geo.country,
-      countryCode: geo.countryCode,
+      country_code: geo.countryCode,
       city: geo.city,
       region: geo.region,
       isp: geo.isp,
-      isMobileNetwork: geo.isMobileNetwork,
-      deviceBrand: device.deviceBrand,
-      deviceModel: device.deviceModel,
-      deviceType: device.deviceType,
-      osName: device.osName,
-      osVersion: device.osVersion,
-      browserName: device.browserName,
-      browserVersion: device.browserVersion,
-      userAgent,
+      is_mobile_network: geo.isMobileNetwork,
+      device_brand: device.deviceBrand,
+      device_model: device.deviceModel,
+      device_type: device.deviceType,
+      os_name: device.osName,
+      os_version: device.osVersion,
+      browser_name: device.browserName,
+      browser_version: device.browserVersion,
+      user_agent: userAgent,
       lat: geo.lat,
       lon: geo.lon,
       pages: [newPageStep],
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
-
-    localSessions = [newSession, ...localSessions];
-    writeLocalSessions(localSessions);
-
-    // Save to Supabase
-    if (isSupabaseConfigured && supabase) {
-      try {
-        await supabase.from('visitor_sessions').insert({
-          id: newSession.id,
-          session_id: newSession.sessionId,
-          ip: newSession.ip,
-          country: newSession.country,
-          country_code: newSession.countryCode,
-          city: newSession.city,
-          region: newSession.region,
-          isp: newSession.isp,
-          is_mobile_network: newSession.isMobileNetwork,
-          device_brand: newSession.deviceBrand,
-          device_model: newSession.deviceModel,
-          device_type: newSession.deviceType,
-          os_name: newSession.osName,
-          os_version: newSession.osVersion,
-          browser_name: newSession.browserName,
-          browser_version: newSession.browserVersion,
-          user_agent: newSession.userAgent,
-          lat: newSession.lat,
-          lon: newSession.lon,
-          pages: newSession.pages,
-          created_at: newSession.createdAt,
-          updated_at: newSession.updatedAt,
-        });
-      } catch (e) {
-        console.warn('Supabase session insert error:', e);
-      }
-    }
+      created_at: nowIso,
+      updated_at: nowIso,
+    });
 
     return NextResponse.json({ success: true, isNewSession: true });
   } catch (err) {
+    console.error('POST /api/app-sync error:', err);
     return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
   }
 }

@@ -190,8 +190,13 @@ export const VisitorLogsManager: React.FC = () => {
   // Filtered list
   const fifteenMinsAgo = Date.now() - 15 * 60 * 1000;
   const filteredSessions = sessions.filter((s) => {
-    if (filterType === 'mobile' && !s.isMobileNetwork && s.deviceType !== 'Mobile') return false;
-    if (filterType === 'desktop' && s.deviceType !== 'Desktop') return false;
+    if (filterType === 'mobile') {
+      const isMob = s.deviceType === 'Mobile' || s.deviceType === 'Tablet' || s.isMobileNetwork;
+      if (!isMob) return false;
+    }
+    if (filterType === 'desktop') {
+      if (s.deviceType !== 'Desktop' && s.deviceType !== 'Tablet') return false;
+    }
     if (filterType === 'active') {
       const updated = new Date(s.updatedAt || s.createdAt).getTime();
       if (updated < fifteenMinsAgo) return false;
