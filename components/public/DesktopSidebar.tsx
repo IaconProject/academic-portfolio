@@ -67,7 +67,7 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
                   href={`#${item.id}`}
                   className={`flex items-center gap-3.5 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-white/15 text-white font-semibold shadow-inner border-l-4 border-amber-400 pl-3'
+                      ? 'bg-white/10 text-white font-bold border-l-4 border-white pl-3 shadow-sm'
                       : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
                 >

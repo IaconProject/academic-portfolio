@@ -28,23 +28,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
 
   return (
     <>
-      {/* Sticky Minimal Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 w-full z-50 h-14 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-4 shadow-2xs">
-        <button
-          onClick={toggleMenu}
-          aria-label="Menüyü Aç"
-          className="w-10 h-10 flex items-center justify-center text-academic-navy hover:bg-slate-100 rounded-xl transition-colors"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-
-        {/* Minimal Academic Icon Badge */}
-        <div className="flex items-center gap-1.5 text-xs font-serif font-bold tracking-widest text-academic-navy opacity-80 uppercase">
-          <span>PORTFOLYO</span>
-        </div>
-
-        <div className="w-10" />
-      </header>
+      {/* Floating Minimal Burger Button only (No Full Bar, No PORTFOLYO text) */}
+      <button
+        onClick={toggleMenu}
+        aria-label="Menüyü Aç"
+        className="lg:hidden fixed top-4 right-4 z-50 w-11 h-11 bg-white/95 text-academic-navy rounded-2xl border border-slate-200/90 shadow-lg shadow-slate-900/10 flex items-center justify-center backdrop-blur-md hover:bg-slate-50 transition-all active:scale-95"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
 
       {/* Backdrop Overlay */}
       {isOpen && (
@@ -71,7 +62,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
           </button>
         </div>
 
-        <ul className="space-y-2">
+        <ul className="space-y-1.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeSection === item.id;
@@ -80,13 +71,13 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
                 <a
                   href={`#${item.id}`}
                   onClick={closeMenu}
-                  className={`flex items-center gap-4 py-3 px-4 rounded-xl text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3.5 py-3 px-4 rounded-xl text-sm font-medium transition-all ${
                     isActive
-                      ? 'bg-academic-navy text-white font-semibold'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-academic-navy'
+                      ? 'bg-academic-navy text-white font-bold shadow-md shadow-academic-navy/20'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-academic-navy'
                   }`}
                 >
-                  <Icon className="w-5 h-5 opacity-75" />
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
                 </a>
               </li>
