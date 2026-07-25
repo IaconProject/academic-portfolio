@@ -50,35 +50,37 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
   }, [initialData]);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const sections = [
-        'hakkinda',
-        'egitim',
-        'yayinlar',
-        'projeler',
-        'sempozyum',
-        'faaliyetler',
-        'referanslar',
-        'iletisim',
-      ];
+    const sections = [
+      'hakkinda',
+      'egitim',
+      'yayinlar',
+      'projeler',
+      'sempozyum',
+      'faaliyetler',
+      'referanslar',
+      'iletisim',
+    ];
 
-      const scrollPos = window.scrollY + 200;
-
-      for (const sectionId of sections) {
-        const el = document.getElementById(sectionId);
-        if (el) {
-          const top = el.offsetTop;
-          const height = el.offsetHeight;
-          if (scrollPos >= top && scrollPos < top + height) {
-            setActiveSection(sectionId);
-            break;
-          }
-        }
-      }
+    const observerOptions = {
+      root: null,
+      rootMargin: '-15% 0px -55% 0px',
+      threshold: 0.05,
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    }, observerOptions);
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   const { profile, education, publications, projects, conferences, activities, references, socialLinks } = data;

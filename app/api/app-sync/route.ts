@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { getClientIp, lookupGeo, parseDeviceAndBrowser } from '@/lib/visitor-helpers.server';
 import { VisitorSession, PageNavStep } from '@/lib/types';
+import { sendNotificationEmail } from '@/lib/email-service';
 import fs from 'fs';
 import path from 'path';
 
@@ -189,6 +190,23 @@ export async function POST(request: Request) {
 
         if (insertErr) {
           console.warn('[app-sync] Supabase insert error:', insertErr);
+        } else {
+          sendNotificationEmail({
+            type: 'visitor',
+            subject: `🔔 Yeni Ziyaretçi Oturumu: ${geo.city}, ${geo.country} (${ip})`,
+            plainText: `Yeni ziyaretçi oturumu başlatıldı.\nIP: ${ip}\nŞehir: ${geo.city}, ${geo.country}\nISP: ${geo.isp}\nCihaz: ${device.deviceBrand} (${device.deviceType})\nİşletim Sistemi: ${device.osName}\nTarayıcı: ${device.browserName}`,
+            htmlText: `
+              <div style="font-family: sans-serif; padding: 20px; background-color: #f7f5f0; color: #1c1917;">
+                <h2 style="color: #d97706;">🔔 Yeni Ziyaretçi Oturumu Başlatıldı</h2>
+                <p><strong>IP Adresi:</strong> ${ip}</p>
+                <p><strong>Lokasyon:</strong> ${geo.city}, ${geo.country}</p>
+                <p><strong>Servis Sağlayıcı (ISP):</strong> ${geo.isp}</p>
+                <p><strong>Cihaz & OS:</strong> ${device.deviceBrand} (${device.deviceType}) - ${device.osName} / ${device.browserName}</p>
+                <hr style="border: none; border-top: 1px solid #e7e3d8; margin: 15px 0;" />
+                <p style="font-size: 12px; color: #78716c;">Bu bildirim Akademik Portfolyo CMS yönetim paneliniz tarafından gönderilmiştir.</p>
+              </div>
+            `,
+          }).catch(() => {});
         }
 
         return NextResponse.json({ success: true, isNewSession: true });

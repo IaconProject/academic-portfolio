@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { ContactMessage } from '@/lib/types';
+import { sendNotificationEmail } from '@/lib/email-service';
 import fs from 'fs';
 import path from 'path';
 
@@ -142,6 +143,25 @@ export async function POST(request: Request) {
         console.warn('Supabase message insert error:', e);
       }
     }
+
+    // Trigger email notification asynchronously
+    sendNotificationEmail({
+      type: 'message',
+      subject: `📩 Yeni İletişim Mesajı: ${newMessage.name} (${newMessage.subject})`,
+      plainText: `Yeni ziyaretçi mesajı alındı.\nAd Soyad: ${newMessage.name}\nE-posta: ${newMessage.email}\nKonu: ${newMessage.subject}\nTelefon: ${newMessage.phone || '-'}\nMesaj:\n${newMessage.message}`,
+      htmlText: `
+        <div style="font-family: sans-serif; padding: 20px; background-color: #f7f5f0; color: #1c1917;">
+          <h2 style="color: #d97706;">📩 Yeni Ziyaretçi Mesajı Alındı</h2>
+          <p><strong>Gönderen:</strong> ${newMessage.name} (${newMessage.email})</p>
+          <p><strong>Konu:</strong> ${newMessage.subject}</p>
+          <p><strong>Telefon:</strong> ${newMessage.phone || '-'}</p>
+          <p><strong>IP Adresi:</strong> ${newMessage.ipAddress}</p>
+          <hr style="border: none; border-top: 1px solid #e7e3d8; margin: 15px 0;" />
+          <p style="white-space: pre-wrap; background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e7e3d8;">${newMessage.message}</p>
+          <p style="font-size: 12px; color: #78716c; margin-top: 20px;">Bu bildirim Akademik Portfolyo CMS yönetim paneliniz tarafından gönderilmiştir.</p>
+        </div>
+      `,
+    }).catch(() => {});
 
     return NextResponse.json({ success: true, data: newMessage });
   } catch (err) {

@@ -145,4 +145,10 @@ export const initialPortfolioData: PortfolioData = {
     canonicalUrl: "https://muhammedakan.vercel.app",
     authorName: "Muhammed Akan",
   },
+  notificationSettings: {
+    emailNotificationsEnabled: true,
+    notifyOnNewMessage: true,
+    notifyOnNewVisitor: false,
+    recipientEmail: "info@cedkan.com",
+  },
 };

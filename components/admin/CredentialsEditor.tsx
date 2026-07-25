@@ -1,10 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { KeyRound, ShieldCheck, Save, Eye, EyeOff } from 'lucide-react';
+import { KeyRound, Save, Eye, EyeOff, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { getAdminCredentials, saveAdminCredentials } from '@/lib/cms-store';
 import toast from 'react-hot-toast';
 
 export const CredentialsEditor: React.FC = () => {
+  const [currentEmail, setCurrentEmail] = useState(() => getAdminCredentials().email || 'admin@cedkan.com');
+  const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -14,23 +17,54 @@ export const CredentialsEditor: React.FC = () => {
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const creds = getAdminCredentials();
+
+    // 1. Validate Current Password
+    if (currentPassword !== creds.password) {
+      toast.error('Mevcut şifreniz hatalı. Lütfen kontrol edin.');
+      return;
+    }
+
+    // 2. Validate New Password Length
     if (!newPassword || newPassword.length < 6) {
       toast.error('Yeni şifre en az 6 karakter olmalıdır.');
       return;
     }
 
+    // 3. Validate Password Match
     if (newPassword !== confirmPassword) {
-      toast.error('Yeni şifreler eşleşmiyor.');
+      toast.error('Yeni şifreler birbiriyle eşleşmiyor.');
       return;
     }
 
     setSaving(true);
     try {
-      // Save password update logic
-      toast.success('Yönetici şifresi güncellendi.');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      const updatedCreds = {
+        email: newEmail.trim() ? newEmail.trim().toLowerCase() : creds.email,
+        password: newPassword,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Save locally
+      saveAdminCredentials(updatedCreds);
+
+      // Save to CMS endpoint & Supabase admin_credentials table
+      const res = await fetch('/api/cms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminCredentials: updatedCreds }),
+      });
+
+      if (res.ok) {
+        toast.success('Yönetici e-posta ve şifreniz güvenli bir şekilde güncellendi.');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setNewEmail('');
+        setCurrentEmail(updatedCreds.email);
+      } else {
+        toast.error('Şifre güncellenirken sunucu hatası oluştu.');
+      }
     } catch (err) {
       toast.error('Şifre güncellenirken hata oluştu.');
     } finally {
@@ -39,21 +73,49 @@ export const CredentialsEditor: React.FC = () => {
   };
 
   return (
-    <form onSubmit={handlePasswordChange} className="space-y-6 bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md transition-colors duration-300">
-      <div className="border-b border-stone-100 dark:border-stone-800 pb-4 mb-6">
+    <form
+      onSubmit={handlePasswordChange}
+      className="space-y-6 bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md transition-colors duration-300 font-sans"
+    >
+      <div className="border-b border-stone-100 dark:border-stone-800 pb-4">
         <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight flex items-center gap-2">
           <KeyRound className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-          <span>Güvenlik & Yönetici Giriş Bilgileri</span>
+          <span>Güvenlik & Güvenli Şifre Yönetimi</span>
         </h2>
         <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-          CMS panelinize erişim şifrenizi güncelleyin ve hesabınızı koruyun.
+          CMS yönetim paneli giriş bilgilerinizi güncelleyin. Güvenliğiniz için mevcut şifrenizi doğrulamanız gerekmektedir.
         </p>
       </div>
 
       <div className="space-y-4 max-w-md">
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
-            Mevcut Giriş Şifreniz
+            Mevcut Giriş E-postası
+          </label>
+          <input
+            type="email"
+            disabled
+            value={currentEmail}
+            className="w-full px-4 py-3 bg-stone-100 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-700 rounded-xl text-sm font-semibold text-stone-600 dark:text-stone-400 outline-none cursor-not-allowed"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+            Yeni E-posta Adresi (İsteğe Bağlı Değiştirin)
+          </label>
+          <input
+            type="email"
+            placeholder={currentEmail}
+            value={newEmail}
+            onChange={(e) => setNewEmail(e.target.value)}
+            className="w-full px-4 py-3 bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
+            Mevcut Şifreniz <span className="text-rose-500">*</span>
           </label>
           <input
             type={showPass ? 'text' : 'password'}
@@ -67,7 +129,7 @@ export const CredentialsEditor: React.FC = () => {
 
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
-            Yeni Şifre
+            Yeni Şifre <span className="text-rose-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -75,7 +137,7 @@ export const CredentialsEditor: React.FC = () => {
               required
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Yeni şifreniz..."
+              placeholder="En az 6 karakter..."
               className="w-full pl-4 pr-11 py-3 bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
             />
             <button
@@ -90,7 +152,7 @@ export const CredentialsEditor: React.FC = () => {
 
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
-            Yeni Şifre (Tekrar)
+            Yeni Şifre (Tekrar) <span className="text-rose-500">*</span>
           </label>
           <input
             type={showPass ? 'text' : 'password'}
@@ -110,7 +172,7 @@ export const CredentialsEditor: React.FC = () => {
           className="inline-flex items-center gap-2 py-3 px-6 bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-stone-50 dark:text-stone-950 font-bold rounded-xl transition-all shadow-md active:scale-95 text-sm disabled:opacity-50"
         >
           <Save className="w-4 h-4" />
-          <span>Şifreyi Güncelle</span>
+          <span>{saving ? 'Güncelleniyor...' : 'Şifreyi Güvenli Güncelle'}</span>
         </button>
       </div>
     </form>

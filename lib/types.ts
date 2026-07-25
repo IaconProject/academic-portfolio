@@ -87,6 +87,18 @@ export interface AdminCredentials {
   updatedAt?: string;
 }
 
+export interface NotificationSettings {
+  emailNotificationsEnabled: boolean;
+  notifyOnNewMessage: boolean;
+  notifyOnNewVisitor: boolean;
+  recipientEmail: string;
+  resendApiKey?: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+}
+
 export interface PortfolioData {
   profile: Profile;
   education: EducationItem[];
@@ -98,6 +110,7 @@ export interface PortfolioData {
   socialLinks: SocialLink[];
   seoSettings: SeoSettings;
   adminCredentials?: AdminCredentials;
+  notificationSettings?: NotificationSettings;
 }
 
 export interface VisitorLog {
@@ -167,6 +180,3 @@ export interface VisitorSession {
   createdAt: string;
   updatedAt: string;
 }
-
-
-

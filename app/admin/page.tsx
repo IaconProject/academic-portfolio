@@ -14,6 +14,7 @@ import { ActivitiesEditor } from '@/components/admin/ActivitiesEditor';
 import { ReferencesEditor } from '@/components/admin/ReferencesEditor';
 import { SeoEditor } from '@/components/admin/SeoEditor';
 import { CredentialsEditor } from '@/components/admin/CredentialsEditor';
+import { NotificationSettingsEditor } from '@/components/admin/NotificationSettingsEditor';
 import { MessagesManager } from '@/components/admin/MessagesManager';
 import { VisitorLogsManager } from '@/components/admin/VisitorLogsManager';
 import { SocialLinksEditor } from '@/components/admin/SocialLinksEditor';
@@ -314,7 +315,15 @@ function AdminDashboardContent() {
 
               {activeTab === 'visitors' && <VisitorLogsManager />}
 
-              {activeTab === 'security' && <CredentialsEditor />}
+              {activeTab === 'security' && (
+                <div className="space-y-6">
+                  <CredentialsEditor />
+                  <NotificationSettingsEditor
+                    portfolioData={data}
+                    onUpdate={(updated) => handleSaveData(updated)}
+                  />
+                </div>
+              )}
             </div>
           </main>
         </div>
