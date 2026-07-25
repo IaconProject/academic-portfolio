@@ -75,14 +75,14 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile, activeS
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
-                  className={`group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`group flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors duration-200 ${
                     isActive
-                      ? 'bg-[#2d3540] text-white font-semibold shadow-sm border border-[#3c4755]'
+                      ? 'bg-[#2d3540] text-white font-semibold'
                       : 'text-[#adbac7] hover:bg-[#232932] hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-3.5">
-                    <Icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? 'text-amber-400' : 'text-[#768390] group-hover:text-[#adbac7]'}`} />
+                    <Icon className={`w-4 h-4 shrink-0 transition-colors duration-200 ${isActive ? 'text-amber-400' : 'text-[#768390] group-hover:text-[#adbac7]'}`} />
                     <span>{item.label}</span>
                   </div>
                   {isActive && (
