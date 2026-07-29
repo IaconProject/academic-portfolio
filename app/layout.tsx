@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu. İslam Hukuku, Blok Zincir Teknolojisi ve Yapay Zeka Etiği.',
   keywords: ['Muhammed Akan', 'Akademik Portfolyo', 'İlahiyat', 'İslam Hukuku', 'Blok Zincir', 'Yapay Zeka Etiği'],
   authors: [{ name: 'Muhammed Akan' }],
-  metadataBase: new URL('https://muhammedakan.vercel.app'),
+  metadataBase: new URL('https://muhammedakan.com'),
   icons: {
     icon: '/favicon.ico',
   },

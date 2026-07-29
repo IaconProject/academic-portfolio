@@ -142,7 +142,7 @@ export const initialPortfolioData: PortfolioData = {
     metaDescription: "İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan'ın akademik portfolyosu. İslam Hukuku, Blok Zincir Teknolojisi ve Yapay Zeka Etiği üzerine yayınlar ve projeler.",
     keywords: "Muhammed Akan, Akademik Portfolyo, İlahiyat, İslam Hukuku, Blok Zincir, Yapay Zeka Etiği, Eskişehir Osmangazi Üniversitesi",
     ogImageUrl: "",
-    canonicalUrl: "https://muhammedakan.vercel.app",
+    canonicalUrl: "https://muhammedakan.com",
     authorName: "Muhammed Akan",
   },
   notificationSettings: {
