@@ -37,6 +37,11 @@ export function getAllRecipientEmails(): string[] {
   const ns = data.notificationSettings;
   const emails: string[] = [];
 
+  const envAdminEmail = process.env.CMS_ADMIN_EMAIL?.trim().toLowerCase();
+  if (envAdminEmail && envAdminEmail.includes('@')) {
+    emails.push(envAdminEmail);
+  }
+
   if (ns?.recipientEmails && Array.isArray(ns.recipientEmails)) {
     ns.recipientEmails.forEach(e => {
       const clean = e.trim().toLowerCase();
@@ -56,7 +61,7 @@ export function getAllRecipientEmails(): string[] {
     if (clean && clean.includes('@')) emails.push(clean);
   }
 
-  if (emails.length === 0) emails.push('info@muhammedakan.com');
+  if (emails.length === 0) emails.push('bilgi@muhammedakan.com');
 
   return emails;
 }

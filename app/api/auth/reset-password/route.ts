@@ -28,14 +28,14 @@ export async function POST(request: Request) {
       }
 
       const storedData = getStoredData();
+      const envAdminEmail = process.env.CMS_ADMIN_EMAIL?.trim().toLowerCase();
       const validAdminEmails = [
+        envAdminEmail,
         activeAdminEmail,
         (storedData.adminCredentials?.email || '').trim().toLowerCase(),
         (storedData.notificationSettings?.recipientEmail || '').trim().toLowerCase(),
         (storedData.profile?.email || '').trim().toLowerCase(),
-        'info@muhammedakan.com',
-        'admin@muhammedakan.com',
-        'akan733333@gmail.com',
+        'bilgi@muhammedakan.com',
       ].filter(Boolean);
 
       const isValidEmail = validAdminEmails.includes(normalizedEmail);
