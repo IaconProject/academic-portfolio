@@ -67,32 +67,35 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    let creds = getAdminCredentials();
-
     try {
-      const res = await fetch('/api/cms', { cache: 'no-store' });
-      if (res.ok) {
-        const cmsData = await res.json();
-        if (cmsData && cmsData.adminCredentials?.email) {
-          creds = cmsData.adminCredentials;
-          saveAdminCredentials(cmsData.adminCredentials);
-        }
-      }
-    } catch (err) {}
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
 
-    if (
-      email.trim().toLowerCase() === creds.email.trim().toLowerCase() &&
-      password === creds.password
-    ) {
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('academic_admin_auth', 'true');
+      const json = await res.json();
+
+      if (res.ok && json.success) {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('academic_admin_auth', 'true');
+          if (json.token) {
+            sessionStorage.setItem('admin_token', json.token);
+          }
+        }
+        toast.success(json.message || 'Yönetici kimliği doğrulandı!');
+        router.push('/admin');
+      } else {
+        toast.error(json.error || 'Geçersiz e-posta adresi veya şifre!');
       }
-      toast.success('Yönetici kimliği doğrulandı!');
-      router.push('/admin');
-    } else {
-      toast.error('Geçersiz e-posta adresi veya şifre!');
+    } catch (err) {
+      toast.error('Sunucu bağlantı hatası oluştu.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Step 1: Request 6-Digit OTP Code via Email
@@ -240,7 +243,7 @@ export default function AdminLoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@muhammedakan.com"
+                placeholder="bilgi@muhammedakan.com"
                 className="w-full pl-10 pr-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none transition-colors"
               />
             </div>

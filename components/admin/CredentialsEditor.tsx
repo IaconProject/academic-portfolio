@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { KeyRound, Save, Eye, EyeOff, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { KeyRound, Save, Eye, EyeOff } from 'lucide-react';
 import { getAdminCredentials, saveAdminCredentials } from '@/lib/cms-store';
 import toast from 'react-hot-toast';
 
 export const CredentialsEditor: React.FC = () => {
-  const [currentEmail, setCurrentEmail] = useState(() => getAdminCredentials().email || 'admin@muhammedakan.com');
+  const [currentEmail, setCurrentEmail] = useState('bilgi@muhammedakan.com');
   const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -14,24 +14,35 @@ export const CredentialsEditor: React.FC = () => {
   const [showPass, setShowPass] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    const creds = getAdminCredentials();
+    if (creds?.email) {
+      setCurrentEmail(creds.email);
+    }
+
+    fetch('/api/cms')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.adminCredentials?.email) {
+          setCurrentEmail(data.adminCredentials.email);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const creds = getAdminCredentials();
-
-    // 1. Validate Current Password
-    if (currentPassword !== creds.password) {
-      toast.error('Mevcut şifreniz hatalı. Lütfen kontrol edin.');
+    if (!currentPassword) {
+      toast.error('Lütfen mevcut şifrenizi girin.');
       return;
     }
 
-    // 2. Validate New Password Length
     if (!newPassword || newPassword.length < 6) {
       toast.error('Yeni şifre en az 6 karakter olmalıdır.');
       return;
     }
 
-    // 3. Validate Password Match
     if (newPassword !== confirmPassword) {
       toast.error('Yeni şifreler birbiriyle eşleşmiyor.');
       return;
@@ -39,31 +50,40 @@ export const CredentialsEditor: React.FC = () => {
 
     setSaving(true);
     try {
-      const updatedCreds = {
-        email: newEmail.trim() ? newEmail.trim().toLowerCase() : creds.email,
-        password: newPassword,
-        updatedAt: new Date().toISOString(),
-      };
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
 
-      // Save locally
-      saveAdminCredentials(updatedCreds);
-
-      // Save to CMS endpoint & Supabase admin_credentials table
-      const res = await fetch('/api/cms', {
+      const res = await fetch('/api/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminCredentials: updatedCreds }),
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-Admin-Token': token } : {}),
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newEmail: newEmail.trim(),
+          newPassword,
+        }),
       });
 
-      if (res.ok) {
-        toast.success('Yönetici e-posta ve şifreniz güvenli bir şekilde güncellendi.');
+      const json = await res.json();
+
+      if (res.ok && json.success) {
+        toast.success(json.message || 'Yönetici e-posta ve şifreniz güvenli bir şekilde güncellendi.');
+        
+        const updatedEmail = json.email || (newEmail.trim() ? newEmail.trim().toLowerCase() : currentEmail);
+        saveAdminCredentials({
+          email: updatedEmail,
+          password: newPassword,
+          updatedAt: new Date().toISOString(),
+        });
+
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setNewEmail('');
-        setCurrentEmail(updatedCreds.email);
+        setCurrentEmail(updatedEmail);
       } else {
-        toast.error('Şifre güncellenirken sunucu hatası oluştu.');
+        toast.error(json.error || 'Şifre güncellenirken sunucu hatası oluştu.');
       }
     } catch (err) {
       toast.error('Şifre güncellenirken hata oluştu.');

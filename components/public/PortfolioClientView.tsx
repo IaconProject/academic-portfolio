@@ -40,13 +40,6 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
         }));
       }
     }
-
-    fetchPortfolioFromSupabase().then((remoteData) => {
-      if (remoteData && remoteData.profile) {
-        setData(remoteData);
-        savePortfolioDataLocally(remoteData);
-      }
-    });
   }, [initialData]);
 
   useEffect(() => {

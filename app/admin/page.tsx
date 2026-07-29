@@ -154,9 +154,13 @@ function AdminDashboardContent() {
     savePortfolioDataLocally(updated);
 
     try {
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
       await fetch('/api/cms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-Admin-Token': token } : {}),
+        },
         body: JSON.stringify(updated),
       });
       toast.success('Değişiklikler kaydedildi!');
@@ -170,6 +174,7 @@ function AdminDashboardContent() {
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('academic_admin_auth');
+      sessionStorage.removeItem('admin_token');
     }
     toast.success('Çıkış yapıldı.');
     router.push('/admin/login');
@@ -190,18 +195,18 @@ function AdminDashboardContent() {
   }
 
   const tabsConfig = [
-    { id: 'profile' as AdminTab, label: 'PROFİL', icon: User },
-    { id: 'messages' as AdminTab, label: 'GELEN MESAJLAR', icon: Inbox, badge: unreadMsgCount },
-    { id: 'social' as AdminTab, label: 'SOSYAL MEDYA', icon: Share2 },
-    { id: 'education' as AdminTab, label: 'EĞİTİM', icon: School },
-    { id: 'publications' as AdminTab, label: 'YAYINLAR', icon: BookOpen },
-    { id: 'projects' as AdminTab, label: 'PROJELER', icon: GitBranch },
-    { id: 'conferences' as AdminTab, label: 'SEMPOZYUM', icon: Mic },
-    { id: 'activities' as AdminTab, label: 'FAALİYETLER', icon: ListOrdered },
-    { id: 'references' as AdminTab, label: 'REFERANSLAR', icon: Users },
-    { id: 'seo' as AdminTab, label: 'SEO', icon: Search },
-    { id: 'visitors' as AdminTab, label: 'ZİYARETÇİ LOGLARI', icon: Activity },
-    { id: 'security' as AdminTab, label: 'GÜVENLİK & GİRİŞ', icon: KeyRound },
+    { id: 'profile' as AdminTab, label: 'Profil', icon: User },
+    { id: 'messages' as AdminTab, label: 'Gelen Mesajlar', icon: Inbox, badge: unreadMsgCount },
+    { id: 'social' as AdminTab, label: 'Sosyal Medya', icon: Share2 },
+    { id: 'education' as AdminTab, label: 'Eğitim', icon: School },
+    { id: 'publications' as AdminTab, label: 'Yayınlar', icon: BookOpen },
+    { id: 'projects' as AdminTab, label: 'Projeler', icon: GitBranch },
+    { id: 'conferences' as AdminTab, label: 'Sempozyum & Konferans', icon: Mic },
+    { id: 'activities' as AdminTab, label: 'Faaliyetler', icon: ListOrdered },
+    { id: 'references' as AdminTab, label: 'Referanslar', icon: Users },
+    { id: 'seo' as AdminTab, label: 'SEO Ayarları', icon: Search },
+    { id: 'visitors' as AdminTab, label: 'Ziyaretçi Analizi', icon: Activity },
+    { id: 'security' as AdminTab, label: 'Güvenlik & Giriş', icon: KeyRound },
   ];
 
   return (

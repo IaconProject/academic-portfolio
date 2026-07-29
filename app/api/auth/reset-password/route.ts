@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { getActiveRecipientEmail, getStoredData, sendOtpEmail } from '@/lib/email-service';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { hashPassword } from '@/lib/auth-helpers';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import fs from 'fs';
 import path from 'path';
 
@@ -15,6 +18,7 @@ const otpStore: Record<string, { code: string; expiresAt: number; attempts: numb
 
 export async function POST(request: Request) {
   try {
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
     const body = await request.json();
     const { action, email, otpCode, newPassword } = body;
 
@@ -23,6 +27,18 @@ export async function POST(request: Request) {
 
     // ── ACTION 1: Request OTP Code ──
     if (action === 'request_otp') {
+      // Rate limit OTP requests: max 3 per 10 minutes per IP
+      const rateCheck = checkRateLimit(`otp_${clientIp}`, 3, 10 * 60 * 1000);
+      if (!rateCheck.allowed) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Çok fazla kod talebinde bulunuldu. Lütfen ${Math.ceil(rateCheck.resetSeconds / 60)} dakika sonra tekrar deneyin.`,
+          },
+          { status: 429 }
+        );
+      }
+
       if (!normalizedEmail || !normalizedEmail.includes('@')) {
         return NextResponse.json({ success: false, error: 'Lütfen geçerli bir e-posta adresi girin.' }, { status: 400 });
       }
@@ -47,8 +63,8 @@ export async function POST(request: Request) {
         );
       }
 
-      // Generate cryptographically secure 6-digit OTP code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      // Generate cryptographically secure 6-digit OTP code using crypto.randomInt
+      const code = crypto.randomInt(100000, 1000000).toString();
       const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes valid
 
       otpStore[normalizedEmail] = {
@@ -114,13 +130,14 @@ export async function POST(request: Request) {
         );
       }
 
-      // OTP Validated Successfully! Update Admin Password.
+      // OTP Validated Successfully! Update Admin Password with hashed string.
       delete otpStore[normalizedEmail];
 
+      const hashedPassword = hashPassword(newPassword);
       const currentData = getStoredData();
       const updatedCreds = {
         email: normalizedEmail,
-        password: newPassword,
+        password: hashedPassword,
         updatedAt: new Date().toISOString(),
       };
 
@@ -151,7 +168,7 @@ export async function POST(request: Request) {
           await supabase.from('admin_credentials').upsert({
             ...(existingId ? { id: existingId } : {}),
             email: normalizedEmail,
-            password: newPassword,
+            password: hashedPassword,
             updated_at: new Date().toISOString(),
           });
         } catch (e) {

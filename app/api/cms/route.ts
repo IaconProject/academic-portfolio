@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { initialPortfolioData } from '@/lib/initial-data';
 import { PortfolioData, AdminCredentials } from '@/lib/types';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { validateAdminSession } from '@/lib/auth-helpers';
 import fs from 'fs';
 import path from 'path';
 
@@ -48,6 +49,19 @@ function writeTmpStore(data: PortfolioData): void {
   }
 }
 
+/**
+ * Remove sensitive password field before sending portfolio data over public API.
+ */
+function sanitizePublicData(data: PortfolioData): PortfolioData {
+  return {
+    ...data,
+    adminCredentials: {
+      email: data.adminCredentials?.email || 'bilgi@muhammedakan.com',
+      password: '', // Never leak password in public GET requests
+    },
+  };
+}
+
 export async function GET() {
   const currentTmp = readTmpStore();
 
@@ -62,6 +76,8 @@ export async function GET() {
       const profileData = profileRows && profileRows.length > 0 ? profileRows[0] : null;
       const { data: credRows } = await supabase.from('admin_credentials').select('*').limit(1);
       const credData = credRows && credRows.length > 0 ? credRows[0] : null;
+      const { data: notifRows } = await supabase.from('notification_settings').select('*').limit(1);
+      const notifData = notifRows && notifRows.length > 0 ? notifRows[0] : null;
 
       if (profileData || credData) {
         const { data: eduData } = await supabase.from('education').select('*').order('created_at', { ascending: true });
@@ -153,10 +169,19 @@ export async function GET() {
             email: credData.email,
             password: credData.password,
           } : currentTmp.adminCredentials,
+          notificationSettings: notifData ? {
+            emailNotificationsEnabled: notifData.email_notifications_enabled ?? true,
+            notifyOnNewMessage: notifData.notify_on_new_message ?? true,
+            notifyOnNewVisitor: notifData.notify_on_new_visitor ?? false,
+            recipientEmail: notifData.recipient_email || 'bilgi@muhammedakan.com',
+            recipientEmails: notifData.recipient_emails || ['bilgi@muhammedakan.com'],
+            resendApiKey: notifData.resend_api_key || '',
+            senderEmail: notifData.sender_email || 'noreply@muhammedakan.com',
+          } : currentTmp.notificationSettings,
         };
 
         writeTmpStore(fetchedData);
-        return NextResponse.json(fetchedData, {
+        return NextResponse.json(sanitizePublicData(fetchedData), {
           headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
         });
       }
@@ -165,13 +190,19 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json(currentTmp, {
+  return NextResponse.json(sanitizePublicData(currentTmp), {
     headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
   });
 }
 
 export async function POST(request: Request) {
   try {
+    // Session authorization check for administrative writes
+    const isAuth = validateAdminSession(request);
+    if (!isAuth) {
+      return NextResponse.json({ success: false, error: 'Yetkisiz erişim. Lütfen giriş yapın.' }, { status: 401 });
+    }
+
     const body = await request.json();
     const currentTmp = readTmpStore();
 
@@ -200,11 +231,33 @@ export async function POST(request: Request) {
 
     // 2. Notification Settings Sync
     if (body.notificationSettings) {
-      const updatedFull = { ...currentTmp, notificationSettings: body.notificationSettings };
+      const notif = body.notificationSettings;
+      const updatedFull = { ...currentTmp, notificationSettings: notif };
       writeTmpStore(updatedFull);
+
+      if (isSupabaseConfigured && supabase) {
+        try {
+          const { data: notifRows } = await supabase.from('notification_settings').select('id').limit(1);
+          const existingId = notifRows && notifRows.length > 0 ? notifRows[0].id : undefined;
+
+          await supabase.from('notification_settings').upsert({
+            ...(existingId ? { id: existingId } : {}),
+            email_notifications_enabled: notif.emailNotificationsEnabled ?? true,
+            notify_on_new_message: notif.notifyOnNewMessage ?? true,
+            notify_on_new_visitor: notif.notifyOnNewVisitor ?? false,
+            recipient_email: notif.recipientEmail || 'bilgi@muhammedakan.com',
+            recipient_emails: notif.recipientEmails || [notif.recipientEmail || 'bilgi@muhammedakan.com'],
+            resend_api_key: notif.resendApiKey || '',
+            sender_email: notif.senderEmail || 'noreply@muhammedakan.com',
+            updated_at: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.warn('Supabase notification_settings upsert error:', e);
+        }
+      }
     }
 
-    // 2. Full Portfolio Data Sync
+    // 3. Full Portfolio Data Sync
     if (body.profile) {
       const updatedData: PortfolioData = {
         ...currentTmp,
@@ -365,7 +418,7 @@ export async function POST(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, data: readTmpStore() }, {
+    return NextResponse.json({ success: true, data: sanitizePublicData(readTmpStore()) }, {
       headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
     });
   } catch (err) {

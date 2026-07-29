@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { ContactMessage } from '@/lib/types';
 import { sendNotificationEmail } from '@/lib/email-service';
+import { validateAdminSession } from '@/lib/auth-helpers';
+import { checkRateLimit } from '@/lib/rate-limiter';
 import fs from 'fs';
 import path from 'path';
 
@@ -84,6 +86,20 @@ export async function GET() {
 // POST: Submit a new visitor message
 export async function POST(request: Request) {
   try {
+    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
+
+    // Rate Limit: 3 messages per minute per IP
+    const rateCheck = checkRateLimit(`msg_${clientIp}`, 3, 60000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Çok fazla mesaj gönderildi. Lütfen ${rateCheck.resetSeconds} saniye sonra tekrar deneyin.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { name, email, subject, phone, message, website_hp } = body;
 
@@ -105,8 +121,6 @@ export async function POST(request: Request) {
     if (!message || typeof message !== 'string' || message.trim().length < 5) {
       return NextResponse.json({ success: false, error: 'Lütfen en az 5 karakterlik mesaj yazın.' }, { status: 400 });
     }
-
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
 
     const newMessage: ContactMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -169,9 +183,13 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH: Update isRead or isStarred status
+// PATCH: Update isRead or isStarred status (Requires Admin Auth)
 export async function PATCH(request: Request) {
   try {
+    if (!validateAdminSession(request)) {
+      return NextResponse.json({ success: false, error: 'Yetkisiz işlem.' }, { status: 401 });
+    }
+
     const { id, isRead, isStarred, markAllRead } = await request.json();
     let current = readLocalMessages();
 
@@ -221,9 +239,13 @@ export async function PATCH(request: Request) {
   }
 }
 
-// DELETE: Delete single message or read messages
+// DELETE: Delete single message or read messages (Requires Admin Auth)
 export async function DELETE(request: Request) {
   try {
+    if (!validateAdminSession(request)) {
+      return NextResponse.json({ success: false, error: 'Yetkisiz işlem.' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const deleteRead = searchParams.get('deleteRead');

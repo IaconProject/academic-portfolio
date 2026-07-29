@@ -6,26 +6,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: baseUrl,
       lastModified: new Date(),
-      changeFrequency: 'weekly',
+      changeFrequency: 'daily',
       priority: 1.0,
-    },
-    {
-      url: `${baseUrl}/#hakkinda`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/#yayinlar`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/#projeler`,
-      lastModified: new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.8,
     },
   ];
 }

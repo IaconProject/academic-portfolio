@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { VisitorSession } from '@/lib/types';
+import { validateAdminSession } from '@/lib/auth-helpers';
 import {
   getLocalSessions,
   deleteLocalSession,
@@ -139,6 +140,10 @@ export async function GET() {
 
 export async function DELETE(request: Request) {
   try {
+    if (!validateAdminSession(request)) {
+      return NextResponse.json({ success: false, error: 'Yetkisiz işlem.' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     let id = searchParams.get('id');
     let idsParam = searchParams.get('ids');

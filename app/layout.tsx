@@ -34,8 +34,15 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Muhammed Akan | Akademik Portfolyo',
     description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu.',
+    url: 'https://muhammedakan.com',
+    siteName: 'Muhammed Akan Akademik Portfolyo',
     type: 'website',
     locale: 'tr_TR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Muhammed Akan | Akademik Portfolyo',
+    description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu.',
   },
   robots: {
     index: true,

@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { validateAdminSession } from '@/lib/auth-helpers';
 
 export async function POST(request: Request) {
   try {
+    if (!validateAdminSession(request)) {
+      return NextResponse.json({ error: 'Yetkisiz erişim. Lütfen giriş yapın.' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
 

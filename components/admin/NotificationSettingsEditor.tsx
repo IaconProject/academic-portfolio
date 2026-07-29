@@ -19,8 +19,8 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
     emailNotificationsEnabled: true,
     notifyOnNewMessage: true,
     notifyOnNewVisitor: false,
-    recipientEmail: 'info@muhammedakan.com',
-    recipientEmails: ['info@muhammedakan.com'],
+    recipientEmail: 'bilgi@muhammedakan.com',
+    recipientEmails: ['bilgi@muhammedakan.com'],
     resendApiKey: '',
   });
 
@@ -111,9 +111,14 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
 
       savePortfolioDataLocally(updatedFull);
 
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
+
       const res = await fetch('/api/cms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-Admin-Token': token } : {}),
+        },
         body: JSON.stringify({ notificationSettings: updatedFull.notificationSettings }),
       });
 
@@ -133,9 +138,14 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
   const handleSendTestEmail = async () => {
     setTesting(true);
     try {
+      const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
+
       const res = await fetch('/api/cms/test-email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-Admin-Token': token } : {}),
+        },
         body: JSON.stringify({}), // Will send to all registered emails
       });
 

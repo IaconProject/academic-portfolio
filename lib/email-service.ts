@@ -20,6 +20,14 @@ export function getStoredData(): PortfolioData {
   return initialPortfolioData;
 }
 
+export function saveStoredData(data: PortfolioData): void {
+  try {
+    fs.writeFileSync(TMP_FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.error('Failed writing to tmp file:', e);
+  }
+}
+
 /**
  * Returns the sender email address.
  * MUST use the verified domain to avoid Resend test-mode restrictions.
