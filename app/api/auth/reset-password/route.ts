@@ -119,7 +119,7 @@ export async function POST(request: Request) {
 
       const currentData = getStoredData();
       const updatedCreds = {
-        email: activeAdminEmail,
+        email: normalizedEmail,
         password: newPassword,
         updatedAt: new Date().toISOString(),
       };
@@ -150,7 +150,7 @@ export async function POST(request: Request) {
 
           await supabase.from('admin_credentials').upsert({
             ...(existingId ? { id: existingId } : {}),
-            email: activeAdminEmail,
+            email: normalizedEmail,
             password: newPassword,
             updated_at: new Date().toISOString(),
           });

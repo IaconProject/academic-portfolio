@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, Lock, Mail, ArrowRight, Sun, Moon, KeyRound, CheckCircle2, RefreshCw, AlertCircle, ShieldAlert } from 'lucide-react';
-import { getAdminCredentials } from '@/lib/cms-store';
+import { getAdminCredentials, saveAdminCredentials } from '@/lib/cms-store';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
 import toast from 'react-hot-toast';
 
@@ -39,6 +39,17 @@ export default function AdminLoginPage() {
     if (creds?.email) {
       setEmail(creds.email);
     }
+
+    // Sync latest credentials from server
+    fetch('/api/cms', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((cmsData) => {
+        if (cmsData && cmsData.adminCredentials?.email) {
+          saveAdminCredentials(cmsData.adminCredentials);
+          setEmail(cmsData.adminCredentials.email);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const toggleTheme = () => {
@@ -52,27 +63,36 @@ export default function AdminLoginPage() {
     }
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    const creds = getAdminCredentials();
+    let creds = getAdminCredentials();
 
-    setTimeout(() => {
-      if (
-        email.trim().toLowerCase() === creds.email.trim().toLowerCase() &&
-        password === creds.password
-      ) {
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('academic_admin_auth', 'true');
+    try {
+      const res = await fetch('/api/cms', { cache: 'no-store' });
+      if (res.ok) {
+        const cmsData = await res.json();
+        if (cmsData && cmsData.adminCredentials?.email) {
+          creds = cmsData.adminCredentials;
+          saveAdminCredentials(cmsData.adminCredentials);
         }
-        toast.success('Yönetici kimliği doğrulandı!');
-        router.push('/admin');
-      } else {
-        toast.error('Geçersiz e-posta adresi veya şifre!');
       }
-      setLoading(false);
-    }, 400);
+    } catch (err) {}
+
+    if (
+      email.trim().toLowerCase() === creds.email.trim().toLowerCase() &&
+      password === creds.password
+    ) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('academic_admin_auth', 'true');
+      }
+      toast.success('Yönetici kimliği doğrulandı!');
+      router.push('/admin');
+    } else {
+      toast.error('Geçersiz e-posta adresi veya şifre!');
+    }
+    setLoading(false);
   };
 
   // Step 1: Request 6-Digit OTP Code via Email
@@ -142,8 +162,14 @@ export default function AdminLoginPage() {
 
       const data = await res.json();
       if (data.success) {
-        toast.success('Şifreniz güvenle güncellendi! Yeni şifrenizle giriş yapabilirsiniz.');
+        saveAdminCredentials({
+          email: resetEmail.trim(),
+          password: newResetPassword,
+          updatedAt: new Date().toISOString(),
+        });
+        setEmail(resetEmail.trim());
         setPassword(newResetPassword);
+        toast.success('Şifreniz güvenle güncellendi! Yeni şifrenizle giriş yapabilirsiniz.');
         setShowResetModal(false);
         setResetStep(1);
         setOtpCode('');
