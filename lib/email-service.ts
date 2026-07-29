@@ -202,9 +202,10 @@ export async function sendNotificationEmail({ subject, htmlText, plainText, type
 }
 
 export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpCode: string }): Promise<boolean> {
-  const resendKey = process.env.RESEND_API_KEY;
+  const data = getStoredData();
+  const resendKey = process.env.RESEND_API_KEY || data.notificationSettings?.resendApiKey;
   if (!resendKey) {
-    console.warn('[Email OTP] No RESEND_API_KEY.');
+    console.warn('[Email OTP] No RESEND_API_KEY found in ENV or CMS Settings.');
     return false;
   }
 
