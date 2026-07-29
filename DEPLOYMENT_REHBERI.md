@@ -69,7 +69,7 @@ Uygulamanız Supabase olmadan da çalışabilen akıllı bir yedekleme mekanizma
 
 - **CMS Giriş Adresi**: `https://siteniz.vercel.app/admin`
 - **Varsayılan Giriş Bilgileri**:
-  - **E-posta**: `admin@cedkan.com`
+  - **E-posta**: `admin@muhammedakan.com`
   - **Şifre**: `admin`
 - **Şifre ve E-posta Değiştirme**:
   - CMS paneline giriş yaptıktan sonra üstteki **"Güvenlik & Giriş"** sekmesine geçin.

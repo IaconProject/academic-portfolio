@@ -19,8 +19,8 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
     emailNotificationsEnabled: true,
     notifyOnNewMessage: true,
     notifyOnNewVisitor: false,
-    recipientEmail: 'info@cedkan.com',
-    recipientEmails: ['info@cedkan.com'],
+    recipientEmail: 'info@muhammedakan.com',
+    recipientEmails: ['info@muhammedakan.com'],
     resendApiKey: '',
   });
 
@@ -362,14 +362,14 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
             <Mail className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
             <input
               type="email"
-              value={settings.senderEmail || 'noreply@cedkan.com'}
+              value={settings.senderEmail || 'noreply@muhammedakan.com'}
               onChange={(e) => setSettings({ ...settings, senderEmail: e.target.value })}
-              placeholder="noreply@cedkan.com"
+              placeholder="noreply@muhammedakan.com"
               className="w-full pl-10 pr-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
             />
           </div>
           <p className="text-[11px] text-stone-400 mt-1">
-            Resend üzerinde doğruladığınız alan adından bir adres (örn: noreply@cedkan.com).
+            Resend üzerinde doğruladığınız alan adından bir adres (örn: noreply@muhammedakan.com).
           </p>
         </div>
 

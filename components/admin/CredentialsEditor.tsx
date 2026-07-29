@@ -6,7 +6,7 @@ import { getAdminCredentials, saveAdminCredentials } from '@/lib/cms-store';
 import toast from 'react-hot-toast';
 
 export const CredentialsEditor: React.FC = () => {
-  const [currentEmail, setCurrentEmail] = useState(() => getAdminCredentials().email || 'admin@cedkan.com');
+  const [currentEmail, setCurrentEmail] = useState(() => getAdminCredentials().email || 'admin@muhammedakan.com');
   const [newEmail, setNewEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');

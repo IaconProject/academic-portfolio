@@ -33,7 +33,8 @@ export async function POST(request: Request) {
         (storedData.adminCredentials?.email || '').trim().toLowerCase(),
         (storedData.notificationSettings?.recipientEmail || '').trim().toLowerCase(),
         (storedData.profile?.email || '').trim().toLowerCase(),
-        'info@cedkan.com',
+        'info@muhammedakan.com',
+        'admin@muhammedakan.com',
         'akan733333@gmail.com',
       ].filter(Boolean);
 

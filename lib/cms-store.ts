@@ -6,7 +6,7 @@ const STORAGE_KEY = 'academic_portfolio_cms_v1';
 const CREDS_KEY = 'academic_portfolio_admin_creds_v1';
 
 export const defaultAdminCredentials: AdminCredentials = {
-  email: 'admin@cedkan.com',
+  email: 'admin@muhammedakan.com',
   password: 'admin',
 };
 

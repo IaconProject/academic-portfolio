@@ -26,7 +26,7 @@ export function getStoredData(): PortfolioData {
  */
 export function getSenderEmail(): string {
   const data = getStoredData();
-  return data.notificationSettings?.senderEmail || 'noreply@cedkan.com';
+  return data.notificationSettings?.senderEmail || 'noreply@muhammedakan.com';
 }
 
 /**
@@ -56,7 +56,7 @@ export function getAllRecipientEmails(): string[] {
     if (clean && clean.includes('@')) emails.push(clean);
   }
 
-  if (emails.length === 0) emails.push('info@cedkan.com');
+  if (emails.length === 0) emails.push('info@muhammedakan.com');
 
   return emails;
 }

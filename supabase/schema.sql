@@ -282,10 +282,10 @@ CREATE TABLE IF NOT EXISTS public.notification_settings (
   email_notifications_enabled BOOLEAN DEFAULT true,
   notify_on_new_message BOOLEAN DEFAULT true,
   notify_on_new_visitor BOOLEAN DEFAULT false,
-  recipient_email TEXT DEFAULT 'info@cedkan.com',
-  recipient_emails TEXT[] DEFAULT '{info@cedkan.com}',
+  recipient_email TEXT DEFAULT 'info@muhammedakan.com',
+  recipient_emails TEXT[] DEFAULT '{info@muhammedakan.com}',
   resend_api_key TEXT DEFAULT '',
-  sender_email TEXT DEFAULT 'noreply@cedkan.com',
+  sender_email TEXT DEFAULT 'noreply@muhammedakan.com',
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
