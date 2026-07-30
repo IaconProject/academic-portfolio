@@ -200,48 +200,69 @@ DROP POLICY IF EXISTS "Public read active redirects" ON public.seo_redirects;
 CREATE POLICY "Public read active redirects"
   ON public.seo_redirects FOR SELECT USING (is_active = TRUE);
 
--- Close the legacy anonymous write policies. Server writes now use the
--- SUPABASE_SERVICE_ROLE_KEY and therefore bypass RLS.
-DROP POLICY IF EXISTS "Allow write public_profile" ON public.public_profile;
-DROP POLICY IF EXISTS "Allow write education" ON public.education;
-DROP POLICY IF EXISTS "Allow write publications" ON public.publications;
-DROP POLICY IF EXISTS "Allow write projects" ON public.projects;
-DROP POLICY IF EXISTS "Allow write conferences" ON public.conferences;
-DROP POLICY IF EXISTS "Allow write activities" ON public.activities;
-DROP POLICY IF EXISTS "Allow write references_list" ON public.references_list;
-DROP POLICY IF EXISTS "Allow write social_links" ON public.social_links;
-DROP POLICY IF EXISTS "Allow write seo_settings" ON public.seo_settings;
-DROP POLICY IF EXISTS "Allow write admin_credentials" ON public.admin_credentials;
-DROP POLICY IF EXISTS "Allow write notification_settings" ON public.notification_settings;
-DROP POLICY IF EXISTS "Allow write contact_messages" ON public.contact_messages;
-DROP POLICY IF EXISTS "Allow public insert visitor_logs" ON public.visitor_logs;
-DROP POLICY IF EXISTS "Allow public select visitor_logs" ON public.visitor_logs;
-DROP POLICY IF EXISTS "Allow admin delete visitor_logs" ON public.visitor_logs;
-DROP POLICY IF EXISTS "Allow write visitor_sessions" ON public.visitor_sessions;
-DROP POLICY IF EXISTS "Allow write password_attempts" ON public.password_attempts;
+-- Close the legacy anonymous write policies. Some installations do not have
+-- every optional legacy table, so each policy change is conditional.
+DO $$
+DECLARE
+  item RECORD;
+BEGIN
+  FOR item IN
+    SELECT * FROM (VALUES
+      ('public_profile', 'Allow write public_profile'),
+      ('education', 'Allow write education'),
+      ('publications', 'Allow write publications'),
+      ('projects', 'Allow write projects'),
+      ('conferences', 'Allow write conferences'),
+      ('activities', 'Allow write activities'),
+      ('references_list', 'Allow write references_list'),
+      ('social_links', 'Allow write social_links'),
+      ('seo_settings', 'Allow write seo_settings'),
+      ('admin_credentials', 'Allow write admin_credentials'),
+      ('notification_settings', 'Allow write notification_settings'),
+      ('contact_messages', 'Allow write contact_messages'),
+      ('visitor_logs', 'Allow public insert visitor_logs'),
+      ('visitor_logs', 'Allow public select visitor_logs'),
+      ('visitor_logs', 'Allow admin delete visitor_logs'),
+      ('visitor_sessions', 'Allow write visitor_sessions'),
+      ('password_attempts', 'Allow write password_attempts')
+    ) AS policies(table_name, policy_name)
+  LOOP
+    IF to_regclass(format('public.%I', item.table_name)) IS NOT NULL THEN
+      EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', item.policy_name, item.table_name);
+    END IF;
+  END LOOP;
+END $$;
+
 DROP POLICY IF EXISTS "Admin Upload Avatars" ON storage.objects;
 
-DROP POLICY IF EXISTS "Public read profile" ON public.public_profile;
-CREATE POLICY "Public read profile" ON public.public_profile FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public read education" ON public.education;
-CREATE POLICY "Public read education" ON public.education FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public read publications" ON public.publications;
-CREATE POLICY "Public read publications" ON public.publications FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public read projects" ON public.projects;
-CREATE POLICY "Public read projects" ON public.projects FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public read conferences" ON public.conferences;
-CREATE POLICY "Public read conferences" ON public.conferences FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public read activities" ON public.activities;
-CREATE POLICY "Public read activities" ON public.activities FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public read references" ON public.references_list;
-CREATE POLICY "Public read references" ON public.references_list FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public read social links" ON public.social_links;
-CREATE POLICY "Public read social links" ON public.social_links FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public read legacy seo settings" ON public.seo_settings;
-CREATE POLICY "Public read legacy seo settings" ON public.seo_settings FOR SELECT USING (TRUE);
-DROP POLICY IF EXISTS "Public insert contact messages" ON public.contact_messages;
-CREATE POLICY "Public insert contact messages" ON public.contact_messages
-  FOR INSERT WITH CHECK (TRUE);
+DO $$
+DECLARE
+  item RECORD;
+BEGIN
+  FOR item IN
+    SELECT * FROM (VALUES
+      ('public_profile', 'Public read profile'),
+      ('education', 'Public read education'),
+      ('publications', 'Public read publications'),
+      ('projects', 'Public read projects'),
+      ('conferences', 'Public read conferences'),
+      ('activities', 'Public read activities'),
+      ('references_list', 'Public read references'),
+      ('social_links', 'Public read social links'),
+      ('seo_settings', 'Public read legacy seo settings')
+    ) AS policies(table_name, policy_name)
+  LOOP
+    IF to_regclass(format('public.%I', item.table_name)) IS NOT NULL THEN
+      EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', item.policy_name, item.table_name);
+      EXECUTE format('CREATE POLICY %I ON public.%I FOR SELECT USING (TRUE)', item.policy_name, item.table_name);
+    END IF;
+  END LOOP;
+
+  IF to_regclass('public.contact_messages') IS NOT NULL THEN
+    EXECUTE 'DROP POLICY IF EXISTS "Public insert contact messages" ON public.contact_messages';
+    EXECUTE 'CREATE POLICY "Public insert contact messages" ON public.contact_messages FOR INSERT WITH CHECK (TRUE)';
+  END IF;
+END $$;
 
 -- Draft long-form bodies must not be retrievable with the public anon key.
 -- The server-side service role retains full access for rendering and admin CMS.
