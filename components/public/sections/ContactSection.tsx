@@ -144,12 +144,13 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
+                  <label htmlFor="contact-name" className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                     Ad Soyad <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <User className="w-4 h-4 text-[#a19b8f] absolute left-3.5 top-3.5" />
                     <input
+                      id="contact-name"
                       type="text"
                       required
                       placeholder="Adınız ve Soyadınız..."
@@ -161,12 +162,13 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
+                  <label htmlFor="contact-email" className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                     E-posta Adresi <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-[#a19b8f] absolute left-3.5 top-3.5" />
                     <input
+                      id="contact-email"
                       type="email"
                       required
                       placeholder="ornek@domain.com"
@@ -180,12 +182,13 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
+                  <label htmlFor="contact-subject" className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                     Konu Kategorisi
                   </label>
                   <div className="relative">
                     <Tag className="w-4 h-4 text-[#a19b8f] absolute left-3.5 top-3.5 pointer-events-none" />
                     <select
+                      id="contact-subject"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 bg-[#f5f2ea]/80 border border-[#e6e2d5] rounded-xl text-sm text-[#24211e] focus:border-[#1c2128] focus:bg-white outline-none transition-colors appearance-none"
@@ -200,12 +203,13 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
+                  <label htmlFor="contact-phone" className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                     Telefon / WhatsApp (İsteğe Bağlı)
                   </label>
                   <div className="relative">
                     <Phone className="w-4 h-4 text-[#a19b8f] absolute left-3.5 top-3.5" />
                     <input
+                      id="contact-phone"
                       type="tel"
                       placeholder="+90 5XX XXX XX XX"
                       value={phone}
@@ -217,10 +221,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
+                <label htmlFor="contact-message" className="block text-xs font-bold tracking-wide text-[#57534e] mb-1.5">
                   Mesajınız <span className="text-rose-500">*</span>
                 </label>
                 <textarea
+                  id="contact-message"
                   rows={4}
                   required
                   placeholder="İletinizi buraya detaylı bir şekilde yazabilirsiniz..."
@@ -270,7 +275,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
 
             <button
               onClick={handleCopyEmail}
-              aria-label="E-postayı kopyala"
+              aria-label={copied ? 'Kopyalandı!' : 'Adresi Kopyala'}
               className="inline-flex items-center justify-center gap-2 py-3 px-5 bg-[#efece4] border border-[#ded9cb] text-[#2c2825] rounded-xl font-semibold text-xs hover:bg-[#e5e1d5] transition-colors w-full sm:w-auto"
             >
               {copied ? (
@@ -280,7 +285,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 text-[#78716c]" />
+                  <Copy className="w-4 h-4 text-[#6b625b]" />
                   <span>Adresi Kopyala</span>
                 </>
               )}
@@ -288,7 +293,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
           </div>
 
           {profile.location && (
-            <div className="inline-flex items-center gap-1.5 text-xs text-[#78716c] font-medium pt-1">
+            <div className="inline-flex items-center gap-1.5 text-xs text-[#6b625b] font-medium pt-1">
               <MapPin className="w-4 h-4 text-[#a19b8f]" />
               <span>{profile.location}</span>
             </div>

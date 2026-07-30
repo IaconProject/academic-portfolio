@@ -17,20 +17,6 @@ export function getOrCreateSessionId(): string {
   }
 }
 
-function getGpuRenderer(): string {
-  try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (gl) {
-      const debugInfo = (gl as any).getExtension('WEBGL_debug_renderer_info');
-      if (debugInfo) {
-        return (gl as any).getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
-      }
-    }
-  } catch (e) {}
-  return '';
-}
-
 /**
  * Send tracking payload with retry logic.
  * Falls back to navigator.sendBeacon if fetch fails (useful on mobile page unload).
@@ -83,8 +69,11 @@ export function VisitorTracker() {
     const trackCurrentPage = () => {
       if (typeof window === 'undefined') return;
 
-      // Admin panele yapılan ziyaretleri takip etme (login hariç)
-      if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
+      if (pathname.startsWith('/admin')) {
+        return;
+      }
+
+      if (localStorage.getItem('analytics_consent') !== 'granted') {
         return;
       }
 
@@ -94,7 +83,6 @@ export function VisitorTracker() {
 
       const sessionId = getOrCreateSessionId();
       const screenResolution = `${window.screen?.width || 0}x${window.screen?.height || 0}`;
-      const gpuRenderer = getGpuRenderer();
       const pageTitle = document.title || 'Muhammed AKAN | Akademik Portfolyo';
 
       const payload = {
@@ -102,7 +90,6 @@ export function VisitorTracker() {
         path: currentPath || '/',
         title: pageTitle,
         screenResolution,
-        gpuRenderer,
         referrer: document.referrer || '',
       };
 
@@ -124,10 +111,18 @@ export function VisitorTracker() {
       }
     };
     window.addEventListener('pageshow', handlePageShow);
+    const handleConsent = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === 'granted') {
+        lastTrackedPath.current = '';
+        trackCurrentPage();
+      }
+    };
+    window.addEventListener('analytics-consent-changed', handleConsent);
 
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
       window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('analytics-consent-changed', handleConsent);
     };
   }, [pathname]);
 

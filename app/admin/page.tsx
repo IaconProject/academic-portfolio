@@ -7,8 +7,7 @@ import { getPortfolioData, savePortfolioDataLocally, fetchPortfolioFromSupabase 
 import { AdminNavbar } from '@/components/admin/AdminNavbar';
 import { ProfileForm } from '@/components/admin/ProfileForm';
 import { EducationEditor } from '@/components/admin/EducationEditor';
-import { PublicationsEditor } from '@/components/admin/PublicationsEditor';
-import { ProjectsEditor } from '@/components/admin/ProjectsEditor';
+import { ContentPublishingEditor } from '@/components/admin/ContentPublishingEditor';
 import { ConferencesEditor } from '@/components/admin/ConferencesEditor';
 import { ActivitiesEditor } from '@/components/admin/ActivitiesEditor';
 import { ReferencesEditor } from '@/components/admin/ReferencesEditor';
@@ -33,6 +32,7 @@ import {
   ListOrdered,
   Users,
   Inbox,
+  FileText,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -42,6 +42,7 @@ type AdminTab =
   | 'education'
   | 'publications'
   | 'projects'
+  | 'articles'
   | 'conferences'
   | 'activities'
   | 'references'
@@ -57,6 +58,7 @@ const VALID_TABS: AdminTab[] = [
   'education',
   'publications',
   'projects',
+  'articles',
   'conferences',
   'activities',
   'references',
@@ -138,7 +140,10 @@ function AdminDashboardContent() {
     });
 
     // Check unread messages count
-    fetch('/api/messages?t=' + Date.now())
+    const adminToken = sessionStorage.getItem('admin_token') || '';
+    fetch('/api/messages?t=' + Date.now(), {
+      headers: adminToken ? { 'X-Admin-Token': adminToken } : {},
+    })
       .then((res) => res.json())
       .then((resData) => {
         if (typeof resData?.unreadCount === 'number') {
@@ -155,7 +160,7 @@ function AdminDashboardContent() {
 
     try {
       const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
-      await fetch('/api/cms', {
+      const response = await fetch('/api/cms', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -163,9 +168,17 @@ function AdminDashboardContent() {
         },
         body: JSON.stringify(updated),
       });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.success !== true) {
+        throw new Error(
+          typeof result?.error === 'string'
+            ? result.error
+            : result?.error?.message || 'Değişiklikler kaydedilemedi.'
+        );
+      }
       toast.success('Değişiklikler kaydedildi!');
     } catch (e) {
-      toast.success('Yerel depolamaya kaydedildi.');
+      toast.error(e instanceof Error ? e.message : 'Değişiklikler yalnız yerel depolamaya kaydedildi.');
     } finally {
       setIsSaving(false);
     }
@@ -201,6 +214,7 @@ function AdminDashboardContent() {
     { id: 'education' as AdminTab, label: 'Eğitim', icon: School },
     { id: 'publications' as AdminTab, label: 'Yayınlar', icon: BookOpen },
     { id: 'projects' as AdminTab, label: 'Projeler', icon: GitBranch },
+    { id: 'articles' as AdminTab, label: 'Yazılar', icon: FileText },
     { id: 'conferences' as AdminTab, label: 'Sempozyum & Konferans', icon: Mic },
     { id: 'activities' as AdminTab, label: 'Faaliyetler', icon: ListOrdered },
     { id: 'references' as AdminTab, label: 'Referanslar', icon: Users },
@@ -277,16 +291,27 @@ function AdminDashboardContent() {
               )}
 
               {activeTab === 'publications' && (
-                <PublicationsEditor
-                  publications={data.publications}
-                  onSave={(updatedPubs) => handleSaveData({ ...data, publications: updatedPubs })}
+                <ContentPublishingEditor
+                  kind="publications"
+                  initialItems={data.publications}
+                  onChange={(publications) => setData({ ...data, publications: publications as typeof data.publications })}
                 />
               )}
 
               {activeTab === 'projects' && (
-                <ProjectsEditor
-                  projects={data.projects || []}
-                  onSave={(updatedProjects) => handleSaveData({ ...data, projects: updatedProjects })}
+                <ContentPublishingEditor
+                  kind="projects"
+                  initialItems={data.projects || []}
+                  availablePublications={data.publications}
+                  onChange={(projects) => setData({ ...data, projects: projects as typeof data.projects })}
+                />
+              )}
+
+              {activeTab === 'articles' && (
+                <ContentPublishingEditor
+                  kind="articles"
+                  initialItems={data.articles || []}
+                  onChange={(articles) => setData({ ...data, articles: articles as typeof data.articles })}
                 />
               )}
 
@@ -314,7 +339,10 @@ function AdminDashboardContent() {
               {activeTab === 'seo' && (
                 <SeoEditor
                   seoSettings={data.seoSettings}
-                  onSave={(updatedSeo) => handleSaveData({ ...data, seoSettings: updatedSeo })}
+                  seoPages={data.seoPages}
+                  seoRedirects={data.seoRedirects}
+                  profileName={data.profile.fullName}
+                  onSave={(seoSettings) => setData({ ...data, seoSettings })}
                 />
               )}
 

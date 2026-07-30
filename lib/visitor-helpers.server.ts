@@ -190,9 +190,9 @@ export function parseDeviceAndBrowser(userAgent: string, gpuRenderer?: string, s
   const result = parser.getResult();
 
   let osName = result.os.name || 'Bilinmiyor';
-  let osVersion = result.os.version || '';
-  let browserName = result.browser.name || 'Bilinmiyor';
-  let browserVersion = result.browser.version || '';
+  const osVersion = result.os.version || '';
+  const browserName = result.browser.name || 'Bilinmiyor';
+  const browserVersion = result.browser.version || '';
   let deviceType: 'Desktop' | 'Mobile' | 'Tablet' = 'Desktop';
   let deviceBrand = result.device.vendor || '';
   let deviceModel = result.device.model || '';

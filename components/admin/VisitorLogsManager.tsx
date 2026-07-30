@@ -26,11 +26,20 @@ export const VisitorLogsManager: React.FC = () => {
   const [selectedSession, setSelectedSession] = useState<VisitorSession | null>(null);
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const adminHeaders = (json = false) => {
+    const token = sessionStorage.getItem('admin_token') || '';
+    return {
+      ...(json ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { 'X-Admin-Token': token } : {}),
+    };
+  };
 
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/visitors?t=' + Date.now());
+      const res = await fetch('/api/visitors?t=' + Date.now(), {
+        headers: adminHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.sessions) {
@@ -49,6 +58,8 @@ export const VisitorLogsManager: React.FC = () => {
     fetchLogs();
     const interval = setInterval(fetchLogs, 20000);
     return () => clearInterval(interval);
+    // The polling function reads the current admin token on every request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDeleteSession = async (id: string, e?: React.MouseEvent) => {
@@ -63,7 +74,10 @@ export const VisitorLogsManager: React.FC = () => {
     toast.success('Oturum silindi.');
 
     try {
-      await fetch(`/api/visitors?id=${id}`, { method: 'DELETE' });
+      await fetch(`/api/visitors?id=${id}`, {
+        method: 'DELETE',
+        headers: adminHeaders(),
+      });
     } catch (e) {}
   };
 
@@ -85,7 +99,7 @@ export const VisitorLogsManager: React.FC = () => {
     try {
       await fetch('/api/visitors', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders(true),
         body: JSON.stringify({ ids: Array.from(deleteSet) }),
       });
     } catch (e) {}
@@ -99,7 +113,10 @@ export const VisitorLogsManager: React.FC = () => {
     toast.success('Tüm loglar silindi.');
 
     try {
-      await fetch('/api/visitors?clearAll=true', { method: 'DELETE' });
+      await fetch('/api/visitors?clearAll=true', {
+        method: 'DELETE',
+        headers: adminHeaders(),
+      });
     } catch (e) {}
   };
 

@@ -1,10 +1,6 @@
-'use client';
-
-import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
-import { X } from 'lucide-react';
+import React from 'react';
+import Link from 'next/link';
 import { PortfolioData } from '@/lib/types';
-import { getPortfolioData, fetchPortfolioFromSupabase, savePortfolioDataLocally } from '@/lib/cms-store';
 import { DesktopSidebar } from '@/components/public/DesktopSidebar';
 import { MobileHeader } from '@/components/public/MobileHeader';
 import { ProfileHero } from '@/components/public/ProfileHero';
@@ -23,59 +19,7 @@ interface PortfolioClientViewProps {
 }
 
 export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initialData }) => {
-  const [data, setData] = useState<PortfolioData>(initialData);
-  const [activeSection, setActiveSection] = useState<string>('hakkinda');
-  const [zoomAvatarUrl, setZoomAvatarUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    const local = getPortfolioData();
-    if (local && local.profile && local.profile.fullName) {
-      if (local.profile.avatarUrl && local.profile.avatarUrl !== initialData.profile.avatarUrl) {
-        setData((prev) => ({
-          ...prev,
-          profile: {
-            ...prev.profile,
-            avatarUrl: local.profile.avatarUrl,
-          },
-        }));
-      }
-    }
-  }, [initialData]);
-
-  useEffect(() => {
-    const sections = [
-      'hakkinda',
-      'egitim',
-      'yayinlar',
-      'projeler',
-      'sempozyum',
-      'faaliyetler',
-      'referanslar',
-      'iletisim',
-    ];
-
-    const observerOptions = {
-      root: null,
-      rootMargin: '-15% 0px -55% 0px',
-      threshold: 0.05,
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setActiveSection(entry.target.id);
-        }
-      });
-    }, observerOptions);
-
-    sections.forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) observer.observe(el);
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
+  const data = initialData;
   const { profile, education, publications, projects, conferences, activities, references, socialLinks } = data;
 
   return (
@@ -86,15 +30,11 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
       {/* Desktop Navigation Sidebar */}
       <DesktopSidebar
         profile={profile}
-        socialLinks={socialLinks}
-        activeSection={activeSection}
-        onOpenAvatar={(url) => setZoomAvatarUrl(url)}
       />
 
       {/* Mobile Sticky Navigation Header */}
       <MobileHeader
         profile={profile}
-        activeSection={activeSection}
       />
 
       {/* Main Content Centering Wrapper */}
@@ -103,13 +43,12 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
           {/* Top Profile Hero for Mobile */}
           <ProfileHero
             profile={profile}
-            onOpenAvatar={(url) => setZoomAvatarUrl(url)}
           />
 
-          {/* Desktop Page Title Header - Centered */}
-          <header className="hidden lg:flex flex-col items-center text-center mb-12 border-b border-stone-200/80 pb-8 mx-auto max-w-2xl">
-            <h1 className="text-4xl md:text-5xl font-serif font-bold text-stone-900 mb-3 tracking-tight">
-              Akademik Özgeçmiş
+          {/* Single visible page heading on every viewport */}
+          <header className="mx-auto mb-10 flex max-w-2xl flex-col items-center border-b border-stone-200/80 pb-7 text-center lg:mb-12 lg:pb-8">
+            <h1 className="mb-3 font-serif text-3xl font-bold tracking-tight text-stone-900 md:text-4xl lg:text-5xl">
+              {profile.fullName} — Akademik Özgeçmiş
             </h1>
             <p className="text-base md:text-lg text-stone-600 font-sans leading-relaxed">
               {profile.subtitle}
@@ -119,47 +58,22 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
           {/* Stacked Academic Section Cards */}
           <AboutSection profile={profile} socialLinks={socialLinks} />
           <EducationSection education={education} />
-          <PublicationsSection publications={publications} />
-          <ProjectsSection projects={projects} />
+          <PublicationsSection publications={publications.filter((item) => (item.locale || 'tr') === 'tr')} />
+          <ProjectsSection projects={projects.filter((item) => (item.locale || 'tr') === 'tr')} />
           <ConferencesSection conferences={conferences} />
           <ActivitiesSection activities={activities} />
           <ReferencesSection references={references} />
           <ContactSection profile={profile} />
 
           {/* Minimalist Footer */}
-          <footer className="text-center py-6 text-[11px] font-medium text-stone-500 border-t border-stone-200/60 mt-12">
+          <footer className="mt-12 border-t border-stone-200/60 py-6 text-center text-xs font-medium text-stone-600">
             © {new Date().getFullYear()} {profile.fullName}
+            <span aria-hidden="true"> · </span>
+            <Link href="/gizlilik" className="underline underline-offset-2">Gizlilik ve çerezler</Link>
           </footer>
         </main>
       </div>
 
-      {/* Profile Picture Lightbox Zoom Modal */}
-      {zoomAvatarUrl && (
-        <div
-          onClick={() => setZoomAvatarUrl(null)}
-          className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer animate-fade-in"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-72 h-72 sm:w-96 sm:h-96 md:w-[420px] md:h-[420px] aspect-square rounded-2xl overflow-hidden border-4 border-white/20 shadow-2xl bg-stone-900 transition-transform duration-300"
-          >
-            <Image
-              src={zoomAvatarUrl}
-              alt={profile.fullName}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-            <button
-              onClick={() => setZoomAvatarUrl(null)}
-              className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-black/80 text-white rounded-full transition-colors"
-              title="Kapat"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

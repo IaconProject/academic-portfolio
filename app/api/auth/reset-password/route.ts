@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { getActiveRecipientEmail, getStoredData, sendOtpEmail } from '@/lib/email-service';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import {
+  serverSupabase as supabase,
+  isServerSupabaseConfigured as isSupabaseConfigured,
+} from '@/lib/supabase/server';
 import { hashPassword } from '@/lib/auth-helpers';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import fs from 'fs';

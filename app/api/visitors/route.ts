@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import {
+  serverSupabase as supabase,
+  isServerSupabaseConfigured as isSupabaseConfigured,
+} from '@/lib/supabase/server';
 import { VisitorSession } from '@/lib/types';
 import { validateAdminSession } from '@/lib/auth-helpers';
 import {
@@ -43,7 +46,10 @@ function mapSession(row: any): VisitorSession {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!validateAdminSession(request)) {
+    return NextResponse.json({ success: false, error: 'Yetkisiz işlem.' }, { status: 401 });
+  }
   let sessions: VisitorSession[] = [];
 
   // ── Try Supabase first ──
@@ -145,7 +151,7 @@ export async function DELETE(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
-    let id = searchParams.get('id');
+    const id = searchParams.get('id');
     let idsParam = searchParams.get('ids');
     const clearAll = searchParams.get('clearAll');
 

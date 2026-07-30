@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { initialPortfolioData } from '@/lib/initial-data';
 import { PortfolioData, AdminCredentials } from '@/lib/types';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import {
+  serverSupabase as supabase,
+  isServerSupabaseConfigured as isSupabaseConfigured,
+} from '@/lib/supabase/server';
 import { validateAdminSession } from '@/lib/auth-helpers';
+import { revalidateSeoRoutes } from '@/lib/admin-api';
 import fs from 'fs';
 import path from 'path';
 
@@ -10,8 +14,6 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 const TMP_FILE_PATH = path.join('/tmp', 'academic_portfolio_data_v2.json');
-const INITIAL_DATA_FILE = path.join(process.cwd(), 'lib', 'initial-data.ts');
-
 let inMemoryStore: PortfolioData | null = null;
 
 function readTmpStore(): PortfolioData {
@@ -39,14 +41,6 @@ function writeTmpStore(data: PortfolioData): void {
   } catch (e) {
     console.error('Failed writing tmp store:', e);
   }
-  try {
-    if (fs.existsSync(INITIAL_DATA_FILE)) {
-      const content = `import { PortfolioData } from './types';\n\nexport const initialPortfolioData: PortfolioData = ${JSON.stringify(data, null, 2)};\n`;
-      fs.writeFileSync(INITIAL_DATA_FILE, content, 'utf-8');
-    }
-  } catch (e) {
-    // Ephemeral disk in lambda
-  }
 }
 
 /**
@@ -62,7 +56,13 @@ function sanitizePublicData(data: PortfolioData): PortfolioData {
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!validateAdminSession(request)) {
+    return NextResponse.json(
+      { success: false, error: { code: 'UNAUTHORIZED', message: 'Yetkisiz erişim.' } },
+      { status: 401 }
+    );
+  }
   const currentTmp = readTmpStore();
 
   if (isSupabaseConfigured && supabase) {
@@ -100,6 +100,7 @@ export async function GET() {
             email: profileData.email,
             location: profileData.location || '',
             cvUrl: profileData.cv_url || '#',
+            updatedAt: profileData.updated_at || undefined,
           } : currentTmp.profile,
           education: (eduData && eduData.length > 0) ? eduData.map((e: any) => ({
             id: e.id,
@@ -118,6 +119,16 @@ export async function GET() {
             year: p.year,
             url: p.url,
             doi: p.doi,
+            slug: p.slug,
+            locale: p.locale || 'tr',
+            translationGroupId: p.translation_group_id,
+            excerpt: p.excerpt,
+            content: p.content,
+            coverImageUrl: p.cover_image_url,
+            coverImageAlt: p.cover_image_alt,
+            detailStatus: p.detail_status || 'none',
+            publishedAt: p.published_at,
+            updatedAt: p.updated_at || p.created_at,
           })) : currentTmp.publications,
           projects: (projData && projData.length > 0) ? projData.map((pr: any) => ({
             id: pr.id,
@@ -126,6 +137,17 @@ export async function GET() {
             years: pr.years,
             tags: pr.tags || [],
             url: pr.url,
+            slug: pr.slug,
+            locale: pr.locale || 'tr',
+            translationGroupId: pr.translation_group_id,
+            excerpt: pr.excerpt,
+            content: pr.content,
+            coverImageUrl: pr.cover_image_url,
+            coverImageAlt: pr.cover_image_alt,
+            relatedPublicationIds: pr.related_publication_ids || [],
+            detailStatus: pr.detail_status || 'none',
+            publishedAt: pr.published_at,
+            updatedAt: pr.updated_at || pr.created_at,
           })) : currentTmp.projects,
           conferences: (confData && confData.length > 0) ? confData.map((c: any) => ({
             id: c.id,
@@ -284,23 +306,6 @@ export async function POST(request: Request) {
             updated_at: new Date().toISOString(),
           });
 
-          // SEO Upsert
-          if (updatedData.seoSettings) {
-            const { data: seoRows } = await supabase.from('seo_settings').select('id').limit(1);
-            const existingSeoId = seoRows && seoRows.length > 0 ? seoRows[0].id : undefined;
-
-            await supabase.from('seo_settings').upsert({
-              ...(existingSeoId ? { id: existingSeoId } : {}),
-              meta_title: updatedData.seoSettings.metaTitle,
-              meta_description: updatedData.seoSettings.metaDescription,
-              keywords: updatedData.seoSettings.keywords,
-              og_image_url: updatedData.seoSettings.ogImageUrl,
-              canonical_url: updatedData.seoSettings.canonicalUrl,
-              author_name: updatedData.seoSettings.authorName,
-              updated_at: new Date().toISOString(),
-            });
-          }
-
           // Education Sync
           if (Array.isArray(updatedData.education)) {
             await supabase.from('education').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -313,39 +318,6 @@ export async function POST(request: Request) {
                   status: e.status || 'Tamamlandı',
                   description: e.description || '',
                   is_current: e.isCurrent || false,
-                }))
-              );
-            }
-          }
-
-          // Publications Sync
-          if (Array.isArray(updatedData.publications)) {
-            await supabase.from('publications').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (updatedData.publications.length > 0) {
-              await supabase.from('publications').insert(
-                updatedData.publications.map((p) => ({
-                  type: p.type,
-                  title: p.title,
-                  publisher: p.publisher || '',
-                  year: p.year,
-                  url: p.url || '#',
-                  doi: p.doi || '',
-                }))
-              );
-            }
-          }
-
-          // Projects Sync
-          if (Array.isArray(updatedData.projects)) {
-            await supabase.from('projects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            if (updatedData.projects.length > 0) {
-              await supabase.from('projects').insert(
-                updatedData.projects.map((pr) => ({
-                  title: pr.title,
-                  description: pr.description,
-                  years: pr.years,
-                  tags: pr.tags || [],
-                  url: pr.url || '#',
                 }))
               );
             }
@@ -418,6 +390,7 @@ export async function POST(request: Request) {
       }
     }
 
+    revalidateSeoRoutes();
     return NextResponse.json({ success: true, data: sanitizePublicData(readTmpStore()) }, {
       headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0' },
     });

@@ -76,7 +76,12 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
   try {
     const res = await fetch('/api/cms?t=' + Date.now(), {
       cache: 'no-store',
-      headers: { 'Cache-Control': 'no-cache' },
+      headers: {
+        'Cache-Control': 'no-cache',
+        ...(typeof window !== 'undefined' && sessionStorage.getItem('admin_token')
+          ? { 'X-Admin-Token': sessionStorage.getItem('admin_token') || '' }
+          : {}),
+      },
     });
 
     if (res.ok) {
@@ -98,9 +103,13 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
 
         if (isServerInitial && isClientCustom) {
           // Re-hydrate server with client's custom data so deploy never wipes client edits
+          const token = sessionStorage.getItem('admin_token') || '';
           fetch('/api/cms', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'X-Admin-Token': token } : {}),
+            },
             body: JSON.stringify({ ...localData, adminCredentials: localCreds }),
           }).catch(() => {});
           
@@ -168,6 +177,7 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         email: profileData.email,
         location: profileData.location || '',
         cvUrl: profileData.cv_url || '#',
+        updatedAt: profileData.updated_at || undefined,
       },
       education: (eduData && eduData.length > 0) ? eduData.map((item: any) => ({
         id: item.id,
@@ -186,6 +196,16 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         year: item.year,
         url: item.url,
         doi: item.doi,
+        slug: item.slug,
+        locale: item.locale || 'tr',
+        translationGroupId: item.translation_group_id,
+        excerpt: item.excerpt,
+        content: item.content,
+        coverImageUrl: item.cover_image_url,
+        coverImageAlt: item.cover_image_alt,
+        detailStatus: item.detail_status || 'none',
+        publishedAt: item.published_at,
+        updatedAt: item.updated_at || item.created_at,
       })) : initialPortfolioData.publications,
       projects: (projData && projData.length > 0) ? projData.map((item: any) => ({
         id: item.id,
@@ -194,6 +214,17 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         years: item.years,
         tags: item.tags || [],
         url: item.url,
+        slug: item.slug,
+        locale: item.locale || 'tr',
+        translationGroupId: item.translation_group_id,
+        excerpt: item.excerpt,
+        content: item.content,
+        coverImageUrl: item.cover_image_url,
+        coverImageAlt: item.cover_image_alt,
+        relatedPublicationIds: item.related_publication_ids || [],
+        detailStatus: item.detail_status || 'none',
+        publishedAt: item.published_at,
+        updatedAt: item.updated_at || item.created_at,
       })) : initialPortfolioData.projects,
       conferences: (confData && confData.length > 0) ? confData.map((item: any) => ({
         id: item.id,

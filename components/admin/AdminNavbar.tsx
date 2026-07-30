@@ -24,7 +24,10 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
 
   const fetchUnreadMessages = async () => {
     try {
-      const res = await fetch('/api/messages?t=' + Date.now());
+      const token = sessionStorage.getItem('admin_token') || '';
+      const res = await fetch('/api/messages?t=' + Date.now(), {
+        headers: token ? { 'X-Admin-Token': token } : {},
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.messages && Array.isArray(json.messages)) {

@@ -1,17 +1,23 @@
 import { MetadataRoute } from 'next';
-import { getPortfolioDataServer } from '@/lib/server-cms';
+import { getSiteUrl } from '@/lib/seo';
 
-export default async function robots(): Promise<MetadataRoute.Robots> {
-  const data = await getPortfolioDataServer();
-  const baseUrl = data.seoSettings?.canonicalUrl || 'https://muhammedakan.com';
-  const cleanBase = baseUrl.replace(/\/+$/, '');
+export default function robots(): MetadataRoute.Robots {
+  const baseUrl = getSiteUrl();
+  const production =
+    process.env.VERCEL_ENV === undefined || process.env.VERCEL_ENV === 'production';
 
   return {
-    rules: {
-      userAgent: '*',
-      allow: '/',
-      disallow: ['/admin/', '/api/'],
-    },
-    sitemap: `${cleanBase}/sitemap.xml`,
+    rules: production
+      ? {
+          userAgent: '*',
+          allow: '/',
+          disallow: ['/api/'],
+        }
+      : {
+          userAgent: '*',
+          disallow: '/',
+        },
+    sitemap: `${baseUrl}/sitemap.xml`,
+    host: baseUrl,
   };
 }

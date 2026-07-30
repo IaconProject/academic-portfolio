@@ -16,9 +16,9 @@ module.exports = {
         'academic-border': '#e7e3d8',
       },
       fontFamily: {
-        serif: ['var(--font-serif)', 'Lora', 'serif'],
-        sans: ['var(--font-sans)', 'Plus Jakarta Sans', 'sans-serif'],
-        mono: ['var(--font-mono)', 'Space Grotesk', 'monospace'],
+        serif: ['Georgia', 'Cambria', '"Times New Roman"', 'serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        mono: ['"SFMono-Regular"', 'Consolas', '"Liberation Mono"', 'monospace'],
       },
       spacing: {
         touch: '48px',

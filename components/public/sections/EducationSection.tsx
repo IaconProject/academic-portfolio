@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { School, Calendar } from 'lucide-react';
 import { EducationItem } from '@/lib/types';

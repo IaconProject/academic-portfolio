@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import {
+  serverSupabase as supabase,
+  isServerSupabaseConfigured as isSupabaseConfigured,
+} from '@/lib/supabase/server';
 import { getClientIp, lookupGeo, parseDeviceAndBrowser } from '@/lib/visitor-helpers.server';
 import { VisitorSession, PageNavStep } from '@/lib/types';
 import { sendNotificationEmail } from '@/lib/email-service';

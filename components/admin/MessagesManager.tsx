@@ -24,11 +24,20 @@ export const MessagesManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'starred'>('all');
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+  const adminHeaders = (json = false) => {
+    const token = sessionStorage.getItem('admin_token') || '';
+    return {
+      ...(json ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { 'X-Admin-Token': token } : {}),
+    };
+  };
 
   const fetchMessages = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/messages?t=' + Date.now());
+      const res = await fetch('/api/messages?t=' + Date.now(), {
+        headers: adminHeaders(),
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.messages) {
@@ -44,6 +53,8 @@ export const MessagesManager: React.FC = () => {
 
   useEffect(() => {
     fetchMessages();
+    // The loader is intentionally bound once when the manager mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleToggleStar = async (msg: ContactMessage, e?: React.MouseEvent) => {
@@ -59,7 +70,7 @@ export const MessagesManager: React.FC = () => {
     try {
       await fetch('/api/messages', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders(true),
         body: JSON.stringify({ id: msg.id, isStarred: newStarred }),
       });
     } catch (e) {}
@@ -76,7 +87,7 @@ export const MessagesManager: React.FC = () => {
     try {
       await fetch('/api/messages', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders(true),
         body: JSON.stringify({ id: msg.id, isRead }),
       });
     } catch (e) {}
@@ -88,7 +99,7 @@ export const MessagesManager: React.FC = () => {
     try {
       await fetch('/api/messages', {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders(true),
         body: JSON.stringify({ markAllRead: true }),
       });
     } catch (e) {}
@@ -105,7 +116,10 @@ export const MessagesManager: React.FC = () => {
     toast.success('Mesaj silindi.');
 
     try {
-      await fetch(`/api/messages?id=${id}`, { method: 'DELETE' });
+      await fetch(`/api/messages?id=${id}`, {
+        method: 'DELETE',
+        headers: adminHeaders(),
+      });
     } catch (e) {}
   };
 
@@ -116,7 +130,10 @@ export const MessagesManager: React.FC = () => {
     toast.success('Okunan mesajlar temizlendi.');
 
     try {
-      await fetch('/api/messages?deleteRead=true', { method: 'DELETE' });
+      await fetch('/api/messages?deleteRead=true', {
+        method: 'DELETE',
+        headers: adminHeaders(),
+      });
     } catch (e) {}
   };
 

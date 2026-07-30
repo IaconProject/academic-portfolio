@@ -6,7 +6,6 @@ import { Profile } from '@/lib/types';
 
 interface MobileHeaderProps {
   profile: Profile;
-  activeSection: string;
 }
 
 const navItems = [
@@ -20,7 +19,7 @@ const navItems = [
   { id: 'iletisim', label: 'İletişim', icon: Mail },
 ];
 
-export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSection }) => {
+export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);
@@ -31,7 +30,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
       {/* Floating Minimal Burger Button */}
       <button
         onClick={toggleMenu}
-        aria-label="Menüyü Aç"
+        aria-label={isOpen ? 'Menüyü kapat' : 'Menüyü aç'}
         className="lg:hidden fixed top-4 left-4 z-50 w-11 h-11 bg-white/95 text-stone-900 rounded-2xl border border-stone-300/80 shadow-md flex items-center justify-center backdrop-blur-md hover:bg-stone-50 transition-all active:scale-95"
       >
         {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -54,19 +53,14 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile, activeSecti
         <ul className="space-y-2">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = activeSection === item.id;
             return (
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
                   onClick={closeMenu}
-                  className={`flex items-center gap-3.5 py-3 px-4 rounded-xl text-sm font-medium transition-all ${
-                    isActive
-                      ? 'bg-stone-900 text-stone-50 font-bold shadow-md'
-                      : 'text-stone-700 hover:bg-stone-100 hover:text-stone-950'
-                  }`}
+                  className="flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium text-stone-700 transition-all hover:bg-stone-100 hover:text-stone-950"
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-stone-50' : 'text-stone-400'}`} />
+                  <Icon className="h-5 w-5 text-stone-400" />
                   <span>{item.label}</span>
                 </a>
               </li>

@@ -1,8 +1,8 @@
-'use client';
-
 import React from 'react';
+import Link from 'next/link';
 import { BookOpen, Calendar, ExternalLink } from 'lucide-react';
 import { PublicationItem } from '@/lib/types';
+import { isContentPublished, publicationSlug } from '@/lib/seo';
 import { AcademicCard } from '../AcademicCard';
 
 interface PublicationsSectionProps {
@@ -22,14 +22,23 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
               <span className="text-[11px] font-semibold text-[#2c2825] bg-[#efece4] px-2.5 py-0.5 rounded-md border border-[#ded9cb]">
                 {pub.type}
               </span>
-              <div className="flex items-center gap-1.5 text-xs text-[#78716c] font-medium">
+              <div className="flex items-center gap-1.5 text-xs text-[#6b625b] font-medium">
                 <Calendar className="w-3.5 h-3.5 text-[#a19b8f]" />
                 <span>{pub.year}</span>
               </div>
             </div>
 
             <h3 className="font-serif font-bold text-[#24211e] text-base md:text-lg leading-snug mb-2">
-              &quot;{pub.title}&quot;
+              {isContentPublished(pub.detailStatus, pub.publishedAt) ? (
+                <Link
+                  href={`/yayinlar/${publicationSlug(pub)}`}
+                  className="hover:underline"
+                >
+                  &quot;{pub.title}&quot;
+                </Link>
+              ) : (
+                <>&quot;{pub.title}&quot;</>
+              )}
             </h3>
 
             {pub.publisher && (
@@ -51,6 +60,13 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
             )}
           </div>
         ))}
+        <Link
+          href="/yayinlar"
+          className="inline-flex items-center gap-1 text-xs font-bold text-[#1c2128] hover:underline"
+        >
+          Tüm yayınları görüntüle
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
       </div>
     </AcademicCard>
   );

@@ -40,16 +40,6 @@ export default function AdminLoginPage() {
       setEmail(creds.email);
     }
 
-    // Sync latest credentials from server
-    fetch('/api/cms', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((cmsData) => {
-        if (cmsData && cmsData.adminCredentials?.email) {
-          saveAdminCredentials(cmsData.adminCredentials);
-          setEmail(cmsData.adminCredentials.email);
-        }
-      })
-      .catch(() => {});
   }, []);
 
   const toggleTheme = () => {

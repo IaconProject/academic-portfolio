@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import {
+  serverSupabase as supabase,
+  isServerSupabaseConfigured as isSupabaseConfigured,
+} from '@/lib/supabase/server';
 import { ContactMessage } from '@/lib/types';
 import { sendNotificationEmail } from '@/lib/email-service';
 import { validateAdminSession } from '@/lib/auth-helpers';
@@ -40,7 +43,10 @@ function writeLocalMessages(msgs: ContactMessage[]): void {
 }
 
 // GET: List all messages with unread count
-export async function GET() {
+export async function GET(request: Request) {
+  if (!validateAdminSession(request)) {
+    return NextResponse.json({ success: false, error: 'Yetkisiz işlem.' }, { status: 401 });
+  }
   let messages: ContactMessage[] = [];
 
   if (isSupabaseConfigured && supabase) {

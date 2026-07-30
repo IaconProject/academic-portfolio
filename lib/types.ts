@@ -7,6 +7,7 @@ export interface Profile {
   email: string;
   location: string;
   cvUrl?: string;
+  updatedAt?: string;
 }
 
 export interface EducationItem {
@@ -27,6 +28,16 @@ export interface PublicationItem {
   year: string;
   url?: string;
   doi?: string;
+  slug?: string;
+  locale?: SiteLocale;
+  translationGroupId?: string;
+  excerpt?: string;
+  content?: string;
+  coverImageUrl?: string;
+  coverImageAlt?: string;
+  detailStatus?: ContentStatus;
+  publishedAt?: string;
+  updatedAt?: string;
 }
 
 export interface ProjectItem {
@@ -36,6 +47,17 @@ export interface ProjectItem {
   years: string;
   tags: string[];
   url?: string;
+  slug?: string;
+  locale?: SiteLocale;
+  translationGroupId?: string;
+  excerpt?: string;
+  content?: string;
+  coverImageUrl?: string;
+  coverImageAlt?: string;
+  relatedPublicationIds?: string[];
+  detailStatus?: ContentStatus;
+  publishedAt?: string;
+  updatedAt?: string;
 }
 
 export interface ConferenceItem {
@@ -79,6 +101,101 @@ export interface SeoSettings {
   ogImageUrl: string;
   canonicalUrl: string;
   authorName: string;
+  siteName?: string;
+  titleTemplate?: string;
+  defaultLocale?: SiteLocale;
+  twitterHandle?: string;
+  googleSiteVerification?: string;
+  bingSiteVerification?: string;
+  ga4MeasurementId?: string;
+  gscProperty?: string;
+  ga4PropertyId?: string;
+  enableAnalytics?: boolean;
+  allowIndexing?: boolean;
+  alternateName?: string;
+  orcidUrl?: string;
+  scholarUrl?: string;
+}
+
+export type SiteLocale = 'tr' | 'en';
+export type ContentStatus = 'none' | 'draft' | 'scheduled' | 'published';
+export type SearchIntent = 'informational' | 'navigational' | 'academic' | 'transactional';
+
+export interface SeoPage {
+  id?: string;
+  routeKey: string;
+  path: string;
+  locale: SiteLocale;
+  title?: string;
+  description?: string;
+  focusKeyword?: string;
+  relatedKeywords: string[];
+  searchIntent?: SearchIntent;
+  topicCluster?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImageUrl?: string;
+  canonicalOverride?: string;
+  index: boolean;
+  follow: boolean;
+  includeInSitemap: boolean;
+  updatedAt?: string;
+}
+
+export interface SeoRedirect {
+  id: string;
+  fromPath: string;
+  toPath: string;
+  statusCode: 301 | 308;
+  reason?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SeoRevision {
+  id: string;
+  entityType: 'settings' | 'page' | 'redirect';
+  entityKey: string;
+  snapshot: Record<string, unknown>;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface SeoAuditIssue {
+  code: string;
+  severity: 'critical' | 'warning' | 'info';
+  category: 'indexing' | 'metadata' | 'content' | 'schema' | 'performance';
+  title: string;
+  detail: string;
+  path?: string;
+}
+
+export interface SeoAuditResult {
+  id?: string;
+  score: number;
+  categoryScores?: Record<SeoAuditIssue['category'], number>;
+  issues: SeoAuditIssue[];
+  checkedAt: string;
+}
+
+export interface ArticleItem {
+  id: string;
+  slug: string;
+  locale: SiteLocale;
+  translationGroupId?: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  coverImageUrl?: string;
+  coverImageAlt?: string;
+  status: Exclude<ContentStatus, 'none'>;
+  authorName?: string;
+  publishedAt?: string;
+  updatedAt?: string;
+  relatedKeywords: string[];
+  topicCluster?: string;
+  references: string[];
 }
 
 export interface AdminCredentials {
@@ -113,6 +230,9 @@ export interface PortfolioData {
   seoSettings: SeoSettings;
   adminCredentials?: AdminCredentials;
   notificationSettings?: NotificationSettings;
+  articles?: ArticleItem[];
+  seoPages?: SeoPage[];
+  seoRedirects?: SeoRedirect[];
 }
 
 export interface VisitorLog {

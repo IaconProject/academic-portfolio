@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import {
+  serverSupabase as supabase,
+  isServerSupabaseConfigured as isSupabaseConfigured,
+} from '@/lib/supabase/server';
 import { verifyPassword, createSessionToken } from '@/lib/auth-helpers';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { getStoredData } from '@/lib/email-service';

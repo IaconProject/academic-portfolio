@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { Users, Building2, Mail, Phone } from 'lucide-react';
 import { ReferenceItem } from '@/lib/types';
@@ -30,7 +28,7 @@ export const ReferencesSection: React.FC<ReferencesSectionProps> = ({ references
               <p className={`text-xs mt-1 font-medium ${isFeatured ? 'text-[#adbac7]' : 'text-[#57534e]'}`}>
                 {ref.title}
               </p>
-              <div className={`flex items-center gap-1.5 text-xs mt-3 pt-3 border-t ${isFeatured ? 'border-[#2d333b] text-[#adbac7]' : 'border-[#ece8dc] text-[#78716c]'}`}>
+              <div className={`flex items-center gap-1.5 text-xs mt-3 pt-3 border-t ${isFeatured ? 'border-[#2d333b] text-[#adbac7]' : 'border-[#ece8dc] text-[#6b625b]'}`}>
                 <Building2 className="w-3.5 h-3.5 shrink-0" />
                 <span>{ref.institution}</span>
               </div>

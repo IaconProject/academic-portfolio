@@ -1,6 +1,9 @@
 import { PortfolioData } from './types';
 import { initialPortfolioData } from './initial-data';
-import { supabase, isSupabaseConfigured } from './supabase/client';
+import {
+  serverSupabase as supabase,
+  isServerSupabaseConfigured as isSupabaseConfigured,
+} from './supabase/server';
 import fs from 'fs';
 import path from 'path';
 
@@ -39,6 +42,7 @@ export async function getPortfolioDataServer(): Promise<PortfolioData> {
             email: profileData.email,
             location: profileData.location || '',
             cvUrl: profileData.cv_url || '#',
+            updatedAt: profileData.updated_at || undefined,
           },
           education: (eduData && eduData.length > 0) ? eduData.map((e: any) => ({
             id: e.id,
@@ -57,6 +61,16 @@ export async function getPortfolioDataServer(): Promise<PortfolioData> {
             year: p.year,
             url: p.url,
             doi: p.doi,
+            slug: p.slug,
+            locale: p.locale || 'tr',
+            translationGroupId: p.translation_group_id,
+            excerpt: p.excerpt,
+            content: p.content,
+            coverImageUrl: p.cover_image_url,
+            coverImageAlt: p.cover_image_alt,
+            detailStatus: p.detail_status || 'none',
+            publishedAt: p.published_at,
+            updatedAt: p.updated_at || p.created_at,
           })) : initialPortfolioData.publications,
           projects: (projData && projData.length > 0) ? projData.map((pr: any) => ({
             id: pr.id,
@@ -65,6 +79,17 @@ export async function getPortfolioDataServer(): Promise<PortfolioData> {
             years: pr.years,
             tags: pr.tags || [],
             url: pr.url,
+            slug: pr.slug,
+            locale: pr.locale || 'tr',
+            translationGroupId: pr.translation_group_id,
+            excerpt: pr.excerpt,
+            content: pr.content,
+            coverImageUrl: pr.cover_image_url,
+            coverImageAlt: pr.cover_image_alt,
+            relatedPublicationIds: pr.related_publication_ids || [],
+            detailStatus: pr.detail_status || 'none',
+            publishedAt: pr.published_at,
+            updatedAt: pr.updated_at || pr.created_at,
           })) : initialPortfolioData.projects,
           conferences: (confData && confData.length > 0) ? confData.map((c: any) => ({
             id: c.id,

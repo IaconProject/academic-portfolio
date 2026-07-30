@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import { User, ExternalLink, Linkedin, Github, FileText, Instagram, Twitter, Youtube, Globe, BookOpen } from 'lucide-react';
 import { Profile, SocialLink } from '@/lib/types';

@@ -20,7 +20,10 @@ export const CredentialsEditor: React.FC = () => {
       setCurrentEmail(creds.email);
     }
 
-    fetch('/api/cms')
+    const token = sessionStorage.getItem('admin_token') || '';
+    fetch('/api/cms', {
+      headers: token ? { 'X-Admin-Token': token } : {},
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data && data.adminCredentials?.email) {
