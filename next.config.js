@@ -13,6 +13,16 @@ const nextConfig = {
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'muhammedakan.vercel.app' }],
+        // Vercel invokes production cron routes on a *.vercel.app host and
+        // does not follow redirects. Its documented user agent bypasses only
+        // this canonical-host redirect; the route still requires CRON_SECRET.
+        missing: [
+          {
+            type: 'header',
+            key: 'user-agent',
+            value: 'vercel-cron/1.0',
+          },
+        ],
         destination: 'https://www.muhammedakan.com/:path*',
         permanent: true,
       },

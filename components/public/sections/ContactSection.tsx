@@ -5,6 +5,10 @@ import { Mail, Send, Check, Copy, MapPin, MessageSquare, CheckCircle2, RefreshCw
 import { Profile } from '@/lib/types';
 import { AcademicCard } from '../AcademicCard';
 import toast from 'react-hot-toast';
+import {
+  ANALYTICS_TRACK_EVENT,
+  AnalyticsTrackEventDetail,
+} from '@/lib/analytics-contract';
 
 interface ContactSectionProps {
   profile: Profile;
@@ -74,9 +78,21 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
 
       const json = await res.json();
 
-      if (json.success) {
+      if (res.ok && json.success) {
         setSubmitted(true);
         toast.success('Mesajınız başarıyla iletildi!');
+        window.dispatchEvent(
+          new CustomEvent<AnalyticsTrackEventDetail>(
+            ANALYTICS_TRACK_EVENT,
+            {
+              detail: {
+                eventType: 'contact_submit',
+                contentType: 'form',
+                contentKey: 'contact_form',
+              },
+            }
+          )
+        );
         setName('');
         setEmail('');
         setPhone('');

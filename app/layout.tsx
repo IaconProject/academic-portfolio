@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'react-hot-toast';
-import { VisitorTracker } from '@/components/public/VisitorTracker';
-import { ConsentManager } from '@/components/public/ConsentManager';
+import { AnalyticsRuntime } from '@/components/public/AnalyticsRuntime';
+import { readAnalyticsRuntimeEnabled } from '@/lib/analytics-settings.server';
 import { getSeoExperienceData } from '@/lib/seo-repository';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
 import './globals.css';
@@ -33,13 +33,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const data = await getSeoExperienceData();
+  const analyticsEnabled = await readAnalyticsRuntimeEnabled();
+
   return (
     <html lang="tr" className="scroll-smooth">
       <body className="bg-academic-bg text-slate-800 font-sans antialiased">
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
-        <VisitorTracker />
-        <ConsentManager
-          enabled={Boolean(data.seoSettings.enableAnalytics)}
+        <AnalyticsRuntime
+          initiallyEnabled={analyticsEnabled}
           measurementId={data.seoSettings.ga4MeasurementId}
         />
         {children}
