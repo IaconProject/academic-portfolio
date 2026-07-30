@@ -1,7 +1,10 @@
 import { MetadataRoute } from 'next';
+import { getPortfolioDataServer } from '@/lib/server-cms';
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://muhammedakan.com';
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const data = await getPortfolioDataServer();
+  const baseUrl = data.seoSettings?.canonicalUrl || 'https://muhammedakan.com';
+
   return [
     {
       url: baseUrl,

@@ -22,33 +22,48 @@ const spaceGrotesk = Space_Grotesk({
   display: 'swap',
 });
 
-export const metadata: Metadata = {
-  title: 'Muhammed Akan | Akademik Portfolyo',
-  description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu. İslam Hukuku, Blok Zincir Teknolojisi ve Yapay Zeka Etiği.',
-  keywords: ['Muhammed Akan', 'Akademik Portfolyo', 'İlahiyat', 'İslam Hukuku', 'Blok Zincir', 'Yapay Zeka Etiği'],
-  authors: [{ name: 'Muhammed Akan' }],
-  metadataBase: new URL('https://muhammedakan.com'),
-  icons: {
-    icon: '/favicon.ico',
-  },
-  openGraph: {
-    title: 'Muhammed Akan | Akademik Portfolyo',
-    description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu.',
-    url: 'https://muhammedakan.com',
-    siteName: 'Muhammed Akan Akademik Portfolyo',
-    type: 'website',
-    locale: 'tr_TR',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Muhammed Akan | Akademik Portfolyo',
-    description: 'İlahiyat Fakültesi Öğrencisi & Araştırmacı Muhammed Akan\'ın akademik portfolyosu.',
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { getPortfolioDataServer } = await import('@/lib/server-cms');
+  const data = await getPortfolioDataServer();
+  const seo = data.seoSettings;
+  const canonicalUrl = seo.canonicalUrl || 'https://muhammedakan.com';
+  const keywordsArray = seo.keywords
+    ? seo.keywords.split(',').map((k) => k.trim())
+    : ['Muhammed Akan', 'Akademik Portfolyo'];
+
+  return {
+    title: seo.metaTitle || 'Muhammed Akan | Akademik Portfolyo',
+    description: seo.metaDescription || 'Muhammed Akan akademik portfolyosu.',
+    keywords: keywordsArray,
+    authors: [{ name: seo.authorName || 'Muhammed Akan' }],
+    metadataBase: new URL(canonicalUrl),
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    icons: {
+      icon: '/favicon.ico',
+    },
+    openGraph: {
+      title: seo.metaTitle || 'Muhammed Akan | Akademik Portfolyo',
+      description: seo.metaDescription || 'Muhammed Akan akademik portfolyosu.',
+      url: canonicalUrl,
+      siteName: seo.authorName ? `${seo.authorName} Akademik Portfolyo` : 'Muhammed Akan Akademik Portfolyo',
+      images: seo.ogImageUrl ? [{ url: seo.ogImageUrl }] : [],
+      type: 'website',
+      locale: 'tr_TR',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: seo.metaTitle || 'Muhammed Akan | Akademik Portfolyo',
+      description: seo.metaDescription || 'Muhammed Akan akademik portfolyosu.',
+      images: seo.ogImageUrl ? [seo.ogImageUrl] : [],
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
 
 export default function RootLayout({
   children,
