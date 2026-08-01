@@ -197,6 +197,14 @@ export interface AnalyticsDashboardData {
       city: string;
       sessions: number;
     }>;
+    networks: Array<{
+      name: string;
+      asn: string | null;
+      isMobileNetwork: boolean | null;
+      isProxy: boolean | null;
+      isHosting: boolean | null;
+      sessions: number;
+    }>;
   };
   events: Array<{ eventType: string; count: number }>;
   webVitals: Array<{
@@ -247,6 +255,12 @@ export interface AnalyticsSessionSummary {
   city: string | null;
   geoSource: string | null;
   geoConfidence: 'high' | 'medium' | 'low' | null;
+  ispName: string | null;
+  networkOrganization: string | null;
+  asn: string | null;
+  isMobileNetwork: boolean | null;
+  isProxy: boolean | null;
+  isHosting: boolean | null;
   deviceType: string | null;
   deviceBrand: string | null;
   deviceModel: string | null;
@@ -391,6 +405,20 @@ const dashboardOutputSchema = z
             })
             .strict()
         ),
+        networks: z
+          .array(
+            z
+              .object({
+                name: z.string(),
+                asn: nullableTextSchema,
+                isMobileNetwork: z.boolean().nullable(),
+                isProxy: z.boolean().nullable(),
+                isHosting: z.boolean().nullable(),
+                sessions: finiteCountSchema,
+              })
+              .strict()
+          )
+          .default([]),
       })
       .strict(),
     events: z.array(
@@ -477,6 +505,12 @@ const sessionSummarySchema = z
     city: nullableTextSchema,
     geoSource: nullableTextSchema,
     geoConfidence: z.enum(['high', 'medium', 'low']).nullable(),
+    ispName: nullableTextSchema.optional(),
+    networkOrganization: nullableTextSchema.optional(),
+    asn: nullableTextSchema.optional(),
+    isMobileNetwork: z.boolean().nullable().optional(),
+    isProxy: z.boolean().nullable().optional(),
+    isHosting: z.boolean().nullable().optional(),
     deviceType: nullableTextSchema,
     deviceBrand: nullableTextSchema,
     deviceModel: nullableTextSchema,
@@ -814,6 +848,12 @@ export async function getAnalyticsSessions(
       city: session.city,
       geoSource: session.geoSource,
       geoConfidence: session.geoConfidence,
+      ispName: session.ispName ?? null,
+      networkOrganization: session.networkOrganization ?? null,
+      asn: session.asn ?? null,
+      isMobileNetwork: session.isMobileNetwork ?? null,
+      isProxy: session.isProxy ?? null,
+      isHosting: session.isHosting ?? null,
       deviceType: session.deviceType,
       deviceBrand: session.deviceBrand,
       deviceModel: session.deviceModel,
@@ -928,9 +968,21 @@ const EXPORT_COLUMNS: Record<
     { key: 'countryName', label: 'country_name' },
     { key: 'region', label: 'region' },
     { key: 'city', label: 'city' },
+    { key: 'geoSource', label: 'geo_source' },
+    { key: 'geoConfidence', label: 'geo_confidence' },
+    { key: 'ispName', label: 'isp_name' },
+    { key: 'networkOrganization', label: 'network_organization' },
+    { key: 'asn', label: 'asn' },
+    { key: 'isMobileNetwork', label: 'is_mobile_network' },
+    { key: 'isProxy', label: 'is_proxy' },
+    { key: 'isHosting', label: 'is_hosting' },
     { key: 'deviceType', label: 'device_type' },
+    { key: 'deviceBrand', label: 'device_brand' },
+    { key: 'deviceModel', label: 'device_model' },
     { key: 'browser', label: 'browser' },
+    { key: 'browserVersion', label: 'browser_version' },
     { key: 'operatingSystem', label: 'operating_system' },
+    { key: 'osVersion', label: 'os_version' },
     { key: 'consentVersion', label: 'consent_version' },
   ],
   pages: [

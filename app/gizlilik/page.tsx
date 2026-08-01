@@ -77,8 +77,11 @@ export default async function PrivacyPage() {
               eşiği, dış bağlantının yalnız alan adı, indirilen dosyanın güvenli
               yolu ve uzantısı, başarılı iletişim gönderimi, anonimleştirilmiş
               istemci hata sınıfı, Core Web Vitals değerleri ve edge
-              sağlayıcının ürettiği yaklaşık ülke/bölge/şehir bilgisini
-              kaydeder. Teknoloji bilgisi tam User-Agent veya donanım kimliği
+              sağlayıcının ve sunucu tarafındaki IP ağ çözümleme hizmetinin
+              ürettiği yaklaşık ülke/bölge/şehir, internet servis sağlayıcısı,
+              ağ kuruluşu, ASN ve mobil/sabit ağ sınıfı bilgisini kaydeder.
+              Proxy veya hosting ağı sinyali varsa bu durum veri kalitesi için
+              işaretlenebilir. Teknoloji bilgisi tam User-Agent veya donanım kimliği
               saklanmadan, sunucu tarafındaki ayrıştırma ve destekleyen
               tarayıcılardaki sınırlı Client Hints alanlarıyla üretilir;
               tarayıcı veya cihazın açıklamadığı model/sürüm “bilinmiyor”
@@ -86,25 +89,35 @@ export default async function PrivacyPage() {
             </p>
             <p>
               Site, tarayıcının cihaz konumu API’sini çağırmaz ve ziyaretçiden
-              konum izni istemez. Konum yalnız barındırma altyapısının isteğin
-              public IP adresi için ürettiği yaklaşık ülke, ISO bölge kodu,
-              şehir ve ağ merkez noktası sinyallerinden sunucu tarafında
-              türetilir. Türkiye il kodu önce yerel il adıyla eşleştirilir;
-              bölge veya şehir sinyali yoksa ağ merkez noktası yalnız il
-              düzeyinde, düşük güvenli bir tahmin için yerel Türkiye il
-              referanslarıyla karşılaştırılır. Bu işlemde kullanılan IP
-              koordinatı analitik eventine, oturuma veya başka bir kalıcı
-              kayda yazılmaz; ilçe cihaz konumuymuş gibi tahmin edilmez.
+              konum izni istemez. Konum, barındırma altyapısının güvenilir edge
+              sinyaliyle başlatılır. Takma adlı önbellekte geçerli sonuç yoksa
+              public IP adresi yalnız sunucudan ip-api konum/ağ çözümleme
+              hizmetine gönderilir. Dönen ülke, bölge, şehir, ISP ve ASN
+              alanları güvenli bir allowlist ile azaltılır; Türkiye il adı
+              yerel referanslarla normalleştirilir. Bölge veya şehir sinyali
+              yoksa sağlayıcının ağ merkez noktası yalnız il düzeyinde, düşük
+              güvenli bir tahmin için yerel Türkiye il referanslarıyla
+              karşılaştırılabilir. Ham IP ve koordinat bu sitenin veritabanına,
+              analitik eventine veya oturumuna yazılmaz. Önbellek anahtarı gizli
+              bir anahtarla HMAC-SHA256 biçiminde takma adlandırılır; mobil ağ
+              sonuçları en fazla 12 saat, diğer sonuçlar en fazla 7 gün
+              önbellekte tutulur. ip-api hizmetinin kendi geçici teknik işleme
+              ve saklama koşulları sağlayıcının gizlilik politikasına tabidir;
+              ilçe cihaz konumuymuş gibi tahmin edilmez.
             </p>
             <p>
               IP tabanlı sonuç fiziksel konum garantisi vermez. Özellikle mobil
               operatörler çok sayıda kullanıcıyı başka bir ildeki ortak ağ
               çıkışından internete bağlayabilir; bu nedenle bazı ziyaretlerde
               yalnız ülke bilinebilir veya gösterilen il operatör çıkışını
-              temsil edebilir. Yeterli sunucu sinyali yoksa sistem yanlış bir
+              temsil edebilir. Vercel ve ip-api aynı public ağ çıkışını farklı
+              veri kümeleriyle çözümlediğinden sonuç yaklaşık bir ağ konumudur;
+              GPS doğruluğu taşımaz. Yeterli sunucu sinyali yoksa sistem yanlış bir
               il üretmek yerine “il belirlenemedi” durumunu korur. Analytics v2
-              konum ve teknoloji kayıtları Google Analytics, Yandex Metrica
-              veya başka bir üçüncü taraf analitik sağlayıcısına aktarılmaz.
+              event ve oturum kayıtları Google Analytics veya Yandex
+              Metrica&apos;ya
+              aktarılmaz; ip-api yalnız yukarıda açıklanan sunucu tarafı IP ağ
+              çözümlemesi için kullanılır.
               Ziyaretçi ve oturumlar rastgele üretilen kimliklerle
               ölçülür; ham IP adresi, tam User-Agent, form içeriği, hata mesajı
               veya stack trace, dış bağlantının tam adresi ve kesin koordinatlar

@@ -17,6 +17,7 @@ import {
   toDatabaseAnalyticsEvent,
 } from '@/lib/analytics';
 import { analyticsCollectionModeForRequest } from '@/lib/analytics-consent-policy';
+import { resolveAnalyticsRequestContext } from '@/lib/analytics-geo.server';
 import { readAnalyticsCmsEnabled } from '@/lib/analytics-settings.server';
 import {
   hasSupabaseServiceRole,
@@ -26,7 +27,7 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const COLLECTOR_VERSION = '2.3.0';
+const COLLECTOR_VERSION = '2.4.0';
 const RATE_LIMIT_PER_MINUTE = 120;
 const RATE_LIMIT_PER_VISITOR_PER_MINUTE = 60;
 const REJECTION_RECORD_LIMIT_PER_MINUTE = 30;
@@ -348,7 +349,7 @@ export async function POST(request: Request) {
   }
   const trafficClass =
     process.env.NODE_ENV === 'production' ? detectedTrafficClass : 'test';
-  const requestContext = buildAnalyticsRequestContext(request);
+  const baseRequestContext = buildAnalyticsRequestContext(request);
 
   const groups = groupAnalyticsEvents(parsed.data.events);
   const visitorIds = Array.from(
@@ -407,6 +408,11 @@ export async function POST(request: Request) {
       { 'Retry-After': String(retryAfter) }
     );
   }
+
+  const requestContext = await resolveAnalyticsRequestContext(
+    request,
+    baseRequestContext
+  );
 
   const totals: AnalyticsIngestResult = {
     acceptedCount: 0,
@@ -523,8 +529,13 @@ export async function POST(request: Request) {
     }
 
     if (
-      groupContext.geo_source === 'vercel-edge' &&
-      (groupContext.region || groupContext.city)
+      groupContext.geo_source !== 'browser-geolocation' &&
+      Boolean(groupContext.geo_source) &&
+      (groupContext.region ||
+        groupContext.city ||
+        groupContext.isp_name ||
+        groupContext.network_organization ||
+        groupContext.asn)
     ) {
       const { error: networkGeoUpgradeError } = await serverSupabase.rpc(
         'upgrade_analytics_session_network_geo',

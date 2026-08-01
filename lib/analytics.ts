@@ -318,8 +318,18 @@ export interface AnalyticsRequestContext {
   country_name?: string;
   region?: string;
   city?: string;
-  geo_source?: 'vercel-edge' | 'browser-geolocation';
+  geo_source?:
+    | 'vercel-edge'
+    | 'ip-api'
+    | 'vercel-edge+ip-api'
+    | 'browser-geolocation';
   geo_confidence?: 'high' | 'medium' | 'low';
+  isp_name?: string;
+  network_organization?: string;
+  asn?: string;
+  is_mobile_network?: boolean;
+  is_proxy?: boolean;
+  is_hosting?: boolean;
   device_type?: 'desktop' | 'mobile' | 'tablet' | 'other';
   device_brand?: string;
   device_model?: string;
@@ -564,7 +574,7 @@ export function getAnalyticsHashSecret(): string {
 
 export function hashAnalyticsIdentifier(
   value: string,
-  purpose: 'visitor' | 'rate-limit'
+  purpose: 'visitor' | 'rate-limit' | 'geo-cache'
 ): string {
   const secret = getAnalyticsHashSecret();
   if (!secret) {

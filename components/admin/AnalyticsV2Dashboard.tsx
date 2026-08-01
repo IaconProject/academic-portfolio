@@ -113,6 +113,14 @@ type DashboardData = {
         countryCode?: string | null;
       }
     >;
+    networks: Array<{
+      name: string;
+      asn: string | null;
+      isMobileNetwork: boolean | null;
+      isProxy: boolean | null;
+      isHosting: boolean | null;
+      sessions: number;
+    }>;
   };
   events: Array<{ eventType: string; count: number }>;
   webVitals: Array<{
@@ -173,6 +181,12 @@ type AnalyticsSession = {
   city: string | null;
   geoSource?: string | null;
   geoConfidence?: 'high' | 'medium' | 'low' | null;
+  ispName?: string | null;
+  networkOrganization?: string | null;
+  asn?: string | null;
+  isMobileNetwork?: boolean | null;
+  isProxy?: boolean | null;
+  isHosting?: boolean | null;
   deviceType: string | null;
   deviceBrand?: string | null;
   deviceModel?: string | null;
@@ -328,6 +342,19 @@ function formatSessionLocation(session: AnalyticsSession): string {
 function geoQualityLabel(session: AnalyticsSession): string {
   if (session.geoSource === 'browser-geolocation') {
     return 'Geçmiş cihaz konumu kaydı · artık toplanmıyor';
+  }
+  if (
+    session.geoSource === 'ip-api' ||
+    session.geoSource === 'vercel-edge+ip-api'
+  ) {
+    if (!session.city && !session.region) {
+      return 'IP ağı doğrulandı · yalnız ülke belirlenebildi';
+    }
+    return session.geoConfidence === 'low'
+      ? 'ip-api ağ merkezinden il tahmini · düşük güven'
+      : session.geoSource === 'vercel-edge+ip-api'
+        ? 'Vercel edge + ip-api bölge sinyali · yaklaşık'
+        : 'ip-api bölge/şehir sinyali · yaklaşık';
   }
   if (session.geoSource !== 'vercel-edge') {
     return 'Konum kaynağı bilinmiyor';
@@ -1211,9 +1238,10 @@ export function AnalyticsV2Dashboard() {
             )}
           </div>
           <p className="mt-2 max-w-3xl text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-            Consent sonrası toplanan, pseudonim ve botlardan ayrıştırılmış
-            Analytics v2 verileri. Ham IP, ziyaretçi anahtarı veya kalıcı kişi
-            kimliği bu ekranda gösterilmez.
+            Bölgesel işleme kuralı veya izin sonrasında toplanan, pseudonim ve
+            botlardan ayrıştırılmış Analytics v2 verileri. Ham IP, kesin
+            koordinat, ziyaretçi anahtarı veya kalıcı kişi kimliği bu ekranda
+            gösterilmez.
           </p>
         </div>
 
@@ -1753,9 +1781,9 @@ export function AnalyticsV2Dashboard() {
           <div className="grid gap-4 xl:grid-cols-2">
             <SectionCard
               title="Coğrafya"
-              description="Tarayıcıdan konum izni istenmez. Sunucudaki güvenilir IP bölge/şehir sinyali, Türkiye il kodu ve gerekirse kalıcı olarak saklanmayan IP ağ merkez noktasıyla yaklaşık il çözümlemesi yapılır. Mobil operatör çıkışları fiziksel ili temsil etmeyebilir."
+              description="Tarayıcıdan konum izni istenmez. Vercel edge sinyali, sunucu tarafındaki ip-api sonucu ve yerel Türkiye il normalizasyonu birlikte değerlendirilir. Ham IP ve koordinat saklanmaz; mobil operatör çıkışları fiziksel ili temsil etmeyebilir."
             >
-              <div className="grid gap-5 sm:grid-cols-2">
+              <div className="grid gap-5 sm:grid-cols-3">
                 <div>
                   <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-stone-500">
                     <Globe2 className="h-3.5 w-3.5" />
@@ -1794,6 +1822,27 @@ export function AnalyticsV2Dashboard() {
                             .join(' · ') || undefined,
                       };
                     })}
+                  />
+                </div>
+                <div>
+                  <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-stone-500">
+                    <ServerCog className="h-3.5 w-3.5" />
+                    ISP / ağ
+                  </p>
+                  <BreakdownBars
+                    rows={dashboard.geography.networks.map((row) => ({
+                      label: safeText(row.name, 'Ağ bilinmiyor'),
+                      value: row.sessions,
+                      detail:
+                        [
+                          row.asn,
+                          row.isMobileNetwork === true ? 'Mobil ağ' : null,
+                          row.isProxy === true ? 'Proxy/VPN sinyali' : null,
+                          row.isHosting === true ? 'Hosting ağı' : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ') || undefined,
+                    }))}
                   />
                 </div>
               </div>
@@ -2160,6 +2209,19 @@ export function AnalyticsV2Dashboard() {
                   ]
                     .filter(Boolean)
                     .join(' ');
+                  const networkName =
+                    session.ispName ||
+                    session.networkOrganization ||
+                    'Ağ bilinmiyor';
+                  const networkSignals = [
+                    session.asn,
+                    session.isMobileNetwork === true ? 'Mobil ağ' : null,
+                    session.isMobileNetwork === false ? 'Sabit ağ' : null,
+                    session.isProxy === true ? 'Proxy/VPN sinyali' : null,
+                    session.isHosting === true ? 'Hosting ağı' : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ');
 
                   return (
                     <details
@@ -2241,7 +2303,7 @@ export function AnalyticsV2Dashboard() {
                       </summary>
 
                       <div className="mt-4 border-t border-stone-200 pt-4 dark:border-stone-700">
-                        <dl className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+                        <dl className="grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-5">
                           <div>
                             <dt className="text-[10px] font-bold uppercase text-stone-400">
                               Edinme
@@ -2254,6 +2316,19 @@ export function AnalyticsV2Dashboard() {
                                 ? ` · ${session.campaign}`
                                 : ''}
                             </dd>
+                          </div>
+                          <div>
+                            <dt className="text-[10px] font-bold uppercase text-stone-400">
+                              ISP / ağ
+                            </dt>
+                            <dd className="mt-1 text-stone-700 dark:text-stone-300">
+                              {networkName}
+                            </dd>
+                            {networkSignals && (
+                              <dd className="mt-0.5 text-[10px] text-stone-500">
+                                {networkSignals}
+                              </dd>
+                            )}
                           </div>
                           <div>
                             <dt className="text-[10px] font-bold uppercase text-stone-400">
