@@ -3,7 +3,6 @@ import {
   ANALYTICS_MAX_BODY_BYTES,
   AnalyticsIngestResult,
   analyticsBatchSchema,
-  applyBrowserGeoToAnalyticsContext,
   applyClientTechnologyToAnalyticsContext,
   buildAnalyticsRequestContext,
   classifyObviousBot,
@@ -17,6 +16,7 @@ import {
   toDatabaseAnalyticsEvent,
 } from '@/lib/analytics';
 import { analyticsCollectionModeForRequest } from '@/lib/analytics-consent-policy';
+import { ANALYTICS_COLLECTOR_VERSION } from '@/lib/analytics-contract';
 import { resolveAnalyticsRequestContext } from '@/lib/analytics-geo.server';
 import { readAnalyticsCmsEnabled } from '@/lib/analytics-settings.server';
 import {
@@ -27,7 +27,6 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const COLLECTOR_VERSION = '2.4.0';
 const RATE_LIMIT_PER_MINUTE = 120;
 const RATE_LIMIT_PER_VISITOR_PER_MINUTE = 60;
 const REJECTION_RECORD_LIMIT_PER_MINUTE = 30;
@@ -424,12 +423,9 @@ export async function POST(request: Request) {
     const groupTechnology = group.events.find(
       (event) => event.technology
     )?.technology;
-    const groupContext = applyBrowserGeoToAnalyticsContext(
-      applyClientTechnologyToAnalyticsContext(
-        requestContext,
-        groupTechnology
-      ),
-      group.events.find((event) => event.geo)?.geo
+    const groupContext = applyClientTechnologyToAnalyticsContext(
+      requestContext,
+      groupTechnology
     );
     const visitorKey = hashAnalyticsIdentifier(
       group.visitorId,
@@ -444,7 +440,7 @@ export async function POST(request: Request) {
         p_events: databaseEvents,
         p_context: {
           ...groupContext,
-          collector_version: COLLECTOR_VERSION,
+          collector_version: ANALYTICS_COLLECTOR_VERSION,
           consent_version: parsed.data.consentVersion,
           authorization_basis: authorizationBasis,
           traffic_class: trafficClass,
@@ -503,33 +499,7 @@ export async function POST(request: Request) {
     totals.acceptedCount += acceptedCount;
     totals.duplicateCount += duplicateCount;
 
-    if (groupContext.geo_source === 'browser-geolocation') {
-      const { error: geoUpgradeError } = await serverSupabase.rpc(
-        'upgrade_analytics_session_geo',
-        {
-          p_visitor_key: visitorKey,
-          p_client_session_id: group.sessionId,
-          p_context: groupContext,
-        }
-      );
-      if (geoUpgradeError) {
-        console.error(
-          '[analytics] Device geo upgrade RPC failed:',
-          geoUpgradeError.code
-        );
-        await recordCollectorFailure(
-          `GEO_UPGRADE_RPC_${geoUpgradeError.code || 'ERROR'}`
-        );
-        return failure(
-          'ANALYTICS_GEO_UPGRADE_FAILED',
-          'Cihaz konumu il düzeyine indirgenemedi.',
-          503
-        );
-      }
-    }
-
     if (
-      groupContext.geo_source !== 'browser-geolocation' &&
       Boolean(groupContext.geo_source) &&
       (groupContext.region ||
         groupContext.city ||

@@ -18,13 +18,41 @@ import {
   serverSupabase,
 } from './supabase/server';
 
-const IP_API_TIMEOUT_MS = 1_800;
+const IP_API_TIMEOUT_MS = 2_000;
 const IP_API_MAX_RESPONSE_BYTES = 16 * 1024;
 const IP_API_FREE_RATE_LIMIT = 40;
-const FIXED_NETWORK_CACHE_MS = 7 * 24 * 60 * 60 * 1000;
-const MOBILE_NETWORK_CACHE_MS = 12 * 60 * 60 * 1000;
+const FIXED_NETWORK_CACHE_MS = 24 * 60 * 60 * 1000;
+const MOBILE_NETWORK_CACHE_MS = 2 * 60 * 60 * 1000;
 
 let providerBlockedUntil = 0;
+
+type GeoProviderOutcome =
+  | 'success'
+  | 'timeout'
+  | 'rate_limited'
+  | 'http_error'
+  | 'invalid_response'
+  | 'network_error';
+
+export function getAnalyticsGeoRuntimeStatus() {
+  const apiKeyConfigured = Boolean(process.env.IP_API_KEY?.trim());
+  return {
+    enabled: process.env.ANALYTICS_IP_GEO_ENABLED !== 'false',
+    provider: 'ip-api' as const,
+    transport: apiKeyConfigured ? ('https' as const) : ('http' as const),
+    secureTransport: apiKeyConfigured,
+    apiKeyConfigured,
+    timeoutMs: IP_API_TIMEOUT_MS,
+    cacheTtlHours: {
+      mobile: MOBILE_NETWORK_CACHE_MS / (60 * 60 * 1000),
+      fixed: FIXED_NETWORK_CACHE_MS / (60 * 60 * 1000),
+    },
+    blockedUntil:
+      providerBlockedUntil > Date.now()
+        ? new Date(providerBlockedUntil).toISOString()
+        : null,
+  };
+}
 
 type GeoCacheRow = {
   country_code: string;
@@ -100,6 +128,27 @@ function applyProviderRateHeaders(headers: Headers) {
   }
 }
 
+async function recordProviderResult(
+  outcome: GeoProviderOutcome,
+  startedAt: number,
+  httpStatus: number | null = null
+) {
+  if (!serverSupabase) return;
+  const durationMs = Math.min(10_000, Math.max(0, Date.now() - startedAt));
+  const { error } = await serverSupabase.rpc(
+    'record_analytics_geo_provider_result',
+    {
+      p_provider: 'ip-api',
+      p_outcome: outcome,
+      p_http_status: httpStatus,
+      p_duration_ms: durationMs,
+    }
+  );
+  if (error && error.code !== 'PGRST202') {
+    console.error('[analytics] Geo provider health RPC failed:', error.code);
+  }
+}
+
 async function requestIpApi(
   ip: string
 ): Promise<AnalyticsIpGeoResolution | null> {
@@ -107,6 +156,7 @@ async function requestIpApi(
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), IP_API_TIMEOUT_MS);
+  const startedAt = Date.now();
   try {
     const response = await fetch(
       buildIpApiUrl(ip, process.env.IP_API_KEY),
@@ -122,23 +172,58 @@ async function requestIpApi(
         providerBlockedUntil,
         Date.now() + 60 * 1000
       );
+      await recordProviderResult('rate_limited', startedAt, 429);
       return null;
     }
-    if (!response.ok) return null;
+    if (!response.ok) {
+      await recordProviderResult('http_error', startedAt, response.status);
+      return null;
+    }
 
     const declaredLength = Number(response.headers.get('content-length'));
     if (
       Number.isFinite(declaredLength) &&
       declaredLength > IP_API_MAX_RESPONSE_BYTES
     ) {
+      await recordProviderResult(
+        'invalid_response',
+        startedAt,
+        response.status
+      );
       return null;
     }
     const body = await response.text();
     if (Buffer.byteLength(body, 'utf8') > IP_API_MAX_RESPONSE_BYTES) {
+      await recordProviderResult(
+        'invalid_response',
+        startedAt,
+        response.status
+      );
       return null;
     }
-    return parseIpApiResolution(JSON.parse(body));
+    let parsedBody: unknown;
+    try {
+      parsedBody = JSON.parse(body);
+    } catch {
+      await recordProviderResult(
+        'invalid_response',
+        startedAt,
+        response.status
+      );
+      return null;
+    }
+    const resolution = parseIpApiResolution(parsedBody);
+    await recordProviderResult(
+      resolution ? 'success' : 'invalid_response',
+      startedAt,
+      response.status
+    );
+    return resolution;
   } catch {
+    await recordProviderResult(
+      controller.signal.aborted ? 'timeout' : 'network_error',
+      startedAt
+    );
     return null;
   } finally {
     clearTimeout(timeout);

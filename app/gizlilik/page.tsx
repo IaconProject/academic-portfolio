@@ -100,10 +100,15 @@ export default async function PrivacyPage() {
               karşılaştırılabilir. Ham IP ve koordinat bu sitenin veritabanına,
               analitik eventine veya oturumuna yazılmaz. Önbellek anahtarı gizli
               bir anahtarla HMAC-SHA256 biçiminde takma adlandırılır; mobil ağ
-              sonuçları en fazla 12 saat, diğer sonuçlar en fazla 7 gün
-              önbellekte tutulur. ip-api hizmetinin kendi geçici teknik işleme
-              ve saklama koşulları sağlayıcının gizlilik politikasına tabidir;
-              ilçe cihaz konumuymuş gibi tahmin edilmez.
+              sonuçları en fazla 2 saat, diğer sonuçlar en fazla 24 saat
+              önbellekte tutulur. Ücretsiz ip-api katmanı sunucudan HTTP ile,
+              ücretli API anahtarı tanımlandığında Pro uç noktası HTTPS ile
+              çağrılır; bu çağrı hiçbir zaman ziyaretçinin tarayıcısından
+              yapılmaz. Sağlayıcı isteklerinin başarı, hata, timeout, hız
+              sınırı ve süre sayaçları, IP veya ziyaretçi kimliği içermeden
+              operasyonel sağlık kaydı olarak tutulur. ip-api hizmetinin kendi
+              geçici teknik işleme ve saklama koşulları sağlayıcının gizlilik
+              politikasına tabidir; ilçe cihaz konumuymuş gibi tahmin edilmez.
             </p>
             <p>
               IP tabanlı sonuç fiziksel konum garantisi vermez. Özellikle mobil

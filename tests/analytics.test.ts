@@ -3,7 +3,6 @@ import {
   ANALYTICS_CONSENT_VERSION,
   ANALYTICS_FIRST_PARTY_VERSION,
   analyticsBatchSchema,
-  applyBrowserGeoToAnalyticsContext,
   applyClientTechnologyToAnalyticsContext,
   buildAnalyticsRequestContext,
   classifyObviousBot,
@@ -18,7 +17,6 @@ import {
 import {
   normalizeTurkeyProvinceRegion,
   resolveTurkeyNetworkProvince,
-  resolveTurkeyProvince,
 } from '../lib/analytics-turkey-geo';
 import {
   getSafeAnalyticsDownload,
@@ -103,13 +101,7 @@ describe('Analytics v2 event sözleşmesi', () => {
         ...baseEvent,
         eventType: 'consent_update',
         contentType: 'privacy_preference',
-        contentKey: 'coarse_location',
-        geo: {
-          source: 'browser-geolocation',
-          latitude: 37.52,
-          longitude: 42.46,
-          accuracyMeters: 150,
-        },
+        contentKey: 'analytics_measurement',
       },
       {
         ...baseEvent,
@@ -307,8 +299,8 @@ describe('Analytics v2 event sözleşmesi', () => {
     });
   });
 
-  it('cihaz koordinatını event tablosuna taşımadan Türkiye iline indirger', () => {
-    const parsed = analyticsBatchSchema.parse({
+  it('tarayıcı koordinatı alanını sözleşme dışında bırakır', () => {
+    const result = analyticsBatchSchema.safeParse({
       schemaVersion: 2,
       consentVersion: ANALYTICS_FIRST_PARTY_VERSION,
       events: [
@@ -324,59 +316,7 @@ describe('Analytics v2 event sözleşmesi', () => {
         },
       ],
     });
-    const event = parsed.events[0];
-    expect(resolveTurkeyProvince(event.geo!)).toMatchObject({
-      province: 'Şırnak',
-      district: 'Merkez',
-      confidence: 'high',
-    });
-    expect(
-      applyBrowserGeoToAnalyticsContext(
-        {
-          country_code: 'TR',
-          city: 'İstanbul',
-          geo_source: 'vercel-edge',
-          geo_confidence: 'medium',
-        },
-        event.geo
-      )
-    ).toMatchObject({
-      country_code: 'TR',
-      country_name: 'Türkiye',
-      region: 'Şırnak',
-      city: 'Merkez',
-      geo_source: 'browser-geolocation',
-      geo_confidence: 'high',
-    });
-    expect(toDatabaseAnalyticsEvent(event)).not.toHaveProperty('geo');
-    expect(JSON.stringify(toDatabaseAnalyticsEvent(event))).not.toContain(
-      '42.46'
-    );
-  });
-
-  it('Türkiye dışındaki veya düşük doğruluklu cihaz konumunu IP bağlamına üstün tutmaz', () => {
-    const context = {
-      country_code: 'TR',
-      city: 'İstanbul',
-      geo_source: 'vercel-edge' as const,
-      geo_confidence: 'medium' as const,
-    };
-    expect(
-      applyBrowserGeoToAnalyticsContext(context, {
-        source: 'browser-geolocation',
-        latitude: 52.52,
-        longitude: 13.405,
-        accuracyMeters: 100,
-      })
-    ).toEqual(context);
-    expect(
-      applyBrowserGeoToAnalyticsContext(context, {
-        source: 'browser-geolocation',
-        latitude: 37.52,
-        longitude: 42.46,
-        accuracyMeters: 80_000,
-      })
-    ).toEqual(context);
+    expect(result.success).toBe(false);
   });
 });
 
@@ -650,6 +590,12 @@ describe('Analytics pseudonimleştirme ve sınıflama', () => {
       },
     });
     expect(getTransientRequestIp(trusted)).toBe('198.51.100.12');
+
+    const documentedFallback = new Request(
+      'https://www.muhammedakan.com',
+      { headers: { 'x-forwarded-for': '192.0.2.25, 10.0.0.1' } }
+    );
+    expect(getTransientRequestIp(documentedFallback)).toBe('192.0.2.25');
   });
 
   it('offline kuyruktaki eventleri visitor ve client sessiona göre gruplar', () => {

@@ -229,6 +229,28 @@ type AnalyticsHealth = {
     lastFailureAt: string | null;
     lastFailureCode: string | null;
   };
+  location: {
+    enabled: boolean;
+    provider: 'ip-api';
+    transport: 'http' | 'https';
+    secureTransport: boolean;
+    apiKeyConfigured: boolean;
+    timeoutMs: number;
+    cacheTtlHours: { mobile: number; fixed: number };
+    blockedUntil: string | null;
+    schemaReady: boolean;
+    activeCacheEntries: number | null;
+    requests: number;
+    successes: number;
+    failures: number;
+    timeouts: number;
+    rateLimited: number;
+    lastOutcome: string | null;
+    lastHttpStatus: number | null;
+    lastDurationMs: number | null;
+    lastAttemptAt: string | null;
+    lastSuccessAt: string | null;
+  };
   collectorVersion: string;
   checkedAt: string;
 };
@@ -1413,6 +1435,23 @@ export function AnalyticsV2Dashboard() {
               Son hata: {health.ingestion.lastFailureCode}
             </span>
           )}
+          <div className="mt-2 border-t border-current/15 pt-2">
+            <span className="font-bold">Konum motoru:</span>{' '}
+            {health.location.enabled ? 'etkin' : 'kapalı'} ·{' '}
+            {health.location.provider} ({health.location.transport.toUpperCase()}) ·{' '}
+            {formatNumber(health.location.activeCacheEntries)} etkin cache ·{' '}
+            {formatNumber(health.location.successes)}/
+            {formatNumber(health.location.requests)} başarılı sağlayıcı sorgusu
+            {health.location.lastSuccessAt
+              ? ` · son başarı ${formatDateTime(health.location.lastSuccessAt)}`
+              : ''}
+            {!health.location.schemaReady
+              ? ' · sağlayıcı sağlık migrationı eksik'
+              : ''}
+            {!health.location.secureTransport
+              ? ' · ücretsiz sağlayıcı katmanı HTTP kullanıyor'
+              : ''}
+          </div>
         </div>
       )}
 

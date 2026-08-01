@@ -17,7 +17,6 @@ import {
 import {
   normalizeTurkeyProvinceRegion,
   resolveTurkeyNetworkProvince,
-  resolveTurkeyProvince,
 } from './analytics-turkey-geo';
 import {
   analyticsAuthorizationBasisFromVersion,
@@ -100,15 +99,6 @@ const analyticsCommonEventFields = {
     })
     .strict()
     .optional(),
-  geo: z
-    .object({
-      source: z.literal('browser-geolocation'),
-      latitude: z.number().finite().min(-90).max(90),
-      longitude: z.number().finite().min(-180).max(180),
-      accuracyMeters: z.number().finite().nonnegative().max(100_000),
-    })
-    .strict()
-    .optional(),
   technology: z
     .object({
       platform: shortText(64).min(1).optional(),
@@ -162,7 +152,7 @@ const consentUpdateEventSchema = z
     ...analyticsCommonEventFields,
     eventType: z.literal('consent_update'),
     contentType: z.literal('privacy_preference'),
-    contentKey: z.literal('coarse_location'),
+    contentKey: z.literal('analytics_measurement'),
   })
   .strict();
 
@@ -321,8 +311,7 @@ export interface AnalyticsRequestContext {
   geo_source?:
     | 'vercel-edge'
     | 'ip-api'
-    | 'vercel-edge+ip-api'
-    | 'browser-geolocation';
+    | 'vercel-edge+ip-api';
   geo_confidence?: 'high' | 'medium' | 'low';
   isp_name?: string;
   network_organization?: string;
@@ -368,29 +357,6 @@ export function applyClientTechnologyToAnalyticsContext(
     context.device_type === 'desktop'
       ? { device_type: technology.mobile ? 'mobile' : 'desktop' }
       : {}),
-  };
-}
-
-/**
- * Browser coordinates are used transiently and reduced to a Turkish province.
- * Exact coordinates never enter the database event or request context.
- */
-export function applyBrowserGeoToAnalyticsContext(
-  context: AnalyticsRequestContext,
-  geo: AnalyticsClientEvent['geo']
-): AnalyticsRequestContext {
-  if (!geo) return context;
-  const resolution = resolveTurkeyProvince(geo);
-  if (!resolution) return context;
-
-  return {
-    ...context,
-    country_code: 'TR',
-    country_name: 'Türkiye',
-    region: resolution.province,
-    city: resolution.district,
-    geo_source: 'browser-geolocation',
-    geo_confidence: resolution.confidence,
   };
 }
 
@@ -635,13 +601,18 @@ export function classifyObviousBot(userAgent: string): AnalyticsTrafficClass {
 }
 
 export function getTransientRequestIp(request: Request): string {
-  const candidate =
-    process.env.VERCEL === '1'
-      ? request.headers
-          .get('x-vercel-forwarded-for')
-          ?.split(',')[0]
-          ?.trim() || ''
-      : '';
+  if (process.env.VERCEL !== '1') return '';
+
+  // Vercel overwrites these forwarding headers at its platform boundary.
+  // Prefer the Vercel-specific copy when a customer proxy may have replaced
+  // x-forwarded-for, then fall back to the documented aliases.
+  const candidate = [
+    'x-vercel-forwarded-for',
+    'x-forwarded-for',
+    'x-real-ip',
+  ]
+    .map((name) => request.headers.get(name)?.split(',')[0]?.trim() || '')
+    .find(Boolean) || '';
   return candidate.replace(/^::ffff:/, '').slice(0, 128);
 }
 

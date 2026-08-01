@@ -1,5 +1,7 @@
 import { apiError, apiSuccess, rejectUnauthorized } from '@/lib/admin-api';
 import { getAnalyticsHashSecret } from '@/lib/analytics';
+import { ANALYTICS_COLLECTOR_VERSION } from '@/lib/analytics-contract';
+import { getAnalyticsGeoRuntimeStatus } from '@/lib/analytics-geo.server';
 import { readAnalyticsCmsEnabled } from '@/lib/analytics-settings.server';
 import {
   hasSupabaseServiceRole,
@@ -30,6 +32,7 @@ export async function GET(request: Request) {
     serviceRoleConfigured: hasSupabaseServiceRole,
     hashSecretConfigured: Boolean(getAnalyticsHashSecret()),
   };
+  const locationRuntime = getAnalyticsGeoRuntimeStatus();
 
   if (!serverSupabase || !hasSupabaseServiceRole) {
     return apiError(
@@ -59,6 +62,23 @@ export async function GET(request: Request) {
       503
     );
   }
+
+  const [providerHealthResult, activeCacheResult] = await Promise.all([
+    serverSupabase
+      .from('analytics_geo_provider_health')
+      .select(
+        'provider,request_count,success_count,failure_count,timeout_count,rate_limited_count,last_outcome,last_http_status,last_duration_ms,last_attempt_at,last_success_at,updated_at'
+      )
+      .eq('provider', 'ip-api')
+      .maybeSingle(),
+    serverSupabase
+      .from('analytics_geo_cache')
+      .select('ip_hash', { count: 'exact', head: true })
+      .gt('expires_at', new Date().toISOString()),
+  ]);
+  const providerHealth = providerHealthResult.error
+    ? null
+    : providerHealthResult.data;
 
   const prerequisitesReady =
     enabled &&
@@ -101,7 +121,24 @@ export async function GET(request: Request) {
       lastFailureCode: ingestHealth.last_failure_code || null,
       updatedAt: ingestHealth.updated_at || null,
     },
-    collectorVersion: '2.0.0',
+    location: {
+      ...locationRuntime,
+      schemaReady: !providerHealthResult.error && !activeCacheResult.error,
+      activeCacheEntries: activeCacheResult.error
+        ? null
+        : Number(activeCacheResult.count || 0),
+      requests: Number(providerHealth?.request_count || 0),
+      successes: Number(providerHealth?.success_count || 0),
+      failures: Number(providerHealth?.failure_count || 0),
+      timeouts: Number(providerHealth?.timeout_count || 0),
+      rateLimited: Number(providerHealth?.rate_limited_count || 0),
+      lastOutcome: providerHealth?.last_outcome || null,
+      lastHttpStatus: providerHealth?.last_http_status || null,
+      lastDurationMs: providerHealth?.last_duration_ms || null,
+      lastAttemptAt: providerHealth?.last_attempt_at || null,
+      lastSuccessAt: providerHealth?.last_success_at || null,
+    },
+    collectorVersion: ANALYTICS_COLLECTOR_VERSION,
     checkedAt: new Date().toISOString(),
   });
 }

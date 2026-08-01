@@ -50,6 +50,7 @@ sonrasında otomatik açılır.
    - `supabase/migrations/20260801155538_analytics_technology_admin_delete.sql`
    - `supabase/migrations/20260801163723_analytics_network_geo_enrichment.sql`
    - `supabase/migrations/20260801210247_analytics_ip_geo_network.sql`
+   - `supabase/migrations/20260801212029_analytics_geo_provider_health.sql`
 3. Vercel environment değerlerini ekleyin.
 4. Production deployment oluşturun.
 5. Admin panelinde **SEO → Performans ve Entegrasyonlar** bölümündeki
@@ -74,7 +75,7 @@ Collector:
 - preview ve açık bot trafiğini ana ölçüme almaz;
 - geçici IP değerini HMAC rate-limit ve konum önbellek anahtarı üretmek için
   kullanır; ham IP hiçbir tabloya yazılmaz;
-- geçerli HMAC önbellek sonucu yoksa ip-api'yi 1,8 saniyelik timeout ve dakikada
+- geçerli HMAC önbellek sonucu yoksa ip-api'yi 2 saniyelik timeout ve dakikada
   en fazla 40 sunucu sorgusuyla çağırır; hata veya kota durumunda event yazımı
   mevcut Vercel sinyaliyle devam eder;
 - Vercel'in güvenilir edge başlıkları ve ip-api allowlist yanıtından yaklaşık
@@ -90,7 +91,7 @@ Collector:
 Raw IP, tam User-Agent ve kesin koordinat Analytics v2 tablolarına yazılmaz.
 Sağlayıcının koordinatı yalnız Türkiye il sinyali eksik olduğunda bellekte
 yerel il eşleştirmesi için kullanılır ve azaltılmış sonuçtan çıkarılır. Mobil
-ağ cache'i 12 saat, diğer ağ cache'i 7 gün geçerlidir. Ücretsiz ip-api uç
+ağ cache'i 2 saat, diğer ağ cache'i 24 saat geçerlidir. Ücretsiz ip-api uç
 noktası HTTPS sunmadığından `IP_API_KEY` yokken server-to-server HTTP kullanılır;
 anahtar tanımlandığında Pro HTTPS uç noktasına otomatik geçilir. Ücretsiz plan
 yalnız hizmet şartlarının izin verdiği kişisel/non-commercial kullanımda
@@ -181,6 +182,9 @@ manuel çalıştırır. Veritabanı fonksiyonları yalnız `service_role` taraf�
   sınırlı temizliği zorunlu olarak uygular.
 - `GET /api/analytics/health` yalnız admin oturumuyla erişilir ve `disabled`,
   `idle`, `degraded` veya `healthy` durumunu ingest sayaçlarıyla döndürür.
+  Aynı yanıt ip-api istek/başarı/hata/timeout/rate-limit sayaçlarını, etkin
+  HMAC cache satırı sayısını ve HTTP/HTTPS taşıma durumunu da bildirir; bu
+  operasyonel sayaçlar IP veya ziyaretçi kimliği içermez.
   Son başarılı event 24 saatten eskiyse eski başarı “healthy” sayılmaz ve
   collector yeni event bekleyen `idle` durumuna döner.
 - Yönetim ekranı Analytics v2 raporlarını varsayılan görünüm olarak sunar.

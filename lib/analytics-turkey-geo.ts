@@ -1,6 +1,3 @@
-import type { AnalyticsBrowserGeo } from './analytics-contract';
-import { TURKEY_DISTRICTS } from './analytics-turkey-districts';
-
 type ProvinceReference = {
   name: string;
   latitude: number;
@@ -227,9 +224,7 @@ export function normalizeTurkeyProvinceRegion(
   return TURKEY_PROVINCES_BY_NAME.get(foldTurkishProvinceName(candidate)) || null;
 }
 
-const MAX_ACCEPTED_ACCURACY_METERS = 25_000;
 const MAX_PROVINCE_REFERENCE_DISTANCE_KM = 175;
-const MAX_DISTRICT_REFERENCE_DISTANCE_KM = 125;
 
 function haversineDistanceKm(
   latitudeA: number,
@@ -249,13 +244,6 @@ function haversineDistanceKm(
       Math.sin(longitudeDelta / 2) ** 2;
   return 6_371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
 }
-
-export type TurkeyProvinceResolution = {
-  province: string;
-  district: string;
-  confidence: 'high' | 'medium';
-  accuracyMeters: number;
-};
 
 export type TurkeyNetworkProvinceResolution = {
   province: string;
@@ -304,80 +292,5 @@ export function resolveTurkeyNetworkProvince(
   return {
     province: nearest.name,
     distanceKm: Math.round(nearestDistanceKm),
-  };
-}
-
-export function resolveTurkeyProvince(
-  geo: AnalyticsBrowserGeo
-): TurkeyProvinceResolution | null {
-  if (
-    geo.source !== 'browser-geolocation' ||
-    !Number.isFinite(geo.latitude) ||
-    !Number.isFinite(geo.longitude) ||
-    !Number.isFinite(geo.accuracyMeters) ||
-    geo.latitude < 35.5 ||
-    geo.latitude > 42.3 ||
-    geo.longitude < 25.4 ||
-    geo.longitude > 45.1 ||
-    geo.accuracyMeters < 0 ||
-    geo.accuracyMeters > MAX_ACCEPTED_ACCURACY_METERS
-  ) {
-    return null;
-  }
-
-  let nearestDistrict: (typeof TURKEY_DISTRICTS)[number] | null = null;
-  let nearestDistrictDistanceKm = Number.POSITIVE_INFINITY;
-  for (const district of TURKEY_DISTRICTS) {
-    const distanceKm = haversineDistanceKm(
-      geo.latitude,
-      geo.longitude,
-      district[2],
-      district[3]
-    );
-    if (distanceKm < nearestDistrictDistanceKm) {
-      nearestDistrict = district;
-      nearestDistrictDistanceKm = distanceKm;
-    }
-  }
-
-  if (
-    nearestDistrict &&
-    nearestDistrictDistanceKm <= MAX_DISTRICT_REFERENCE_DISTANCE_KM
-  ) {
-    return {
-      province: nearestDistrict[0],
-      district: nearestDistrict[1],
-      confidence:
-        geo.accuracyMeters <= 5_000 && nearestDistrictDistanceKm <= 50
-          ? 'high'
-          : 'medium',
-      accuracyMeters: Math.round(geo.accuracyMeters),
-    };
-  }
-
-  let nearest: ProvinceReference | null = null;
-  let nearestDistanceKm = Number.POSITIVE_INFINITY;
-  for (const province of TURKEY_PROVINCES) {
-    const distanceKm = haversineDistanceKm(
-      geo.latitude,
-      geo.longitude,
-      province.latitude,
-      province.longitude
-    );
-    if (distanceKm < nearestDistanceKm) {
-      nearest = province;
-      nearestDistanceKm = distanceKm;
-    }
-  }
-
-  if (!nearest || nearestDistanceKm > MAX_PROVINCE_REFERENCE_DISTANCE_KM) {
-    return null;
-  }
-
-  return {
-    province: nearest.name,
-    district: nearest.name,
-    confidence: geo.accuracyMeters <= 10_000 ? 'high' : 'medium',
-    accuracyMeters: Math.round(geo.accuracyMeters),
   };
 }
