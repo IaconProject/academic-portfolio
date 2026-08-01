@@ -11,7 +11,7 @@ import {
 } from '@/lib/analytics-contract';
 
 interface ContactSectionProps {
-  profile: Profile;
+  profile: Pick<Profile, 'email' | 'location'>;
 }
 
 const SUBJECT_OPTIONS = [

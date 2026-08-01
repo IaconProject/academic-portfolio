@@ -2,11 +2,6 @@
 
 import React, { useState } from 'react';
 import { Menu, User, School, BookOpen, GitBranch, Mic, ListOrdered, Users, Mail, X } from 'lucide-react';
-import { Profile } from '@/lib/types';
-
-interface MobileHeaderProps {
-  profile: Profile;
-}
 
 const navItems = [
   { id: 'hakkinda', label: 'Hakkında', icon: User },
@@ -19,7 +14,7 @@ const navItems = [
   { id: 'iletisim', label: 'İletişim', icon: Mail },
 ];
 
-export const MobileHeader: React.FC<MobileHeaderProps> = ({ profile }) => {
+export const MobileHeader: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleMenu = () => setIsOpen(!isOpen);

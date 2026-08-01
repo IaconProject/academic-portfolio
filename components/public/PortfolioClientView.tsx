@@ -33,9 +33,7 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
       />
 
       {/* Mobile Sticky Navigation Header */}
-      <MobileHeader
-        profile={profile}
-      />
+      <MobileHeader />
 
       {/* Main Content Centering Wrapper */}
       <div className="flex-1 lg:pl-72 flex flex-col items-center w-full">
@@ -53,7 +51,9 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
           <ConferencesSection conferences={conferences} />
           <ActivitiesSection activities={activities} />
           <ReferencesSection references={references} />
-          <ContactSection profile={profile} />
+          <ContactSection
+            profile={{ email: profile.email, location: profile.location }}
+          />
 
           {/* Minimalist Footer */}
           <footer className="mt-12 border-t border-stone-200/60 py-6 text-center text-xs font-medium text-stone-600">
