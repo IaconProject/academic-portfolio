@@ -235,6 +235,8 @@ export interface AnalyticsSessionSummary {
   countryName: string | null;
   region: string | null;
   city: string | null;
+  geoSource: string | null;
+  geoConfidence: 'high' | 'medium' | 'low' | null;
   deviceType: string | null;
   browserName: string | null;
   osName: string | null;
@@ -443,6 +445,8 @@ const sessionSummarySchema = z
     countryName: nullableTextSchema,
     region: nullableTextSchema,
     city: nullableTextSchema,
+    geoSource: nullableTextSchema,
+    geoConfidence: z.enum(['high', 'medium', 'low']).nullable(),
     deviceType: nullableTextSchema,
     browser: nullableTextSchema,
     operatingSystem: nullableTextSchema,
@@ -774,6 +778,8 @@ export async function getAnalyticsSessions(
       countryName: session.countryName,
       region: session.region,
       city: session.city,
+      geoSource: session.geoSource,
+      geoConfidence: session.geoConfidence,
       deviceType: session.deviceType,
       browserName: session.browser,
       osName: session.operatingSystem,

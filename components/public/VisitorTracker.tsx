@@ -20,6 +20,7 @@ import {
   ANALYTICS_TRACK_EVENT,
   ANALYTICS_WEB_VITAL_NAMES,
   AnalyticsClientEventContract,
+  AnalyticsBrowserGeo,
   AnalyticsEventBase,
   AnalyticsEventDetails,
   AnalyticsTrackEventDetail,
@@ -34,6 +35,11 @@ import {
   normalizeAnalyticsWebVitalValue,
 } from '@/lib/analytics-contract';
 import { analyticsAuthorizationVersion } from '@/lib/analytics-consent-policy';
+import {
+  ANALYTICS_LOCATION_UPDATED_EVENT,
+  clearAnalyticsBrowserGeo,
+  getGrantedAnalyticsBrowserGeo,
+} from '@/lib/analytics-client-location';
 
 const ANALYTICS_ENDPOINT = '/api/analytics/events';
 const MAX_QUEUE_EVENTS = 100;
@@ -254,6 +260,7 @@ function trimQueue(
       case 'contact_submit':
         return 5;
       case 'page_view':
+      case 'consent_update':
         return 4;
       case 'download':
       case 'outbound_click':
@@ -526,6 +533,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   const trackedScrollThresholds = useRef(new Set<number>());
   const trackedWebVitals = useRef(new Set<string>());
   const clientErrorCount = useRef(0);
+  const browserGeo = useRef<AnalyticsBrowserGeo | null>(null);
 
   const clearRuntimeState = useCallback(() => {
     runtimeGeneration.current += 1;
@@ -542,6 +550,8 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
     trackedScrollThresholds.current.clear();
     trackedWebVitals.current.clear();
     clientErrorCount.current = 0;
+    browserGeo.current = null;
+    clearAnalyticsBrowserGeo();
     if (retryTimer.current) {
       clearTimeout(retryTimer.current);
       retryTimer.current = null;
@@ -752,6 +762,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         timezone: currentTimezone().slice(0, 100),
         consentVersion: authorizationVersion,
         utm: allowedUtmProperties(),
+        geo: browserGeo.current || undefined,
         ...details,
       } as AnalyticsClientEventContract;
 
@@ -813,6 +824,8 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
 
     const path = canonicalPath(pathname);
     if (lastTrackedPath.current === path) return;
+    const grantedGeo = await getGrantedAnalyticsBrowserGeo();
+    if (grantedGeo) browserGeo.current = grantedGeo;
     lastTrackedPath.current = path;
     const event = await emitAnalyticsEvent(
       { eventType: 'page_view' },
@@ -900,12 +913,32 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         clearRuntimeState();
       }
     };
+    const handleLocationUpdate = (event: Event) => {
+      const geo = (event as CustomEvent<AnalyticsBrowserGeo>).detail;
+      if (
+        !enabled ||
+        !hasGrantedConsent() ||
+        geo?.source !== 'browser-geolocation'
+      ) {
+        return;
+      }
+      browserGeo.current = geo;
+      void emitAnalyticsEvent({
+        eventType: 'consent_update',
+        contentType: 'privacy_preference',
+        contentKey: 'coarse_location',
+      });
+    };
 
     window.addEventListener('pageshow', handlePageShow);
     window.addEventListener('online', handleOnline);
     window.addEventListener('pagehide', handlePageHide);
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener(ANALYTICS_CONSENT_EVENT, handleConsent);
+    window.addEventListener(
+      ANALYTICS_LOCATION_UPDATED_EVENT,
+      handleLocationUpdate
+    );
 
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
@@ -916,8 +949,18 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         handleVisibility
       );
       window.removeEventListener(ANALYTICS_CONSENT_EVENT, handleConsent);
+      window.removeEventListener(
+        ANALYTICS_LOCATION_UPDATED_EVENT,
+        handleLocationUpdate
+      );
     };
-  }, [clearRuntimeState, enabled, flushQueue, trackCurrentPage]);
+  }, [
+    clearRuntimeState,
+    emitAnalyticsEvent,
+    enabled,
+    flushQueue,
+    trackCurrentPage,
+  ]);
 
   useEffect(() => {
     if (

@@ -14,6 +14,7 @@ import {
   ANALYTICS_WEB_VITAL_RATINGS,
   normalizeAnalyticsCampaignValue,
 } from './analytics-contract';
+import { resolveTurkeyProvince } from './analytics-turkey-geo';
 import {
   analyticsAuthorizationBasisFromVersion,
   analyticsAuthorizationVersion,
@@ -95,6 +96,15 @@ const analyticsCommonEventFields = {
     })
     .strict()
     .optional(),
+  geo: z
+    .object({
+      source: z.literal('browser-geolocation'),
+      latitude: z.number().finite().min(-90).max(90),
+      longitude: z.number().finite().min(-180).max(180),
+      accuracyMeters: z.number().finite().nonnegative().max(100_000),
+    })
+    .strict()
+    .optional(),
 };
 
 const durationMsSchema = z.number().int().min(1).max(300_000);
@@ -129,6 +139,15 @@ const engagementEventSchema = z
     ...analyticsCommonEventFields,
     eventType: z.literal('engagement'),
     durationMs: durationMsSchema,
+  })
+  .strict();
+
+const consentUpdateEventSchema = z
+  .object({
+    ...analyticsCommonEventFields,
+    eventType: z.literal('consent_update'),
+    contentType: z.literal('privacy_preference'),
+    contentKey: z.literal('coarse_location'),
   })
   .strict();
 
@@ -232,6 +251,7 @@ export const analyticsEventSchema = z.discriminatedUnion('eventType', [
   pageViewEventSchema,
   heartbeatEventSchema,
   engagementEventSchema,
+  consentUpdateEventSchema,
   scrollDepthEventSchema,
   outboundClickEventSchema,
   downloadEventSchema,
@@ -283,11 +303,34 @@ export interface AnalyticsRequestContext {
   country_name?: string;
   region?: string;
   city?: string;
-  geo_source?: 'vercel-edge';
-  geo_confidence?: 'medium';
+  geo_source?: 'vercel-edge' | 'browser-geolocation';
+  geo_confidence?: 'high' | 'medium';
   device_type?: 'desktop' | 'mobile' | 'tablet' | 'other';
   browser_name?: string;
   os_name?: string;
+}
+
+/**
+ * Browser coordinates are used transiently and reduced to a Turkish province.
+ * Exact coordinates never enter the database event or request context.
+ */
+export function applyBrowserGeoToAnalyticsContext(
+  context: AnalyticsRequestContext,
+  geo: AnalyticsClientEvent['geo']
+): AnalyticsRequestContext {
+  if (!geo) return context;
+  const resolution = resolveTurkeyProvince(geo);
+  if (!resolution) return context;
+
+  return {
+    ...context,
+    country_code: 'TR',
+    country_name: 'Türkiye',
+    region: resolution.province,
+    city: resolution.province,
+    geo_source: 'browser-geolocation',
+    geo_confidence: resolution.confidence,
+  };
 }
 
 export function toDatabaseAnalyticsEvent(

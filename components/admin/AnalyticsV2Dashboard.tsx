@@ -166,6 +166,8 @@ type AnalyticsSession = {
   countryName: string | null;
   region?: string | null;
   city: string | null;
+  geoSource?: string | null;
+  geoConfidence?: 'high' | 'medium' | 'low' | null;
   deviceType: string | null;
   browser?: string | null;
   browserName?: string | null;
@@ -542,6 +544,7 @@ function eventLabel(eventType: string) {
       outbound_click: 'Harici bağlantı tıklaması',
       download: 'Dosya indirme',
       contact_submit: 'İletişim formu gönderimi',
+      consent_update: 'Gizlilik / konum tercihi',
       web_vital: 'Web performans ölçümü',
       client_error: 'İstemci hatası',
     }[eventType] || eventType
@@ -1615,8 +1618,8 @@ export function AnalyticsV2Dashboard() {
 
           <div className="grid gap-4 xl:grid-cols-2">
             <SectionCard
-              title="Yaklaşık coğrafya"
-              description="Ülke ve şehir bilgisi güvenilir edge başlıklarından, kesin konum olmadan üretilir."
+              title="Coğrafya"
+              description="Cihaz konumu açıkça izinliyse koordinat saklanmadan Türkiye ili düzeyine indirgenir; aksi durumda public IP/operatör çıkış noktasına dayalı yaklaşık bilgi kullanılır."
             >
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
@@ -1637,7 +1640,7 @@ export function AnalyticsV2Dashboard() {
                 <div>
                   <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-stone-500">
                     <Route className="h-3.5 w-3.5" />
-                    Şehirler
+                    İl / şehir
                   </p>
                   <BreakdownBars
                     rows={dashboard.geography.cities.map((row) => ({
@@ -2035,12 +2038,23 @@ export function AnalyticsV2Dashboard() {
                           </div>
                           <div>
                             <dt className="text-[10px] font-bold uppercase text-stone-400">
-                              Yaklaşık konum
+                              Konum
                             </dt>
                             <dd className="mt-1 text-stone-700 dark:text-stone-300">
                               {[session.city, session.countryName]
                                 .filter(Boolean)
                                 .join(', ') || 'Bilinmiyor'}
+                            </dd>
+                            <dd className="mt-0.5 text-[10px] text-stone-500">
+                              {session.geoSource === 'browser-geolocation'
+                                ? `Cihazın bildirdiği il · ${
+                                    session.geoConfidence === 'high'
+                                      ? 'yüksek doğruluk'
+                                      : 'orta doğruluk'
+                                  }`
+                                : session.geoSource === 'vercel-edge'
+                                  ? 'Public IP / operatör çıkış noktası · yaklaşık'
+                                  : 'Konum kaynağı bilinmiyor'}
                             </dd>
                           </div>
                           <div>

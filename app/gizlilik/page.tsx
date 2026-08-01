@@ -2,6 +2,7 @@ import { getSeoExperienceData } from '@/lib/seo-repository';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
 import { SeoPageShell } from '@/components/public/SeoPageShell';
 import { AnalyticsPreferencesControl } from '@/components/public/AnalyticsPreferencesControl';
+import { AnalyticsLocationAccuracyControl } from '@/components/public/AnalyticsLocationAccuracyControl';
 
 export const revalidate = 300;
 
@@ -76,7 +77,11 @@ export default async function PrivacyPage() {
               yolu ve uzantısı, başarılı iletişim gönderimi, anonimleştirilmiş
               istemci hata sınıfı, Core Web Vitals değerleri ve edge
               sağlayıcının ürettiği yaklaşık ülke/bölge/şehir bilgisini
-              kaydeder. Ziyaretçi ve oturumlar rastgele üretilen kimliklerle
+              kaydeder. IP tabanlı şehir, internet sağlayıcısının çıkış
+              noktasını gösterebilir ve fiziksel konum garantisi vermez. Açık
+              cihaz konumu izni verilirse koordinatlar yalnız istek sırasında
+              Türkiye ili düzeyine indirgenir; ham koordinatlar event veya
+              oturum kaydına yazılmaz. Ziyaretçi ve oturumlar rastgele üretilen kimliklerle
               ölçülür; ham IP adresi, tam User-Agent, form içeriği, hata mesajı
               veya stack trace, dış bağlantının tam adresi ve kesin koordinatlar
               Analytics v2 kayıtlarında saklanmaz.
@@ -91,6 +96,7 @@ export default async function PrivacyPage() {
             <div className="pt-1">
               <AnalyticsPreferencesControl />
             </div>
+            <AnalyticsLocationAccuracyControl />
             <p>
               Tercih veya bölgesel işleme kaydının süresi dolduğunda güncel
               bölge kuralı yeniden değerlendirilir; gerektiğinde tekrar izin

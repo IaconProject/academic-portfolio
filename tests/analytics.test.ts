@@ -3,6 +3,7 @@ import {
   ANALYTICS_CONSENT_VERSION,
   ANALYTICS_FIRST_PARTY_VERSION,
   analyticsBatchSchema,
+  applyBrowserGeoToAnalyticsContext,
   buildAnalyticsRequestContext,
   classifyObviousBot,
   getTransientRequestIp,
@@ -13,6 +14,7 @@ import {
   normalizeAnalyticsPath,
   toDatabaseAnalyticsEvent,
 } from '../lib/analytics';
+import { resolveTurkeyProvince } from '../lib/analytics-turkey-geo';
 import {
   getSafeAnalyticsDownload,
   normalizeAnalyticsCampaignValue,
@@ -91,6 +93,18 @@ describe('Analytics v2 event sözleşmesi', () => {
         ...baseEvent,
         eventType: 'engagement',
         durationMs: 12_500,
+      },
+      {
+        ...baseEvent,
+        eventType: 'consent_update',
+        contentType: 'privacy_preference',
+        contentKey: 'coarse_location',
+        geo: {
+          source: 'browser-geolocation',
+          latitude: 37.52,
+          longitude: 42.46,
+          accuracyMeters: 150,
+        },
       },
       {
         ...baseEvent,
@@ -286,6 +300,77 @@ describe('Analytics v2 event sözleşmesi', () => {
         navigation_type: 'reload',
       },
     });
+  });
+
+  it('cihaz koordinatını event tablosuna taşımadan Türkiye iline indirger', () => {
+    const parsed = analyticsBatchSchema.parse({
+      schemaVersion: 2,
+      consentVersion: ANALYTICS_FIRST_PARTY_VERSION,
+      events: [
+        {
+          ...baseEvent,
+          consentVersion: ANALYTICS_FIRST_PARTY_VERSION,
+          geo: {
+            source: 'browser-geolocation',
+            latitude: 37.52,
+            longitude: 42.46,
+            accuracyMeters: 120,
+          },
+        },
+      ],
+    });
+    const event = parsed.events[0];
+    expect(resolveTurkeyProvince(event.geo!)).toMatchObject({
+      province: 'Şırnak',
+      confidence: 'high',
+    });
+    expect(
+      applyBrowserGeoToAnalyticsContext(
+        {
+          country_code: 'TR',
+          city: 'İstanbul',
+          geo_source: 'vercel-edge',
+          geo_confidence: 'medium',
+        },
+        event.geo
+      )
+    ).toMatchObject({
+      country_code: 'TR',
+      country_name: 'Türkiye',
+      region: 'Şırnak',
+      city: 'Şırnak',
+      geo_source: 'browser-geolocation',
+      geo_confidence: 'high',
+    });
+    expect(toDatabaseAnalyticsEvent(event)).not.toHaveProperty('geo');
+    expect(JSON.stringify(toDatabaseAnalyticsEvent(event))).not.toContain(
+      '42.46'
+    );
+  });
+
+  it('Türkiye dışındaki veya düşük doğruluklu cihaz konumunu IP bağlamına üstün tutmaz', () => {
+    const context = {
+      country_code: 'TR',
+      city: 'İstanbul',
+      geo_source: 'vercel-edge' as const,
+      geo_confidence: 'medium' as const,
+    };
+    expect(
+      applyBrowserGeoToAnalyticsContext(context, {
+        source: 'browser-geolocation',
+        latitude: 52.52,
+        longitude: 13.405,
+        accuracyMeters: 100,
+      })
+    ).toEqual(context);
+    expect(
+      applyBrowserGeoToAnalyticsContext(context, {
+        source: 'browser-geolocation',
+        latitude: 37.52,
+        longitude: 42.46,
+        accuracyMeters: 80_000,
+      })
+    ).toEqual(context);
   });
 });
 

@@ -100,6 +100,13 @@ export type AnalyticsUtmProperties = Partial<
   Record<'source' | 'medium' | 'campaign' | 'term' | 'content', string>
 >;
 
+export interface AnalyticsBrowserGeo {
+  source: 'browser-geolocation';
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number;
+}
+
 const ANALYTICS_CAMPAIGN_VALUE_PATTERN =
   /^[A-Za-z0-9ÇĞİÖŞÜçğıöşüÂâÎîÛû][A-Za-z0-9ÇĞİÖŞÜçğıöşüÂâÎîÛû _./:+-]{0,99}$/;
 
@@ -142,12 +149,18 @@ export interface AnalyticsEventBase {
   timezone: string;
   consentVersion: string;
   utm?: AnalyticsUtmProperties;
+  geo?: AnalyticsBrowserGeo;
 }
 
 export type AnalyticsEventDetails =
   | { eventType: 'page_view' }
   | { eventType: 'heartbeat'; durationMs: number }
   | { eventType: 'engagement'; durationMs: number }
+  | {
+      eventType: 'consent_update';
+      contentType: 'privacy_preference';
+      contentKey: 'coarse_location';
+    }
   | {
       eventType: 'scroll_depth';
       contentType: 'page';

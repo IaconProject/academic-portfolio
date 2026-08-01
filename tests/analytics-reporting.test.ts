@@ -50,6 +50,8 @@ const sessionItem = {
   countryName: 'Türkiye',
   region: null,
   city: 'İstanbul',
+  geoSource: 'vercel-edge',
+  geoConfidence: 'medium' as const,
   deviceType: 'desktop',
   browser: 'Chrome',
   operatingSystem: 'macOS',
@@ -94,6 +96,8 @@ describe('Analytics reporting cursor sözleşmesi', () => {
     const firstPage = await getAnalyticsSessions(baseQuery);
     expect(firstPage.sessions[0]).toMatchObject({
       id: 's_0123456789abcdef',
+      geoSource: 'vercel-edge',
+      geoConfidence: 'medium',
       journeyTruncated: true,
       journey: [{ path: '/', title: 'Ana Sayfa' }],
     });

@@ -3,6 +3,7 @@ import {
   ANALYTICS_MAX_BODY_BYTES,
   AnalyticsIngestResult,
   analyticsBatchSchema,
+  applyBrowserGeoToAnalyticsContext,
   buildAnalyticsRequestContext,
   classifyObviousBot,
   getAnalyticsHashSecret,
@@ -24,7 +25,7 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const COLLECTOR_VERSION = '2.1.0';
+const COLLECTOR_VERSION = '2.2.0';
 const RATE_LIMIT_PER_MINUTE = 120;
 const RATE_LIMIT_PER_VISITOR_PER_MINUTE = 60;
 const REJECTION_RECORD_LIMIT_PER_MINUTE = 30;
@@ -413,6 +414,10 @@ export async function POST(request: Request) {
   };
 
   for (const group of groups) {
+    const groupContext = applyBrowserGeoToAnalyticsContext(
+      requestContext,
+      group.events.find((event) => event.geo)?.geo
+    );
     const visitorKey = hashAnalyticsIdentifier(
       group.visitorId,
       'visitor'
@@ -425,7 +430,7 @@ export async function POST(request: Request) {
         p_client_session_id: group.sessionId,
         p_events: databaseEvents,
         p_context: {
-          ...requestContext,
+          ...groupContext,
           collector_version: COLLECTOR_VERSION,
           consent_version: parsed.data.consentVersion,
           authorization_basis: authorizationBasis,
@@ -484,6 +489,31 @@ export async function POST(request: Request) {
 
     totals.acceptedCount += acceptedCount;
     totals.duplicateCount += duplicateCount;
+
+    if (groupContext.geo_source === 'browser-geolocation') {
+      const { error: geoUpgradeError } = await serverSupabase.rpc(
+        'upgrade_analytics_session_geo',
+        {
+          p_visitor_key: visitorKey,
+          p_client_session_id: group.sessionId,
+          p_context: groupContext,
+        }
+      );
+      if (geoUpgradeError) {
+        console.error(
+          '[analytics] Device geo upgrade RPC failed:',
+          geoUpgradeError.code
+        );
+        await recordCollectorFailure(
+          `GEO_UPGRADE_RPC_${geoUpgradeError.code || 'ERROR'}`
+        );
+        return failure(
+          'ANALYTICS_GEO_UPGRADE_FAILED',
+          'Cihaz konumu il düzeyine indirgenemedi.',
+          503
+        );
+      }
+    }
   }
 
   return success(totals, 202);

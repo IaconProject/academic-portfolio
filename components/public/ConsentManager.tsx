@@ -9,6 +9,7 @@ import {
   AnalyticsAuthorizationBasis,
   AnalyticsCollectionMode,
 } from '@/lib/analytics-consent-policy';
+import { clearAnalyticsBrowserGeo } from '@/lib/analytics-client-location';
 
 export type ConsentValue = 'granted' | 'denied';
 export type ConsentChangeReason =
@@ -105,6 +106,7 @@ export function clearAnalyticsClientState(): void {
   } catch {
     // Session storage is optional.
   }
+  clearAnalyticsBrowserGeo();
 }
 
 function removeAnalyticsConsentRecord(): void {
