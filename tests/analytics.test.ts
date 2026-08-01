@@ -15,7 +15,11 @@ import {
   normalizeAnalyticsPath,
   toDatabaseAnalyticsEvent,
 } from '../lib/analytics';
-import { resolveTurkeyProvince } from '../lib/analytics-turkey-geo';
+import {
+  normalizeTurkeyProvinceRegion,
+  resolveTurkeyNetworkProvince,
+  resolveTurkeyProvince,
+} from '../lib/analytics-turkey-geo';
 import {
   getSafeAnalyticsDownload,
   normalizeAnalyticsCampaignValue,
@@ -537,7 +541,7 @@ describe('Analytics pseudonimleştirme ve sınıflama', () => {
 
     expect(context).toMatchObject({
       country_code: 'TR',
-      region: '26',
+      region: 'Eskişehir',
       city: 'Eskişehir',
       geo_source: 'vercel-edge',
       geo_confidence: 'medium',
@@ -551,6 +555,55 @@ describe('Analytics pseudonimleştirme ve sınıflama', () => {
     });
     expect(JSON.stringify(context)).not.toContain('user-agent');
     expect(JSON.stringify(context)).not.toContain('Mozilla');
+  });
+
+  it('Türkiye ISO il kodlarını adlara dönüştürür', () => {
+    expect(normalizeTurkeyProvinceRegion('73')).toBe('Şırnak');
+    expect(normalizeTurkeyProvinceRegion('TR-73')).toBe('Şırnak');
+    expect(normalizeTurkeyProvinceRegion('sirnak')).toBe('Şırnak');
+    expect(normalizeTurkeyProvinceRegion('Marmara')).toBeNull();
+  });
+
+  it('bölge/şehir yoksa IP ağ merkez noktasını yalnız il düzeyine indirger', () => {
+    process.env.VERCEL = '1';
+    const request = new Request('https://www.muhammedakan.com/', {
+      headers: {
+        'x-vercel-ip-country': 'TR',
+        'x-vercel-ip-latitude': '37.52',
+        'x-vercel-ip-longitude': '42.46',
+      },
+    });
+
+    expect(resolveTurkeyNetworkProvince(37.52, 42.46)).toMatchObject({
+      province: 'Şırnak',
+    });
+    expect(buildAnalyticsRequestContext(request)).toMatchObject({
+      country_code: 'TR',
+      country_name: 'Türkiye',
+      region: 'Şırnak',
+      geo_source: 'vercel-edge',
+      geo_confidence: 'low',
+    });
+    expect(buildAnalyticsRequestContext(request)).not.toHaveProperty('city');
+    expect(JSON.stringify(buildAnalyticsRequestContext(request))).not.toContain(
+      '42.46'
+    );
+  });
+
+  it('il sinyali yoksa yanlış il üretmeden yalnız ülkeyi düşük güvenle tutar', () => {
+    process.env.VERCEL = '1';
+    const request = new Request('https://www.muhammedakan.com/', {
+      headers: { 'x-vercel-ip-country': 'TR' },
+    });
+
+    expect(buildAnalyticsRequestContext(request)).toMatchObject({
+      country_code: 'TR',
+      country_name: 'Türkiye',
+      geo_source: 'vercel-edge',
+      geo_confidence: 'low',
+    });
+    expect(buildAnalyticsRequestContext(request)).not.toHaveProperty('region');
+    expect(buildAnalyticsRequestContext(request)).not.toHaveProperty('city');
   });
 
   it('izinli Client Hints alanlarıyla cihaz ve sürüm bilgisini zenginleştirir', () => {

@@ -522,6 +522,32 @@ export async function POST(request: Request) {
       }
     }
 
+    if (
+      groupContext.geo_source === 'vercel-edge' &&
+      (groupContext.region || groupContext.city)
+    ) {
+      const { error: networkGeoUpgradeError } = await serverSupabase.rpc(
+        'upgrade_analytics_session_network_geo',
+        {
+          p_visitor_key: visitorKey,
+          p_client_session_id: group.sessionId,
+          p_context: groupContext,
+        }
+      );
+      if (networkGeoUpgradeError) {
+        // Ingestion already succeeded and new sessions already received this
+        // context. Enrichment of an older open session is best-effort so a
+        // migration/version mismatch cannot poison the durable client queue.
+        console.error(
+          '[analytics] Network geo upgrade RPC failed:',
+          networkGeoUpgradeError.code
+        );
+        await recordCollectorFailure(
+          `NETWORK_GEO_UPGRADE_RPC_${networkGeoUpgradeError.code || 'ERROR'}`
+        );
+      }
+    }
+
     const { error: technologyUpgradeError } = await serverSupabase.rpc(
       'upgrade_analytics_session_technology',
       {

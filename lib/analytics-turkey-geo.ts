@@ -97,6 +97,136 @@ const TURKEY_PROVINCES: readonly ProvinceReference[] = [
   { name: 'Zonguldak', latitude: 41.25, longitude: 31.83333 },
 ] as const;
 
+const TURKEY_PROVINCES_BY_ISO_SUBDIVISION = new Map(
+  [
+    'Adana',
+    'Adıyaman',
+    'Afyonkarahisar',
+    'Ağrı',
+    'Amasya',
+    'Ankara',
+    'Antalya',
+    'Artvin',
+    'Aydın',
+    'Balıkesir',
+    'Bilecik',
+    'Bingöl',
+    'Bitlis',
+    'Bolu',
+    'Burdur',
+    'Bursa',
+    'Çanakkale',
+    'Çankırı',
+    'Çorum',
+    'Denizli',
+    'Diyarbakır',
+    'Edirne',
+    'Elazığ',
+    'Erzincan',
+    'Erzurum',
+    'Eskişehir',
+    'Gaziantep',
+    'Giresun',
+    'Gümüşhane',
+    'Hakkâri',
+    'Hatay',
+    'Isparta',
+    'Mersin',
+    'İstanbul',
+    'İzmir',
+    'Kars',
+    'Kastamonu',
+    'Kayseri',
+    'Kırklareli',
+    'Kırşehir',
+    'Kocaeli',
+    'Konya',
+    'Kütahya',
+    'Malatya',
+    'Manisa',
+    'Kahramanmaraş',
+    'Mardin',
+    'Muğla',
+    'Muş',
+    'Nevşehir',
+    'Niğde',
+    'Ordu',
+    'Rize',
+    'Sakarya',
+    'Samsun',
+    'Siirt',
+    'Sinop',
+    'Sivas',
+    'Tekirdağ',
+    'Tokat',
+    'Trabzon',
+    'Tunceli',
+    'Şanlıurfa',
+    'Uşak',
+    'Van',
+    'Yozgat',
+    'Zonguldak',
+    'Aksaray',
+    'Bayburt',
+    'Karaman',
+    'Kırıkkale',
+    'Batman',
+    'Şırnak',
+    'Bartın',
+    'Ardahan',
+    'Iğdır',
+    'Yalova',
+    'Karabük',
+    'Kilis',
+    'Osmaniye',
+    'Düzce',
+  ].map((name, index) => [String(index + 1).padStart(2, '0'), name])
+);
+
+function foldTurkishProvinceName(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i')
+    .replace(/İ/g, 'I')
+    .replace(/ğ/gi, 'g')
+    .replace(/ş/gi, 's')
+    .replace(/ç/gi, 'c')
+    .replace(/ö/gi, 'o')
+    .replace(/ü/gi, 'u')
+    .replace(/â/gi, 'a')
+    .replace(/î/gi, 'i')
+    .replace(/û/gi, 'u')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLocaleLowerCase('en-US');
+}
+
+const TURKEY_PROVINCES_BY_NAME = new Map(
+  TURKEY_PROVINCES.map((province) => [
+    foldTurkishProvinceName(province.name),
+    province.name,
+  ])
+);
+
+/** Normalizes Vercel's ISO 3166-2 subdivision value (for example 73/TR-73). */
+export function normalizeTurkeyProvinceRegion(
+  value: string | null | undefined
+): string | null {
+  const candidate = value?.trim() || '';
+  if (!candidate) return null;
+
+  const withoutCountry = candidate
+    .toUpperCase()
+    .replace(/^TR[-_\s]?/, '');
+  const subdivision = /^\d{1,2}$/.test(withoutCountry)
+    ? withoutCountry.padStart(2, '0')
+    : withoutCountry;
+  const bySubdivision = TURKEY_PROVINCES_BY_ISO_SUBDIVISION.get(subdivision);
+  if (bySubdivision) return bySubdivision;
+
+  return TURKEY_PROVINCES_BY_NAME.get(foldTurkishProvinceName(candidate)) || null;
+}
+
 const MAX_ACCEPTED_ACCURACY_METERS = 25_000;
 const MAX_PROVINCE_REFERENCE_DISTANCE_KM = 175;
 const MAX_DISTRICT_REFERENCE_DISTANCE_KM = 125;
@@ -126,6 +256,56 @@ export type TurkeyProvinceResolution = {
   confidence: 'high' | 'medium';
   accuracyMeters: number;
 };
+
+export type TurkeyNetworkProvinceResolution = {
+  province: string;
+  distanceKm: number;
+};
+
+/**
+ * Resolves an IP-derived edge coordinate only to a province. IP coordinates
+ * are network centroids, not device positions, so district inference would
+ * overstate their precision.
+ */
+export function resolveTurkeyNetworkProvince(
+  latitude: number,
+  longitude: number
+): TurkeyNetworkProvinceResolution | null {
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < 35.5 ||
+    latitude > 42.3 ||
+    longitude < 25.4 ||
+    longitude > 45.1
+  ) {
+    return null;
+  }
+
+  let nearest: ProvinceReference | null = null;
+  let nearestDistanceKm = Number.POSITIVE_INFINITY;
+  for (const province of TURKEY_PROVINCES) {
+    const distanceKm = haversineDistanceKm(
+      latitude,
+      longitude,
+      province.latitude,
+      province.longitude
+    );
+    if (distanceKm < nearestDistanceKm) {
+      nearest = province;
+      nearestDistanceKm = distanceKm;
+    }
+  }
+
+  if (!nearest || nearestDistanceKm > MAX_PROVINCE_REFERENCE_DISTANCE_KM) {
+    return null;
+  }
+
+  return {
+    province: nearest.name,
+    distanceKm: Math.round(nearestDistanceKm),
+  };
+}
 
 export function resolveTurkeyProvince(
   geo: AnalyticsBrowserGeo

@@ -1,9 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'react-hot-toast';
 import { AnalyticsRuntime } from '@/components/public/AnalyticsRuntime';
 import { getSeoExperienceData } from '@/lib/seo-repository';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
 import './globals.css';
+
+const SITE_THEME_COLOR = '#f7f5f0';
+
+export const viewport: Viewport = {
+  themeColor: SITE_THEME_COLOR,
+  colorScheme: 'light',
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const data = await getSeoExperienceData();
@@ -16,6 +23,14 @@ export async function generateMetadata(): Promise<Metadata> {
     icons: {
       icon: '/favicon.ico',
       apple: '/favicon.ico',
+    },
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: 'default',
+      title: data.seoSettings.siteName || data.profile.fullName,
+    },
+    other: {
+      'msapplication-navbutton-color': SITE_THEME_COLOR,
     },
     alternates: {
       canonical: '/',

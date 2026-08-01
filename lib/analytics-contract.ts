@@ -3,7 +3,7 @@
  * Updating the consent policy version here forces both sides to move together.
  */
 export const ANALYTICS_SCHEMA_VERSION = 2 as const;
-export const ANALYTICS_CONSENT_POLICY_VERSION = '2026-08-01.2';
+export const ANALYTICS_CONSENT_POLICY_VERSION = '2026-08-01.3';
 export const ANALYTICS_MAX_BATCH_EVENTS = 20;
 export const ANALYTICS_SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 export const ANALYTICS_RUNTIME_DISABLED_EVENT =

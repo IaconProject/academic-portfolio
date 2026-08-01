@@ -85,20 +85,24 @@ export default async function PrivacyPage() {
               kalabilir.
             </p>
             <p>
-              IP tabanlı şehir, internet sağlayıcısının çıkış noktasını
-              gösterebilir ve fiziksel konum garantisi vermez. Tarayıcıda
-              cihaz konumu izni daha önce açıkça verilmişse koordinatlar
-              yaklaşık bir kilometre hassasiyete düşürülür, yalnız istek
-              sırasında sunucudaki yerel Türkiye il/ilçe referanslarıyla
-              eşleştirilir ve sadece tahmini il ile ilçe saklanır. Ham veya
-              yuvarlanmış koordinatlar event ya da oturum kaydına yazılmaz.
-              Türkiye’de tarayıcı izni bulunmuyorsa site ilk gerçek kullanıcı
-              etkileşiminden sonra tarayıcının kendi açık izin ekranını bir kez
-              çağırabilir. İzin reddedilirse yeniden baskı kurulmaz; bu durumda
-              yalnız yaklaşık IP/operatör bilgisi kullanılabilir ve ilçe
-              doğruluğu garanti edilemez. Konum izninin teknik olarak nasıl
-              üretildiği ayrıca kullanılan tarayıcı ve işletim sisteminin
-              gizlilik ayarlarına tabidir. Analytics v2
+              Site, tarayıcının cihaz konumu API’sini çağırmaz ve ziyaretçiden
+              konum izni istemez. Konum yalnız barındırma altyapısının isteğin
+              public IP adresi için ürettiği yaklaşık ülke, ISO bölge kodu,
+              şehir ve ağ merkez noktası sinyallerinden sunucu tarafında
+              türetilir. Türkiye il kodu önce yerel il adıyla eşleştirilir;
+              bölge veya şehir sinyali yoksa ağ merkez noktası yalnız il
+              düzeyinde, düşük güvenli bir tahmin için yerel Türkiye il
+              referanslarıyla karşılaştırılır. Bu işlemde kullanılan IP
+              koordinatı analitik eventine, oturuma veya başka bir kalıcı
+              kayda yazılmaz; ilçe cihaz konumuymuş gibi tahmin edilmez.
+            </p>
+            <p>
+              IP tabanlı sonuç fiziksel konum garantisi vermez. Özellikle mobil
+              operatörler çok sayıda kullanıcıyı başka bir ildeki ortak ağ
+              çıkışından internete bağlayabilir; bu nedenle bazı ziyaretlerde
+              yalnız ülke bilinebilir veya gösterilen il operatör çıkışını
+              temsil edebilir. Yeterli sunucu sinyali yoksa sistem yanlış bir
+              il üretmek yerine “il belirlenemedi” durumunu korur. Analytics v2
               konum ve teknoloji kayıtları Google Analytics, Yandex Metrica
               veya başka bir üçüncü taraf analitik sağlayıcısına aktarılmaz.
               Ziyaretçi ve oturumlar rastgele üretilen kimliklerle
@@ -122,8 +126,9 @@ export default async function PrivacyPage() {
             </div>
             <p>
               Tercih veya bölgesel işleme kaydının süresi dolduğunda güncel
-              bölge kuralı yeniden değerlendirilir; gerektiğinde tekrar izin
-              istenir ve önceki tarayıcı ziyaretçi kimliği silinerek yenisi
+              bölge kuralı yeniden değerlendirilir; açık analitik izni gereken
+              ülkelerde tercih yeniden sorulabilir ve önceki tarayıcı ziyaretçi
+              kimliği silinerek yenisi
               oluşturulur. Ham analitik
               eventleri ve bunlara bağlı etkin olmayan oturum/ziyaretçi
               kayıtları son aktiviteye göre en fazla {retentionDays} gün, kimlik

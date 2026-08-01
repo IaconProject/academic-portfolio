@@ -66,6 +66,9 @@ const nextConfig = {
         headers: [
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
+          // Defense in depth: neither first-party code nor embedded content
+          // may invoke the browser's device geolocation permission prompt.
+          { key: 'Permissions-Policy', value: 'geolocation=()' },
         ],
       },
     ];

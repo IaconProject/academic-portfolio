@@ -20,7 +20,6 @@ import {
   ANALYTICS_TRACK_EVENT,
   ANALYTICS_WEB_VITAL_NAMES,
   AnalyticsClientEventContract,
-  AnalyticsBrowserGeo,
   AnalyticsEventBase,
   AnalyticsEventDetails,
   AnalyticsTrackEventDetail,
@@ -35,11 +34,6 @@ import {
   normalizeAnalyticsWebVitalValue,
 } from '@/lib/analytics-contract';
 import { analyticsAuthorizationVersion } from '@/lib/analytics-consent-policy';
-import {
-  clearAnalyticsBrowserGeo,
-  getGrantedAnalyticsBrowserGeo,
-  requestAnalyticsBrowserGeoFromUserGesture,
-} from '@/lib/analytics-client-location';
 import { getAnalyticsClientTechnology } from '@/lib/analytics-client-technology';
 
 const ANALYTICS_ENDPOINT = '/api/analytics/events';
@@ -534,7 +528,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   const trackedScrollThresholds = useRef(new Set<number>());
   const trackedWebVitals = useRef(new Set<string>());
   const clientErrorCount = useRef(0);
-  const browserGeo = useRef<AnalyticsBrowserGeo | null>(null);
 
   const clearRuntimeState = useCallback(() => {
     runtimeGeneration.current += 1;
@@ -551,8 +544,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
     trackedScrollThresholds.current.clear();
     trackedWebVitals.current.clear();
     clientErrorCount.current = 0;
-    browserGeo.current = null;
-    clearAnalyticsBrowserGeo();
     if (retryTimer.current) {
       clearTimeout(retryTimer.current);
       retryTimer.current = null;
@@ -772,7 +763,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         timezone: currentTimezone().slice(0, 100),
         consentVersion: authorizationVersion,
         utm: allowedUtmProperties(),
-        geo: browserGeo.current || undefined,
         technology: technology || undefined,
         ...details,
       } as AnalyticsClientEventContract;
@@ -835,8 +825,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
 
     const path = canonicalPath(pathname);
     if (lastTrackedPath.current === path) return;
-    const grantedGeo = await getGrantedAnalyticsBrowserGeo();
-    if (grantedGeo) browserGeo.current = grantedGeo;
     lastTrackedPath.current = path;
     const event = await emitAnalyticsEvent(
       { eventType: 'page_view' },
@@ -924,44 +912,11 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         clearRuntimeState();
       }
     };
-    let locationOpportunityHandled = false;
-    const handleLocationOpportunity = () => {
-      if (locationOpportunityHandled) return;
-      locationOpportunityHandled = true;
-      window.removeEventListener('pointerdown', handleLocationOpportunity);
-      window.removeEventListener('keydown', handleLocationOpportunity);
-
-      const consent = readAnalyticsConsent();
-      if (
-        !enabled ||
-        consent?.state !== 'granted' ||
-        consent.basis !== 'first-party-analytics'
-      ) {
-        return;
-      }
-
-      void requestAnalyticsBrowserGeoFromUserGesture().then((geo) => {
-        if (!geo || !enabled || !hasGrantedConsent()) return;
-        browserGeo.current = geo;
-        void emitAnalyticsEvent({
-          eventType: 'consent_update',
-          contentType: 'privacy_preference',
-          contentKey: 'coarse_location',
-        });
-      });
-    };
     window.addEventListener('pageshow', handlePageShow);
     window.addEventListener('online', handleOnline);
     window.addEventListener('pagehide', handlePageHide);
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener(ANALYTICS_CONSENT_EVENT, handleConsent);
-    window.addEventListener('pointerdown', handleLocationOpportunity, {
-      once: true,
-      passive: true,
-    });
-    window.addEventListener('keydown', handleLocationOpportunity, {
-      once: true,
-    });
 
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
@@ -972,8 +927,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         handleVisibility
       );
       window.removeEventListener(ANALYTICS_CONSENT_EVENT, handleConsent);
-      window.removeEventListener('pointerdown', handleLocationOpportunity);
-      window.removeEventListener('keydown', handleLocationOpportunity);
     };
   }, [
     clearRuntimeState,

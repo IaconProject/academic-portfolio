@@ -310,6 +310,36 @@ function safeText(value: string | null | undefined, fallback = '—') {
   return trimmed || fallback;
 }
 
+function formatSessionLocation(session: AnalyticsSession): string {
+  const parts = [session.city, session.region, session.countryName]
+    .map((value) => value?.trim())
+    .filter((value): value is string => Boolean(value));
+  const uniqueParts = Array.from(new Set(parts));
+  if (
+    !session.city &&
+    !session.region &&
+    session.countryName
+  ) {
+    return `İl belirlenemedi · ${session.countryName}`;
+  }
+  return uniqueParts.join(', ') || 'Bilinmiyor';
+}
+
+function geoQualityLabel(session: AnalyticsSession): string {
+  if (session.geoSource === 'browser-geolocation') {
+    return 'Geçmiş cihaz konumu kaydı · artık toplanmıyor';
+  }
+  if (session.geoSource !== 'vercel-edge') {
+    return 'Konum kaynağı bilinmiyor';
+  }
+  if (!session.city && !session.region) {
+    return 'Yalnız ülke belirlendi';
+  }
+  return session.geoConfidence === 'low'
+    ? 'IP ağ merkezinden il tahmini · düşük güven'
+    : 'Public IP bölge/şehir sinyali · yaklaşık';
+}
+
 function authorizationBasisLabel(version: string | null | undefined) {
   if (version?.endsWith(':first-party-analytics')) {
     return 'Türkiye · birinci taraf analitik';
@@ -1723,7 +1753,7 @@ export function AnalyticsV2Dashboard() {
           <div className="grid gap-4 xl:grid-cols-2">
             <SectionCard
               title="Coğrafya"
-              description="Tarayıcıda cihaz konumu izni önceden verilmişse koordinat saklanmadan yerel referanslarla il/ilçe tahmini yapılır; aksi durumda public IP/operatör çıkış noktasına dayalı yaklaşık bilgi kullanılır."
+              description="Tarayıcıdan konum izni istenmez. Sunucudaki güvenilir IP bölge/şehir sinyali, Türkiye il kodu ve gerekirse kalıcı olarak saklanmayan IP ağ merkez noktasıyla yaklaşık il çözümlemesi yapılır. Mobil operatör çıkışları fiziksel ili temsil etmeyebilir."
             >
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
@@ -1744,17 +1774,26 @@ export function AnalyticsV2Dashboard() {
                 <div>
                   <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-stone-500">
                     <Route className="h-3.5 w-3.5" />
-                    İlçe / şehir
+                    İl / şehir
                   </p>
                   <BreakdownBars
-                    rows={dashboard.geography.cities.map((row) => ({
-                      label: safeText(row.city || row.name, 'Bilinmiyor'),
-                      value: countOf(row),
-                      detail:
-                        [row.region, row.countryCode]
-                          .filter(Boolean)
-                          .join(' · ') || undefined,
-                    }))}
+                    rows={dashboard.geography.cities.map((row) => {
+                      const city =
+                        row.city && row.city !== 'unknown'
+                          ? row.city
+                          : null;
+                      return {
+                        label: safeText(
+                          city || row.region,
+                          'İl belirlenemedi'
+                        ),
+                        value: countOf(row),
+                        detail:
+                          [city ? row.region : null, row.countryCode]
+                            .filter(Boolean)
+                            .join(' · ') || undefined,
+                      };
+                    })}
                   />
                 </div>
               </div>
@@ -2221,24 +2260,10 @@ export function AnalyticsV2Dashboard() {
                               Konum
                             </dt>
                             <dd className="mt-1 text-stone-700 dark:text-stone-300">
-                              {[
-                                session.city,
-                                session.region,
-                                session.countryName,
-                              ]
-                                .filter(Boolean)
-                                .join(', ') || 'Bilinmiyor'}
+                              {formatSessionLocation(session)}
                             </dd>
                             <dd className="mt-0.5 text-[10px] text-stone-500">
-                              {session.geoSource === 'browser-geolocation'
-                                ? `Cihaz izninden yerel il/ilçe tahmini · ${
-                                    session.geoConfidence === 'high'
-                                      ? 'daha güçlü sinyal'
-                                      : 'yaklaşık'
-                                  }`
-                                : session.geoSource === 'vercel-edge'
-                                  ? 'Public IP / operatör çıkış noktası · yaklaşık'
-                                  : 'Konum kaynağı bilinmiyor'}
+                              {geoQualityLabel(session)}
                             </dd>
                           </div>
                           <div>

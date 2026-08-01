@@ -14,7 +14,11 @@ import {
   ANALYTICS_WEB_VITAL_RATINGS,
   normalizeAnalyticsCampaignValue,
 } from './analytics-contract';
-import { resolveTurkeyProvince } from './analytics-turkey-geo';
+import {
+  normalizeTurkeyProvinceRegion,
+  resolveTurkeyNetworkProvince,
+  resolveTurkeyProvince,
+} from './analytics-turkey-geo';
 import {
   analyticsAuthorizationBasisFromVersion,
   analyticsAuthorizationVersion,
@@ -315,7 +319,7 @@ export interface AnalyticsRequestContext {
   region?: string;
   city?: string;
   geo_source?: 'vercel-edge' | 'browser-geolocation';
-  geo_confidence?: 'high' | 'medium';
+  geo_confidence?: 'high' | 'medium' | 'low';
   device_type?: 'desktop' | 'mobile' | 'tablet' | 'other';
   device_brand?: string;
   device_model?: string;
@@ -432,6 +436,18 @@ function decodeEdgeText(value: string | null, max: number): string {
   }
 }
 
+function parseEdgeCoordinate(
+  value: string | null,
+  min: number,
+  max: number
+): number | null {
+  if (!value?.trim()) return null;
+  const candidate = Number(value);
+  return Number.isFinite(candidate) && candidate >= min && candidate <= max
+    ? candidate
+    : null;
+}
+
 /**
  * Produces useful, coarse request dimensions without persisting the raw
  * User-Agent or IP address. Geo headers are trusted only on Vercel runtime;
@@ -475,13 +491,23 @@ export function buildAnalyticsRequestContext(
       request.headers.get('x-vercel-ip-country'),
       2
     ).toUpperCase();
-    const region = decodeEdgeText(
+    const rawRegion = decodeEdgeText(
       request.headers.get('x-vercel-ip-country-region'),
       128
     );
     const city = decodeEdgeText(
       request.headers.get('x-vercel-ip-city'),
       128
+    );
+    const latitude = parseEdgeCoordinate(
+      request.headers.get('x-vercel-ip-latitude'),
+      -90,
+      90
+    );
+    const longitude = parseEdgeCoordinate(
+      request.headers.get('x-vercel-ip-longitude'),
+      -180,
+      180
     );
 
     if (/^[A-Z]{2}$/.test(countryCode)) {
@@ -497,9 +523,34 @@ export function buildAnalyticsRequestContext(
         // The ISO code remains a reliable dimension on runtimes without ICU.
       }
       context.geo_source = 'vercel-edge';
-      context.geo_confidence = 'medium';
-      if (region) context.region = region;
+      context.geo_confidence = 'low';
+
+      if (countryCode === 'TR') {
+        const normalizedRegion =
+          normalizeTurkeyProvinceRegion(rawRegion) ||
+          normalizeTurkeyProvinceRegion(city);
+        const coordinateResolution =
+          normalizedRegion || latitude === null || longitude === null
+            ? null
+            : resolveTurkeyNetworkProvince(latitude, longitude);
+
+        if (normalizedRegion) {
+          context.region = normalizedRegion;
+          context.geo_confidence = 'medium';
+        } else if (coordinateResolution) {
+          context.region = coordinateResolution.province;
+          // The edge coordinate belongs to a public IP/network centroid, not
+          // the visitor's device. It improves province coverage but remains a
+          // deliberately low-confidence estimate.
+          context.geo_confidence = 'low';
+        }
+      } else if (rawRegion) {
+        context.region = rawRegion;
+        context.geo_confidence = 'medium';
+      }
+
       if (city) context.city = city;
+      if (city) context.geo_confidence = 'medium';
     }
   }
 
