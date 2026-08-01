@@ -2,8 +2,6 @@
 
 import type { AnalyticsBrowserGeo } from './analytics-contract';
 
-export const ANALYTICS_LOCATION_UPDATED_EVENT =
-  'analytics-location-updated';
 export const ANALYTICS_LOCATION_SESSION_KEY =
   'analytics_coarse_location_v2';
 
@@ -30,10 +28,10 @@ function normalizeGeo(
 
   return {
     source: 'browser-geolocation',
-    // About 110 metres at the equator: sufficient for province inference,
-    // while avoiding needless coordinate precision in transit/storage.
-    latitude: Number(Number(value.latitude).toFixed(3)),
-    longitude: Number(Number(value.longitude).toFixed(3)),
+    // Roughly one-kilometre precision: sufficient for province/district
+    // inference while avoiding unnecessary coordinate detail in transit.
+    latitude: Number(Number(value.latitude).toFixed(2)),
+    longitude: Number(Number(value.longitude).toFixed(2)),
     accuracyMeters: Math.round(Number(value.accuracyMeters)),
   };
 }
@@ -109,20 +107,13 @@ export async function getGrantedAnalyticsBrowserGeo(): Promise<AnalyticsBrowserG
   }
 }
 
-/** Must be called from an explicit user action because it may open a prompt. */
-export async function requestAnalyticsBrowserGeo(): Promise<AnalyticsBrowserGeo | null> {
-  if (typeof window === 'undefined') return null;
+/**
+ * Called directly from a real user gesture. The browser remains the authority:
+ * it displays its native permission UI and a denial produces no retry loop.
+ */
+export function requestAnalyticsBrowserGeoFromUserGesture(): Promise<AnalyticsBrowserGeo | null> {
+  if (typeof window === 'undefined') return Promise.resolve(null);
   return currentPosition();
-}
-
-export function dispatchAnalyticsLocationUpdate(
-  geo: AnalyticsBrowserGeo
-): void {
-  window.dispatchEvent(
-    new CustomEvent<AnalyticsBrowserGeo>(ANALYTICS_LOCATION_UPDATED_EVENT, {
-      detail: geo,
-    })
-  );
 }
 
 export function clearAnalyticsBrowserGeo(): void {

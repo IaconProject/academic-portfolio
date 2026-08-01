@@ -3,7 +3,7 @@
  * Updating the consent policy version here forces both sides to move together.
  */
 export const ANALYTICS_SCHEMA_VERSION = 2 as const;
-export const ANALYTICS_CONSENT_POLICY_VERSION = '2026-08-01';
+export const ANALYTICS_CONSENT_POLICY_VERSION = '2026-08-01.2';
 export const ANALYTICS_MAX_BATCH_EVENTS = 20;
 export const ANALYTICS_SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 export const ANALYTICS_RUNTIME_DISABLED_EVENT =
@@ -107,6 +107,19 @@ export interface AnalyticsBrowserGeo {
   accuracyMeters: number;
 }
 
+/**
+ * Coarse, allowlisted client technology hints. No full User-Agent, hardware
+ * identifier, architecture or other fingerprinting dimension is collected.
+ */
+export interface AnalyticsClientTechnology {
+  platform?: string;
+  platformVersion?: string;
+  deviceModel?: string;
+  browserName?: string;
+  browserVersion?: string;
+  mobile?: boolean;
+}
+
 const ANALYTICS_CAMPAIGN_VALUE_PATTERN =
   /^[A-Za-z0-9ÇĞİÖŞÜçğıöşüÂâÎîÛû][A-Za-z0-9ÇĞİÖŞÜçğıöşüÂâÎîÛû _./:+-]{0,99}$/;
 
@@ -150,6 +163,7 @@ export interface AnalyticsEventBase {
   consentVersion: string;
   utm?: AnalyticsUtmProperties;
   geo?: AnalyticsBrowserGeo;
+  technology?: AnalyticsClientTechnology;
 }
 
 export type AnalyticsEventDetails =

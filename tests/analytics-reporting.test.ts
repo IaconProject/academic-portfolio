@@ -16,6 +16,7 @@ vi.mock('../lib/supabase/server', () => ({
 }));
 
 import {
+  deleteAnalyticsSessions,
   getAnalyticsSessions,
   parseAnalyticsSessionsQuery,
 } from '../lib/analytics-reporting.server';
@@ -53,8 +54,12 @@ const sessionItem = {
   geoSource: 'vercel-edge',
   geoConfidence: 'medium' as const,
   deviceType: 'desktop',
+  deviceBrand: 'Apple',
+  deviceModel: 'Mac',
   browser: 'Chrome',
+  browserVersion: '127.0.0.0',
   operatingSystem: 'macOS',
+  osVersion: '14.6',
   consentVersion: '2026-07-30',
   journey: [
     {
@@ -98,6 +103,8 @@ describe('Analytics reporting cursor sözleşmesi', () => {
       id: 's_0123456789abcdef',
       geoSource: 'vercel-edge',
       geoConfidence: 'medium',
+      deviceBrand: 'Apple',
+      browserVersion: '127.0.0.0',
       journeyTruncated: true,
       journey: [{ path: '/', title: 'Ana Sayfa' }],
     });
@@ -182,6 +189,31 @@ describe('Analytics reporting query doğrulaması', () => {
 
     expect(Date.parse(parsed.data.to) - Date.parse(parsed.data.from)).toBe(
       30 * 24 * 60 * 60 * 1000
+    );
+  });
+});
+
+describe('Analytics admin silme sözleşmesi', () => {
+  it('yalnız seçili pseudonymous oturum referanslarını RPCye yollar', async () => {
+    reportingMocks.rpc.mockResolvedValueOnce({
+      data: { requestedCount: 2, deletedCount: 2 },
+      error: null,
+    });
+
+    await expect(
+      deleteAnalyticsSessions([
+        's_0123456789abcdef',
+        's_fedcba9876543210',
+      ])
+    ).resolves.toEqual({ requestedCount: 2, deletedCount: 2 });
+    expect(reportingMocks.rpc).toHaveBeenCalledWith(
+      'delete_analytics_sessions',
+      {
+        p_session_refs: [
+          's_0123456789abcdef',
+          's_fedcba9876543210',
+        ],
+      }
     );
   });
 });

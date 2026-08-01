@@ -36,10 +36,11 @@ import {
 } from '@/lib/analytics-contract';
 import { analyticsAuthorizationVersion } from '@/lib/analytics-consent-policy';
 import {
-  ANALYTICS_LOCATION_UPDATED_EVENT,
   clearAnalyticsBrowserGeo,
   getGrantedAnalyticsBrowserGeo,
+  requestAnalyticsBrowserGeoFromUserGesture,
 } from '@/lib/analytics-client-location';
+import { getAnalyticsClientTechnology } from '@/lib/analytics-client-technology';
 
 const ANALYTICS_ENDPOINT = '/api/analytics/events';
 const MAX_QUEUE_EVENTS = 100;
@@ -747,6 +748,15 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       const authorizationVersion =
         currentAnalyticsAuthorizationVersion();
       if (!authorizationVersion) return null;
+      const technology = await getAnalyticsClientTechnology();
+
+      if (
+        runtimeGeneration.current !== generation ||
+        !enabled ||
+        !hasGrantedConsent()
+      ) {
+        return null;
+      }
 
       const event = {
         eventId: createUuid(),
@@ -763,6 +773,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         consentVersion: authorizationVersion,
         utm: allowedUtmProperties(),
         geo: browserGeo.current || undefined,
+        technology: technology || undefined,
         ...details,
       } as AnalyticsClientEventContract;
 
@@ -913,32 +924,44 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         clearRuntimeState();
       }
     };
-    const handleLocationUpdate = (event: Event) => {
-      const geo = (event as CustomEvent<AnalyticsBrowserGeo>).detail;
+    let locationOpportunityHandled = false;
+    const handleLocationOpportunity = () => {
+      if (locationOpportunityHandled) return;
+      locationOpportunityHandled = true;
+      window.removeEventListener('pointerdown', handleLocationOpportunity);
+      window.removeEventListener('keydown', handleLocationOpportunity);
+
+      const consent = readAnalyticsConsent();
       if (
         !enabled ||
-        !hasGrantedConsent() ||
-        geo?.source !== 'browser-geolocation'
+        consent?.state !== 'granted' ||
+        consent.basis !== 'first-party-analytics'
       ) {
         return;
       }
-      browserGeo.current = geo;
-      void emitAnalyticsEvent({
-        eventType: 'consent_update',
-        contentType: 'privacy_preference',
-        contentKey: 'coarse_location',
+
+      void requestAnalyticsBrowserGeoFromUserGesture().then((geo) => {
+        if (!geo || !enabled || !hasGrantedConsent()) return;
+        browserGeo.current = geo;
+        void emitAnalyticsEvent({
+          eventType: 'consent_update',
+          contentType: 'privacy_preference',
+          contentKey: 'coarse_location',
+        });
       });
     };
-
     window.addEventListener('pageshow', handlePageShow);
     window.addEventListener('online', handleOnline);
     window.addEventListener('pagehide', handlePageHide);
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener(ANALYTICS_CONSENT_EVENT, handleConsent);
-    window.addEventListener(
-      ANALYTICS_LOCATION_UPDATED_EVENT,
-      handleLocationUpdate
-    );
+    window.addEventListener('pointerdown', handleLocationOpportunity, {
+      once: true,
+      passive: true,
+    });
+    window.addEventListener('keydown', handleLocationOpportunity, {
+      once: true,
+    });
 
     return () => {
       window.removeEventListener('pageshow', handlePageShow);
@@ -949,10 +972,8 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         handleVisibility
       );
       window.removeEventListener(ANALYTICS_CONSENT_EVENT, handleConsent);
-      window.removeEventListener(
-        ANALYTICS_LOCATION_UPDATED_EVENT,
-        handleLocationUpdate
-      );
+      window.removeEventListener('pointerdown', handleLocationOpportunity);
+      window.removeEventListener('keydown', handleLocationOpportunity);
     };
   }, [
     clearRuntimeState,

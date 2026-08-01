@@ -42,14 +42,14 @@ export const MobileHeader: React.FC = () => {
         aria-label={isOpen ? 'Menüyü kapat' : 'Menüyü aç'}
         aria-controls="mobile-navigation-drawer"
         aria-expanded={isOpen}
-        className={`fixed left-4 top-4 z-[80] flex h-11 w-11 items-center justify-center rounded-2xl border shadow-md backdrop-blur-md transition-[transform,background-color,color,border-color,box-shadow] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:hidden ${
+        className={`fixed left-4 top-4 z-[80] flex h-11 w-11 items-center justify-center rounded-2xl border shadow-md backdrop-blur-md transition-[transform,background-color,color,border-color,box-shadow,border-radius] duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden ${
           isOpen
-            ? 'border-[#1c2128] bg-[#1c2128] text-[#f7f5f0] shadow-xl'
+            ? 'rounded-full border-[#1c2128] bg-[#1c2128] text-[#f7f5f0] shadow-xl ring-4 ring-[#f7f5f0]/80'
             : 'border-stone-300/80 bg-[#f7f5f0]/95 text-stone-900 hover:bg-[#eee8dc]'
         }`}
         style={{
           transform: isOpen
-            ? 'translateX(calc(min(18rem, 82vw) - 3.75rem))'
+            ? 'translateX(calc(min(18rem, 80vw) - 0.25rem))'
             : 'translateX(0)',
           willChange: 'transform',
         }}
@@ -87,7 +87,7 @@ export const MobileHeader: React.FC = () => {
         id="mobile-navigation-drawer"
         aria-label="Mobil ana menü"
         aria-hidden={!isOpen}
-        className={`fixed left-0 top-0 z-[70] h-full w-[min(18rem,82vw)] overflow-y-auto border-r border-[#d9d1c2] bg-[#f1ece2] p-6 pt-20 shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:hidden ${
+        className={`fixed left-0 top-0 z-[70] h-full w-[min(18rem,80vw)] overflow-y-auto border-r border-[#ddd7ca] bg-[#f7f5f0] p-6 pt-20 shadow-2xl transition-transform duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

@@ -105,6 +105,17 @@ const analyticsCommonEventFields = {
     })
     .strict()
     .optional(),
+  technology: z
+    .object({
+      platform: shortText(64).min(1).optional(),
+      platformVersion: shortText(64).min(1).optional(),
+      deviceModel: shortText(128).min(1).optional(),
+      browserName: shortText(128).min(1).optional(),
+      browserVersion: shortText(64).min(1).optional(),
+      mobile: z.boolean().optional(),
+    })
+    .strict()
+    .optional(),
 };
 
 const durationMsSchema = z.number().int().min(1).max(300_000);
@@ -306,8 +317,44 @@ export interface AnalyticsRequestContext {
   geo_source?: 'vercel-edge' | 'browser-geolocation';
   geo_confidence?: 'high' | 'medium';
   device_type?: 'desktop' | 'mobile' | 'tablet' | 'other';
+  device_brand?: string;
+  device_model?: string;
   browser_name?: string;
+  browser_version?: string;
   os_name?: string;
+  os_version?: string;
+}
+
+export function applyClientTechnologyToAnalyticsContext(
+  context: AnalyticsRequestContext,
+  technology: AnalyticsClientEvent['technology']
+): AnalyticsRequestContext {
+  if (!technology) return context;
+
+  const deviceModel = cleanContextText(technology.deviceModel || '', 128);
+  const browserName = cleanContextText(technology.browserName || '', 128);
+  const browserVersion = cleanContextText(
+    technology.browserVersion || '',
+    64
+  );
+  const platform = cleanContextText(technology.platform || '', 128);
+  const platformVersion = cleanContextText(
+    technology.platformVersion || '',
+    64
+  );
+
+  return {
+    ...context,
+    ...(deviceModel ? { device_model: deviceModel } : {}),
+    ...(browserName ? { browser_name: browserName } : {}),
+    ...(browserVersion ? { browser_version: browserVersion } : {}),
+    ...(platform ? { os_name: platform } : {}),
+    ...(platformVersion ? { os_version: platformVersion } : {}),
+    ...(typeof technology.mobile === 'boolean' &&
+    context.device_type === 'desktop'
+      ? { device_type: technology.mobile ? 'mobile' : 'desktop' }
+      : {}),
+  };
 }
 
 /**
@@ -327,7 +374,7 @@ export function applyBrowserGeoToAnalyticsContext(
     country_code: 'TR',
     country_name: 'Türkiye',
     region: resolution.province,
-    city: resolution.province,
+    city: resolution.district,
     geo_source: 'browser-geolocation',
     geo_confidence: resolution.confidence,
   };
@@ -408,9 +455,20 @@ export function buildAnalyticsRequestContext(
           : 'desktop';
 
   const browserName = cleanContextText(parsedAgent.browser.name || '', 128);
+  const browserVersion = cleanContextText(
+    parsedAgent.browser.version || '',
+    64
+  );
   const osName = cleanContextText(parsedAgent.os.name || '', 128);
+  const osVersion = cleanContextText(parsedAgent.os.version || '', 64);
+  const deviceBrand = cleanContextText(parsedAgent.device.vendor || '', 128);
+  const deviceModel = cleanContextText(parsedAgent.device.model || '', 128);
   if (browserName) context.browser_name = browserName;
+  if (browserVersion) context.browser_version = browserVersion;
   if (osName) context.os_name = osName;
+  if (osVersion) context.os_version = osVersion;
+  if (deviceBrand) context.device_brand = deviceBrand;
+  if (deviceModel) context.device_model = deviceModel;
 
   if (process.env.VERCEL === '1') {
     const countryCode = cleanContextText(

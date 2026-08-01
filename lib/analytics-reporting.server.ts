@@ -115,6 +115,12 @@ export const analyticsExportQuerySchema = z
   .strict()
   .superRefine(validateRange);
 
+export const analyticsSessionRefsSchema = z
+  .array(z.string().regex(/^s_[a-f0-9]{16}$/))
+  .min(1)
+  .max(100)
+  .transform((values) => Array.from(new Set(values)));
+
 export type AnalyticsDashboardQuery = z.infer<
   typeof analyticsDashboardQuerySchema
 >;
@@ -172,8 +178,11 @@ export interface AnalyticsDashboardData {
   }>;
   technology: {
     devices: Array<{ name: string; sessions: number }>;
+    deviceModels: Array<{ name: string; sessions: number }>;
     browsers: Array<{ name: string; sessions: number }>;
+    browserVersions: Array<{ name: string; sessions: number }>;
     operatingSystems: Array<{ name: string; sessions: number }>;
+    operatingSystemVersions: Array<{ name: string; sessions: number }>;
     screenBuckets: Array<{ name: string; pageViews: number }>;
   };
   geography: {
@@ -184,6 +193,7 @@ export interface AnalyticsDashboardData {
     }>;
     cities: Array<{
       countryCode: string | null;
+      region: string | null;
       city: string;
       sessions: number;
     }>;
@@ -238,8 +248,12 @@ export interface AnalyticsSessionSummary {
   geoSource: string | null;
   geoConfidence: 'high' | 'medium' | 'low' | null;
   deviceType: string | null;
+  deviceBrand: string | null;
+  deviceModel: string | null;
   browserName: string | null;
+  browserVersion: string | null;
   osName: string | null;
+  osVersion: string | null;
   consentVersion: string | null;
   journey: AnalyticsJourneyEvent[];
   journeyTruncated: boolean;
@@ -324,12 +338,27 @@ const dashboardOutputSchema = z
             .object({ name: z.string(), sessions: finiteCountSchema })
             .strict()
         ),
+        deviceModels: z.array(
+          z
+            .object({ name: z.string(), sessions: finiteCountSchema })
+            .strict()
+        ),
         browsers: z.array(
           z
             .object({ name: z.string(), sessions: finiteCountSchema })
             .strict()
         ),
+        browserVersions: z.array(
+          z
+            .object({ name: z.string(), sessions: finiteCountSchema })
+            .strict()
+        ),
         operatingSystems: z.array(
+          z
+            .object({ name: z.string(), sessions: finiteCountSchema })
+            .strict()
+        ),
+        operatingSystemVersions: z.array(
           z
             .object({ name: z.string(), sessions: finiteCountSchema })
             .strict()
@@ -356,6 +385,7 @@ const dashboardOutputSchema = z
           z
             .object({
               countryCode: nullableTextSchema,
+              region: nullableTextSchema,
               city: z.string(),
               sessions: finiteCountSchema,
             })
@@ -448,8 +478,12 @@ const sessionSummarySchema = z
     geoSource: nullableTextSchema,
     geoConfidence: z.enum(['high', 'medium', 'low']).nullable(),
     deviceType: nullableTextSchema,
+    deviceBrand: nullableTextSchema,
+    deviceModel: nullableTextSchema,
     browser: nullableTextSchema,
+    browserVersion: nullableTextSchema,
     operatingSystem: nullableTextSchema,
+    osVersion: nullableTextSchema,
     consentVersion: nullableTextSchema,
     journey: z.array(journeyEventSchema).max(100),
     journeyTruncated: z.boolean(),
@@ -781,8 +815,12 @@ export async function getAnalyticsSessions(
       geoSource: session.geoSource,
       geoConfidence: session.geoConfidence,
       deviceType: session.deviceType,
+      deviceBrand: session.deviceBrand,
+      deviceModel: session.deviceModel,
       browserName: session.browser,
+      browserVersion: session.browserVersion,
       osName: session.operatingSystem,
+      osVersion: session.osVersion,
       consentVersion: session.consentVersion,
       journey: session.journey.map((event) => ({
         path: event.path,
@@ -799,6 +837,27 @@ export async function getAnalyticsSessions(
         )
       : null,
   };
+}
+
+const deleteSessionsOutputSchema = z
+  .object({
+    requestedCount: z.number().int().min(1).max(100),
+    deletedCount: z.number().int().min(0).max(100),
+  })
+  .strict();
+
+export async function deleteAnalyticsSessions(
+  sessionRefs: string[]
+): Promise<z.infer<typeof deleteSessionsOutputSchema>> {
+  const client = requireReportingClient();
+  const { data, error } = await client.rpc('delete_analytics_sessions', {
+    p_session_refs: sessionRefs,
+  });
+
+  if (error || !data) throw reportQueryFailed();
+  const parsed = deleteSessionsOutputSchema.safeParse(data);
+  if (!parsed.success) throw reportContractFailed();
+  return parsed.data;
 }
 
 export type AnalyticsExportRow = Record<

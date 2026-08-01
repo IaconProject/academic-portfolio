@@ -4,6 +4,7 @@ import {
   ANALYTICS_FIRST_PARTY_VERSION,
   analyticsBatchSchema,
   applyBrowserGeoToAnalyticsContext,
+  applyClientTechnologyToAnalyticsContext,
   buildAnalyticsRequestContext,
   classifyObviousBot,
   getTransientRequestIp,
@@ -322,6 +323,7 @@ describe('Analytics v2 event sözleşmesi', () => {
     const event = parsed.events[0];
     expect(resolveTurkeyProvince(event.geo!)).toMatchObject({
       province: 'Şırnak',
+      district: 'Merkez',
       confidence: 'high',
     });
     expect(
@@ -338,7 +340,7 @@ describe('Analytics v2 event sözleşmesi', () => {
       country_code: 'TR',
       country_name: 'Türkiye',
       region: 'Şırnak',
-      city: 'Şırnak',
+      city: 'Merkez',
       geo_source: 'browser-geolocation',
       geo_confidence: 'high',
     });
@@ -541,10 +543,41 @@ describe('Analytics pseudonimleştirme ve sınıflama', () => {
       geo_confidence: 'medium',
       device_type: 'mobile',
       browser_name: 'Mobile Safari',
+      browser_version: '17.5',
       os_name: 'iOS',
+      os_version: '17.5',
+      device_brand: 'Apple',
+      device_model: 'iPhone',
     });
     expect(JSON.stringify(context)).not.toContain('user-agent');
     expect(JSON.stringify(context)).not.toContain('Mozilla');
+  });
+
+  it('izinli Client Hints alanlarıyla cihaz ve sürüm bilgisini zenginleştirir', () => {
+    expect(
+      applyClientTechnologyToAnalyticsContext(
+        {
+          device_type: 'mobile',
+          browser_name: 'Chrome',
+          os_name: 'Android',
+        },
+        {
+          platform: 'Android',
+          platformVersion: '15.0.0',
+          deviceModel: 'Pixel 9 Pro',
+          browserName: 'Google Chrome',
+          browserVersion: '127.0.6533.88',
+          mobile: true,
+        }
+      )
+    ).toMatchObject({
+      device_type: 'mobile',
+      device_model: 'Pixel 9 Pro',
+      browser_name: 'Google Chrome',
+      browser_version: '127.0.6533.88',
+      os_name: 'Android',
+      os_version: '15.0.0',
+    });
   });
 
   it('rate-limit IP değerinde yalnız Vercel güven sınırını kullanır', () => {

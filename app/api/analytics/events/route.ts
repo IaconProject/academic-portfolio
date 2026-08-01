@@ -4,6 +4,7 @@ import {
   AnalyticsIngestResult,
   analyticsBatchSchema,
   applyBrowserGeoToAnalyticsContext,
+  applyClientTechnologyToAnalyticsContext,
   buildAnalyticsRequestContext,
   classifyObviousBot,
   getAnalyticsHashSecret,
@@ -25,7 +26,7 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const COLLECTOR_VERSION = '2.2.0';
+const COLLECTOR_VERSION = '2.3.0';
 const RATE_LIMIT_PER_MINUTE = 120;
 const RATE_LIMIT_PER_VISITOR_PER_MINUTE = 60;
 const REJECTION_RECORD_LIMIT_PER_MINUTE = 30;
@@ -414,8 +415,14 @@ export async function POST(request: Request) {
   };
 
   for (const group of groups) {
+    const groupTechnology = group.events.find(
+      (event) => event.technology
+    )?.technology;
     const groupContext = applyBrowserGeoToAnalyticsContext(
-      requestContext,
+      applyClientTechnologyToAnalyticsContext(
+        requestContext,
+        groupTechnology
+      ),
       group.events.find((event) => event.geo)?.geo
     );
     const visitorKey = hashAnalyticsIdentifier(
@@ -513,6 +520,29 @@ export async function POST(request: Request) {
           503
         );
       }
+    }
+
+    const { error: technologyUpgradeError } = await serverSupabase.rpc(
+      'upgrade_analytics_session_technology',
+      {
+        p_visitor_key: visitorKey,
+        p_client_session_id: group.sessionId,
+        p_context: groupContext,
+      }
+    );
+    if (technologyUpgradeError) {
+      console.error(
+        '[analytics] Technology upgrade RPC failed:',
+        technologyUpgradeError.code
+      );
+      await recordCollectorFailure(
+        `TECHNOLOGY_UPGRADE_RPC_${technologyUpgradeError.code || 'ERROR'}`
+      );
+      return failure(
+        'ANALYTICS_TECHNOLOGY_UPGRADE_FAILED',
+        'Cihaz ve işletim sistemi bilgisi güvenli biçimde işlenemedi.',
+        503
+      );
     }
   }
 

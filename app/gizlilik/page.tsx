@@ -2,7 +2,6 @@ import { getSeoExperienceData } from '@/lib/seo-repository';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
 import { SeoPageShell } from '@/components/public/SeoPageShell';
 import { AnalyticsPreferencesControl } from '@/components/public/AnalyticsPreferencesControl';
-import { AnalyticsLocationAccuracyControl } from '@/components/public/AnalyticsLocationAccuracyControl';
 
 export const revalidate = 300;
 
@@ -71,17 +70,38 @@ export default async function PrivacyPage() {
             <p>
               Site içi ölçüm; ziyaret edilen canonical sayfa yolu ve başlığı,
               yalnız yönlendiren alan adı, izinli UTM kampanya alanları, dil,
-              saat dilimi, yaklaşık ekran sınıfı, kaba cihaz/tarayıcı/işletim
-              sistemi türü, sayfada görünür geçirilen süre, ulaşılan kaydırma
+              saat dilimi, yaklaşık ekran sınıfı, cihaz sınıfı ve tarayıcının
+              bildirebildiği ölçüde cihaz markası/modeli ile tarayıcı ve
+              işletim sistemi adı/sürümü, sayfada görünür geçirilen süre,
+              ulaşılan kaydırma
               eşiği, dış bağlantının yalnız alan adı, indirilen dosyanın güvenli
               yolu ve uzantısı, başarılı iletişim gönderimi, anonimleştirilmiş
               istemci hata sınıfı, Core Web Vitals değerleri ve edge
               sağlayıcının ürettiği yaklaşık ülke/bölge/şehir bilgisini
-              kaydeder. IP tabanlı şehir, internet sağlayıcısının çıkış
-              noktasını gösterebilir ve fiziksel konum garantisi vermez. Açık
-              cihaz konumu izni verilirse koordinatlar yalnız istek sırasında
-              Türkiye ili düzeyine indirgenir; ham koordinatlar event veya
-              oturum kaydına yazılmaz. Ziyaretçi ve oturumlar rastgele üretilen kimliklerle
+              kaydeder. Teknoloji bilgisi tam User-Agent veya donanım kimliği
+              saklanmadan, sunucu tarafındaki ayrıştırma ve destekleyen
+              tarayıcılardaki sınırlı Client Hints alanlarıyla üretilir;
+              tarayıcı veya cihazın açıklamadığı model/sürüm “bilinmiyor”
+              kalabilir.
+            </p>
+            <p>
+              IP tabanlı şehir, internet sağlayıcısının çıkış noktasını
+              gösterebilir ve fiziksel konum garantisi vermez. Tarayıcıda
+              cihaz konumu izni daha önce açıkça verilmişse koordinatlar
+              yaklaşık bir kilometre hassasiyete düşürülür, yalnız istek
+              sırasında sunucudaki yerel Türkiye il/ilçe referanslarıyla
+              eşleştirilir ve sadece tahmini il ile ilçe saklanır. Ham veya
+              yuvarlanmış koordinatlar event ya da oturum kaydına yazılmaz.
+              Türkiye’de tarayıcı izni bulunmuyorsa site ilk gerçek kullanıcı
+              etkileşiminden sonra tarayıcının kendi açık izin ekranını bir kez
+              çağırabilir. İzin reddedilirse yeniden baskı kurulmaz; bu durumda
+              yalnız yaklaşık IP/operatör bilgisi kullanılabilir ve ilçe
+              doğruluğu garanti edilemez. Konum izninin teknik olarak nasıl
+              üretildiği ayrıca kullanılan tarayıcı ve işletim sisteminin
+              gizlilik ayarlarına tabidir. Analytics v2
+              konum ve teknoloji kayıtları Google Analytics, Yandex Metrica
+              veya başka bir üçüncü taraf analitik sağlayıcısına aktarılmaz.
+              Ziyaretçi ve oturumlar rastgele üretilen kimliklerle
               ölçülür; ham IP adresi, tam User-Agent, form içeriği, hata mesajı
               veya stack trace, dış bağlantının tam adresi ve kesin koordinatlar
               Analytics v2 kayıtlarında saklanmaz.
@@ -91,12 +111,15 @@ export default async function PrivacyPage() {
               hatırlanır. Ölçüm reddedildiğinde veya izin geri çekildiğinde
               tarayıcıdaki analitik ziyaretçi/oturum
               kimlikleri ve bekleyen event kuyruğu temizlenir. Analitik
-              kayıtlarına yalnız yetkili yönetim katmanı erişebilir.
+              kayıtlarına yalnız yetkili yönetim katmanı erişebilir. Yetkili
+              yönetici, gerekli olduğunda tek bir oturumu veya açıkça seçilen
+              oturumları topluca silebilir; ilişkili eventler de aynı işlemle
+              kalıcı olarak kaldırılır ve boş kalan takma adlı ziyaretçi kaydı
+              temizlenir.
             </p>
             <div className="pt-1">
               <AnalyticsPreferencesControl />
             </div>
-            <AnalyticsLocationAccuracyControl />
             <p>
               Tercih veya bölgesel işleme kaydının süresi dolduğunda güncel
               bölge kuralı yeniden değerlendirilir; gerektiğinde tekrar izin

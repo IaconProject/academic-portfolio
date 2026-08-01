@@ -1,4 +1,5 @@
 import type { AnalyticsBrowserGeo } from './analytics-contract';
+import { TURKEY_DISTRICTS } from './analytics-turkey-districts';
 
 type ProvinceReference = {
   name: string;
@@ -96,8 +97,9 @@ const TURKEY_PROVINCES: readonly ProvinceReference[] = [
   { name: 'Zonguldak', latitude: 41.25, longitude: 31.83333 },
 ] as const;
 
-const MAX_ACCEPTED_ACCURACY_METERS = 50_000;
+const MAX_ACCEPTED_ACCURACY_METERS = 25_000;
 const MAX_PROVINCE_REFERENCE_DISTANCE_KM = 175;
+const MAX_DISTRICT_REFERENCE_DISTANCE_KM = 125;
 
 function haversineDistanceKm(
   latitudeA: number,
@@ -120,6 +122,7 @@ function haversineDistanceKm(
 
 export type TurkeyProvinceResolution = {
   province: string;
+  district: string;
   confidence: 'high' | 'medium';
   accuracyMeters: number;
 };
@@ -140,6 +143,36 @@ export function resolveTurkeyProvince(
     geo.accuracyMeters > MAX_ACCEPTED_ACCURACY_METERS
   ) {
     return null;
+  }
+
+  let nearestDistrict: (typeof TURKEY_DISTRICTS)[number] | null = null;
+  let nearestDistrictDistanceKm = Number.POSITIVE_INFINITY;
+  for (const district of TURKEY_DISTRICTS) {
+    const distanceKm = haversineDistanceKm(
+      geo.latitude,
+      geo.longitude,
+      district[2],
+      district[3]
+    );
+    if (distanceKm < nearestDistrictDistanceKm) {
+      nearestDistrict = district;
+      nearestDistrictDistanceKm = distanceKm;
+    }
+  }
+
+  if (
+    nearestDistrict &&
+    nearestDistrictDistanceKm <= MAX_DISTRICT_REFERENCE_DISTANCE_KM
+  ) {
+    return {
+      province: nearestDistrict[0],
+      district: nearestDistrict[1],
+      confidence:
+        geo.accuracyMeters <= 5_000 && nearestDistrictDistanceKm <= 50
+          ? 'high'
+          : 'medium',
+      accuracyMeters: Math.round(geo.accuracyMeters),
+    };
   }
 
   let nearest: ProvinceReference | null = null;
@@ -163,6 +196,7 @@ export function resolveTurkeyProvince(
 
   return {
     province: nearest.name,
+    district: nearest.name,
     confidence: geo.accuracyMeters <= 10_000 ? 'high' : 'medium',
     accuracyMeters: Math.round(geo.accuracyMeters),
   };

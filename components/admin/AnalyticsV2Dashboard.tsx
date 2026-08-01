@@ -25,6 +25,7 @@ import {
   Route,
   Search,
   ServerCog,
+  Trash2,
   Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -90,8 +91,11 @@ type DashboardData = {
   acquisition: AcquisitionRow[];
   technology: {
     devices: CountRow[];
+    deviceModels: CountRow[];
     browsers: CountRow[];
+    browserVersions: CountRow[];
     operatingSystems: CountRow[];
+    operatingSystemVersions: CountRow[];
     screenBuckets: CountRow[];
   };
   geography: {
@@ -105,6 +109,7 @@ type DashboardData = {
     cities: Array<
       CountRow & {
         city?: string;
+        region?: string | null;
         countryCode?: string | null;
       }
     >;
@@ -169,10 +174,14 @@ type AnalyticsSession = {
   geoSource?: string | null;
   geoConfidence?: 'high' | 'medium' | 'low' | null;
   deviceType: string | null;
+  deviceBrand?: string | null;
+  deviceModel?: string | null;
   browser?: string | null;
   browserName?: string | null;
+  browserVersion?: string | null;
   operatingSystem?: string | null;
   osName?: string | null;
+  osVersion?: string | null;
   consentVersion?: string | null;
   journeyTruncated?: boolean;
   journey: SessionJourneyStep[];
@@ -625,6 +634,10 @@ export function AnalyticsV2Dashboard() {
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [sessionsLoadingMore, setSessionsLoadingMore] = useState(false);
   const [sessionsError, setSessionsError] = useState<string | null>(null);
+  const [selectedSessionRefs, setSelectedSessionRefs] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [sessionsDeleting, setSessionsDeleting] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [trafficFilter, setTrafficFilter] =
@@ -768,6 +781,7 @@ export function AnalyticsV2Dashboard() {
         setAnalyticsSessions((current) =>
           append ? [...current, ...incoming] : incoming
         );
+        if (!append) setSelectedSessionRefs(new Set());
         setNextCursor(pageCursor);
         setHasMore(pageHasMore);
         setSessionsError(null);
@@ -879,6 +893,88 @@ export function AnalyticsV2Dashboard() {
     renewRangeAnchor();
     await Promise.all([fetchHealth(), fetchMaintenance()]);
   };
+
+  const deleteSelectedSessions = async (sessionRefs: string[]) => {
+    const uniqueRefs = Array.from(new Set(sessionRefs)).filter((value) =>
+      /^s_[a-f0-9]{16}$/.test(value)
+    );
+    if (uniqueRefs.length === 0) return;
+    if (
+      !window.confirm(
+        uniqueRefs.length === 1
+          ? 'Bu analitik oturumunu ve ilişkili event kayıtlarını kalıcı olarak silmek istiyor musunuz?'
+          : `${uniqueRefs.length} analitik oturumunu ve ilişkili event kayıtlarını kalıcı olarak silmek istiyor musunuz?`
+      )
+    ) {
+      return;
+    }
+
+    setSessionsDeleting(true);
+    try {
+      const response = await fetch('/api/analytics/sessions', {
+        method: 'DELETE',
+        headers: {
+          ...adminHeaders(),
+          'Content-Type': 'application/json',
+        },
+        cache: 'no-store',
+        body: JSON.stringify({ sessionRefs: uniqueRefs }),
+      });
+      const payload = (await response
+        .json()
+        .catch(() => null)) as ApiEnvelope<{
+        requestedCount: number;
+        deletedCount: number;
+      }> | null;
+      if (!response.ok || !payload?.success || !payload.data) {
+        throw new Error(
+          apiMessage(payload, 'Seçili analitik oturumları silinemedi.')
+        );
+      }
+
+      setSelectedSessionRefs(new Set());
+      toast.success(
+        `${formatNumber(payload.data.deletedCount)} oturum ve ilişkili eventleri silindi.`
+      );
+      await Promise.all([
+        fetchSessions(),
+        fetchDashboard(true),
+        fetchHealth(),
+      ]);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Seçili analitik oturumları silinemedi.'
+      );
+    } finally {
+      setSessionsDeleting(false);
+    }
+  };
+
+  const toggleSessionSelection = (sessionRef: string) => {
+    if (
+      !selectedSessionRefs.has(sessionRef) &&
+      selectedSessionRefs.size >= 100
+    ) {
+      toast.error('Tek işlemde en fazla 100 oturum seçilebilir.');
+      return;
+    }
+    setSelectedSessionRefs((current) => {
+      const next = new Set(current);
+      if (next.has(sessionRef)) next.delete(sessionRef);
+      else next.add(sessionRef);
+      return next;
+    });
+  };
+
+  const loadedSessionRefs = analyticsSessions
+    .map((session) => session.sessionRef || session.id || '')
+    .filter((value) => /^s_[a-f0-9]{16}$/.test(value))
+    .slice(0, 100);
+  const allLoadedSelected =
+    loadedSessionRefs.length > 0 &&
+    loadedSessionRefs.every((value) => selectedSessionRefs.has(value));
 
   const applyCustomRange = (event: FormEvent) => {
     event.preventDefault();
@@ -1581,26 +1677,34 @@ export function AnalyticsV2Dashboard() {
             </SectionCard>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <SectionCard title="Cihazlar">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <SectionCard title="Cihaz modelleri">
+              <BreakdownBars
+                rows={dashboard.technology.deviceModels.map((row) => ({
+                  label: safeText(row.name, 'Bilinmiyor'),
+                  value: countOf(row),
+                }))}
+              />
+            </SectionCard>
+            <SectionCard title="Tarayıcı sürümleri">
+              <BreakdownBars
+                rows={dashboard.technology.browserVersions.map((row) => ({
+                  label: safeText(row.name, 'Bilinmiyor'),
+                  value: countOf(row),
+                }))}
+              />
+            </SectionCard>
+            <SectionCard title="İşletim sistemi sürümleri">
+              <BreakdownBars
+                rows={dashboard.technology.operatingSystemVersions.map((row) => ({
+                  label: safeText(row.name, 'Bilinmiyor'),
+                  value: countOf(row),
+                }))}
+              />
+            </SectionCard>
+            <SectionCard title="Cihaz sınıfları">
               <BreakdownBars
                 rows={dashboard.technology.devices.map((row) => ({
-                  label: safeText(row.name, 'Bilinmiyor'),
-                  value: countOf(row),
-                }))}
-              />
-            </SectionCard>
-            <SectionCard title="Tarayıcılar">
-              <BreakdownBars
-                rows={dashboard.technology.browsers.map((row) => ({
-                  label: safeText(row.name, 'Bilinmiyor'),
-                  value: countOf(row),
-                }))}
-              />
-            </SectionCard>
-            <SectionCard title="İşletim sistemleri">
-              <BreakdownBars
-                rows={dashboard.technology.operatingSystems.map((row) => ({
                   label: safeText(row.name, 'Bilinmiyor'),
                   value: countOf(row),
                 }))}
@@ -1619,7 +1723,7 @@ export function AnalyticsV2Dashboard() {
           <div className="grid gap-4 xl:grid-cols-2">
             <SectionCard
               title="Coğrafya"
-              description="Cihaz konumu açıkça izinliyse koordinat saklanmadan Türkiye ili düzeyine indirgenir; aksi durumda public IP/operatör çıkış noktasına dayalı yaklaşık bilgi kullanılır."
+              description="Tarayıcıda cihaz konumu izni önceden verilmişse koordinat saklanmadan yerel referanslarla il/ilçe tahmini yapılır; aksi durumda public IP/operatör çıkış noktasına dayalı yaklaşık bilgi kullanılır."
             >
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
@@ -1640,13 +1744,16 @@ export function AnalyticsV2Dashboard() {
                 <div>
                   <p className="mb-3 flex items-center gap-2 text-[10px] font-bold uppercase text-stone-500">
                     <Route className="h-3.5 w-3.5" />
-                    İl / şehir
+                    İlçe / şehir
                   </p>
                   <BreakdownBars
                     rows={dashboard.geography.cities.map((row) => ({
                       label: safeText(row.city || row.name, 'Bilinmiyor'),
                       value: countOf(row),
-                      detail: row.countryCode || undefined,
+                      detail:
+                        [row.region, row.countryCode]
+                          .filter(Boolean)
+                          .join(' · ') || undefined,
                     }))}
                   />
                 </div>
@@ -1913,6 +2020,50 @@ export function AnalyticsV2Dashboard() {
               </form>
             </div>
 
+            {analyticsSessions.length > 0 && (
+              <div className="mb-3 flex flex-col justify-between gap-2 rounded-xl border border-stone-200 bg-stone-50 p-3 dark:border-stone-700 dark:bg-stone-800/60 sm:flex-row sm:items-center">
+                <label className="inline-flex items-center gap-2 text-xs font-semibold text-stone-700 dark:text-stone-200">
+                  <input
+                    type="checkbox"
+                    checked={allLoadedSelected}
+                    onChange={() =>
+                      setSelectedSessionRefs(
+                        allLoadedSelected
+                          ? new Set()
+                          : new Set(loadedSessionRefs)
+                      )
+                    }
+                    className="h-4 w-4 rounded border-stone-300 accent-amber-600"
+                  />
+                  Yüklü oturumları seç
+                  <span className="font-normal text-stone-500">
+                    (en fazla 100)
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void deleteSelectedSessions(
+                      Array.from(selectedSessionRefs)
+                    )
+                  }
+                  disabled={
+                    selectedSessionRefs.size === 0 || sessionsDeleting
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:bg-stone-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                >
+                  {sessionsDeleting ? (
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  {selectedSessionRefs.size > 0
+                    ? `${selectedSessionRefs.size} seçili oturumu sil`
+                    : 'Seçili oturumları sil'}
+                </button>
+              </div>
+            )}
+
             {sessionsError && (
               <div
                 role="alert"
@@ -1956,13 +2107,42 @@ export function AnalyticsV2Dashboard() {
                     'Bilinmiyor';
                   const conversionCount =
                     session.conversions ?? session.conversionCount ?? 0;
+                  const selectable = /^s_[a-f0-9]{16}$/.test(reference);
+                  const device =
+                    [session.deviceBrand, session.deviceModel]
+                      .filter(Boolean)
+                      .join(' ') || session.deviceType || 'Bilinmiyor';
+                  const browserDetail = [browser, session.browserVersion]
+                    .filter(Boolean)
+                    .join(' ');
+                  const operatingSystemDetail = [
+                    operatingSystem,
+                    session.osVersion,
+                  ]
+                    .filter(Boolean)
+                    .join(' ');
 
                   return (
                     <details
                       key={`${reference}-${session.startedAt}`}
-                      className="group rounded-xl border border-stone-200 bg-stone-50/60 p-4 open:border-amber-300 open:bg-amber-50/30 dark:border-stone-700 dark:bg-stone-800/45 dark:open:border-amber-800 dark:open:bg-amber-950/10"
+                      className={`group rounded-xl border bg-stone-50/60 p-4 open:border-amber-300 open:bg-amber-50/30 dark:bg-stone-800/45 dark:open:border-amber-800 dark:open:bg-amber-950/10 ${
+                        selectedSessionRefs.has(reference)
+                          ? 'border-rose-300 ring-1 ring-rose-200 dark:border-rose-800 dark:ring-rose-900/50'
+                          : 'border-stone-200 dark:border-stone-700'
+                      }`}
                     >
-                      <summary className="cursor-pointer list-none">
+                      <summary className="relative cursor-pointer list-none pr-9">
+                        {selectable && (
+                          <input
+                            type="checkbox"
+                            aria-label={`${reference} oturumunu seç`}
+                            checked={selectedSessionRefs.has(reference)}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={() => toggleSessionSelection(reference)}
+                            disabled={sessionsDeleting}
+                            className="absolute right-0 top-0.5 h-4 w-4 rounded border-stone-300 accent-amber-600"
+                          />
+                        )}
                         <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -2041,16 +2221,20 @@ export function AnalyticsV2Dashboard() {
                               Konum
                             </dt>
                             <dd className="mt-1 text-stone-700 dark:text-stone-300">
-                              {[session.city, session.countryName]
+                              {[
+                                session.city,
+                                session.region,
+                                session.countryName,
+                              ]
                                 .filter(Boolean)
                                 .join(', ') || 'Bilinmiyor'}
                             </dd>
                             <dd className="mt-0.5 text-[10px] text-stone-500">
                               {session.geoSource === 'browser-geolocation'
-                                ? `Cihazın bildirdiği il · ${
+                                ? `Cihaz izninden yerel il/ilçe tahmini · ${
                                     session.geoConfidence === 'high'
-                                      ? 'yüksek doğruluk'
-                                      : 'orta doğruluk'
+                                      ? 'daha güçlü sinyal'
+                                      : 'yaklaşık'
                                   }`
                                 : session.geoSource === 'vercel-edge'
                                   ? 'Public IP / operatör çıkış noktası · yaklaşık'
@@ -2061,10 +2245,14 @@ export function AnalyticsV2Dashboard() {
                             <dt className="text-[10px] font-bold uppercase text-stone-400">
                               Teknoloji
                             </dt>
-                            <dd className="mt-1 text-stone-700 dark:text-stone-300">
-                              {[session.deviceType, browser, operatingSystem]
-                                .filter(Boolean)
-                                .join(' · ')}
+                            <dd className="mt-1 space-y-0.5 text-stone-700 dark:text-stone-300">
+                              <span className="block">{device}</span>
+                              <span className="block text-[11px] text-stone-500">
+                                {operatingSystemDetail}
+                              </span>
+                              <span className="block text-[11px] text-stone-500">
+                                {browserDetail}
+                              </span>
                             </dd>
                           </div>
                           <div>
@@ -2080,6 +2268,22 @@ export function AnalyticsV2Dashboard() {
                             </dd>
                           </div>
                         </dl>
+
+                        {selectable && (
+                          <div className="mt-4 flex justify-end border-t border-stone-200 pt-3 dark:border-stone-700">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void deleteSelectedSessions([reference])
+                              }
+                              disabled={sessionsDeleting}
+                              className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2 text-[11px] font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:bg-stone-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Bu oturumu sil
+                            </button>
+                          </div>
+                        )}
 
                         <div className="mt-4">
                           <p className="mb-2 text-[10px] font-bold uppercase text-stone-500">
