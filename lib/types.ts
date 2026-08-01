@@ -281,6 +281,8 @@ export interface PageNavStep {
 export interface VisitorSession {
   id: string;
   sessionId: string;
+  legacySource?: 'visitor_sessions' | 'visitor_logs';
+  legacySourceId?: string;
   ip: string;
   country: string;
   countryCode: string;

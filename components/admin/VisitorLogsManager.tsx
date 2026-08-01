@@ -36,6 +36,14 @@ type VisitorsMeta = {
   legacy: boolean;
   isPartial: boolean;
   limit: number;
+  sourceCounts?: {
+    visitorSessions: number;
+    visitorLogs: number;
+  };
+  displayedSourceCounts?: {
+    visitorSessions: number;
+    visitorLogs: number;
+  };
   activityWindowMinutes: number;
   pageHistoryMayBeTruncated: boolean;
   geoConfidence: 'unverified-legacy';
@@ -135,6 +143,12 @@ function analyticsHealthLabel(status: AnalyticsHealth['status']): string {
     degraded: 'sorunlu',
     healthy: 'sağlıklı',
   }[status];
+}
+
+function legacySourceLabel(session: VisitorSession): string {
+  return session.legacySource === 'visitor_logs'
+    ? 'Tarihî sayfa kaydı'
+    : 'Legacy oturum';
 }
 
 const LegacyVisitorLogsManager: React.FC = () => {
@@ -450,7 +464,7 @@ const LegacyVisitorLogsManager: React.FC = () => {
         `${session.browserName} ${session.browserVersion}`.trim(),
         (session.pages || []).length,
         journey,
-        'Supabase legacy visitor_sessions',
+        legacySourceLabel(session),
         meta?.isPartial
           ? `Yalnız en güncel ${meta.limit} oturumdan dışa aktarıldı`
           : 'Yüklenen legacy oturum kapsamı',
@@ -671,6 +685,18 @@ const LegacyVisitorLogsManager: React.FC = () => {
         </div>
       )}
 
+      {meta?.sourceCounts && (
+        <div
+          role="status"
+          className="rounded-xl border border-stone-200 bg-stone-50 p-3 text-xs text-stone-700 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-300"
+        >
+          Legacy kaynakları birlikte okunuyor: <strong>{meta.sourceCounts.visitorLogs}</strong>{' '}
+          tarihî sayfa kaydı (<code>visitor_logs</code>) ve{' '}
+          <strong>{meta.sourceCounts.visitorSessions}</strong> oturum kaydı
+          (<code>visitor_sessions</code>). Ham IP ve User-Agent tarayıcıya gönderilmez.
+        </div>
+      )}
+
       {meta?.geoConfidence === 'unverified-legacy' && (
         <div
           role="status"
@@ -690,7 +716,7 @@ const LegacyVisitorLogsManager: React.FC = () => {
         </div>
 
         <div className="p-3.5 bg-stone-50 dark:bg-stone-800/80 border border-stone-200/80 dark:border-stone-700/80 rounded-xl space-y-1">
-          <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold">Kayıtlı Legacy Oturum</span>
+          <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-bold">Gösterilen Legacy Kayıt</span>
           <div className="text-xl font-bold text-stone-900 dark:text-stone-100">{stats?.recordedLegacySessions || 0}</div>
         </div>
 
@@ -883,6 +909,9 @@ const LegacyVisitorLogsManager: React.FC = () => {
                       <span className="font-bold text-stone-900 dark:text-stone-100 text-sm font-mono">
                         {displayValue(maskIpAddress(sess.ip))}
                       </span>
+                      <span className="text-[10px] font-bold bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded border border-sky-200 dark:border-sky-900/60">
+                        {legacySourceLabel(sess)}
+                      </span>
                       {isLive && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -966,7 +995,9 @@ const LegacyVisitorLogsManager: React.FC = () => {
             <div className="flex items-start justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Oturum Gezinti Akışı</span>
+                  <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                    {legacySourceLabel(selectedSession)} · Gezinti Akışı
+                  </span>
                 </div>
                 <h3
                   id="visitor-session-dialog-title"

@@ -43,7 +43,9 @@ sonrasında otomatik açılır.
    - `supabase/migrations/20260730194500_visitor_analytics_operations.sql`
 3. Vercel environment değerlerini ekleyin.
 4. Production deployment oluşturun.
-5. Admin tokenıyla sırasıyla `GET /api/analytics/health`,
+5. Admin panelinde **SEO → Performans ve Entegrasyonlar** bölümündeki
+   “Consent sonrasında analitiği etkinleştir” anahtarını açıp kaydedin.
+6. Admin tokenıyla sırasıyla `GET /api/analytics/health`,
    `GET /api/analytics/maintenance` ve
    `GET /api/analytics/dashboard?range=30d` yanıtlarını kontrol edin.
 
@@ -159,8 +161,10 @@ manuel çalıştırır. Veritabanı fonksiyonları yalnız `service_role` taraf�
   `idle`, `degraded` veya `healthy` durumunu ingest sayaçlarıyla döndürür.
   Son başarılı event 24 saatten eskiyse eski başarı “healthy” sayılmaz ve
   collector yeni event bekleyen `idle` durumuna döner.
-- Yönetim ekranı Analytics v2 raporlarını varsayılan görünüm olarak sunar;
-  legacy rapor salt okunur geçiş sekmesi olarak korunur.
+- Yönetim ekranı Analytics v2 raporlarını varsayılan görünüm olarak sunar.
+  Legacy sekmesi, `visitor_sessions` oturumlarını ve daha eski
+  `visitor_logs` sayfa kayıtlarını kaynak işaretli ortak bir okuma modelinde
+  birleştirir; ham IP ve User-Agent değerleri tarayıcıya gönderilmez.
 - `ANALYTICS_RETENTION_DAYS` yalnız 30–3650 aralığında kabul edilir; geçersiz
   değer güvenli 425 günlük varsayılana döner.
 - Manuel ve zamanlanmış bakım aynı atomik, server-only RPC zincirini kullanır.

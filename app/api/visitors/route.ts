@@ -3,8 +3,14 @@ import {
   serverSupabase as supabase,
   hasSupabaseServiceRole,
 } from '@/lib/supabase/server';
-import { VisitorSession } from '@/lib/types';
 import { validateAdminSession } from '@/lib/auth-helpers';
+import {
+  buildLegacyStats,
+  cleanLegacyText,
+  mapLegacyLogRow,
+  mapLegacySessionRow,
+  parseLegacyRecordId,
+} from '@/lib/legacy-analytics';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -31,132 +37,6 @@ function errorResponse(status: number, code: string, message: string) {
   );
 }
 
-function cleanText(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
-/**
- * Maps legacy visitor_sessions rows without inventing geo, ISP or hardware data.
- * Empty values are intentionally kept empty so the admin UI can label them as
- * unknown instead of presenting inferred information as fact.
- */
-function mapSession(row: Record<string, unknown>): VisitorSession {
-  const rawDeviceType = cleanText(row.device_type ?? row.deviceType);
-  const deviceType = ['Desktop', 'Mobile', 'Tablet'].includes(rawDeviceType)
-    ? (rawDeviceType as VisitorSession['deviceType'])
-    : ('' as VisitorSession['deviceType']);
-
-  return {
-    id: cleanText(row.id),
-    sessionId: cleanText(row.session_id ?? row.sessionId),
-    ip: cleanText(row.ip),
-    country: cleanText(row.country),
-    countryCode: cleanText(row.country_code ?? row.countryCode),
-    city: cleanText(row.city),
-    region: cleanText(row.region),
-    isp: cleanText(row.isp),
-    isMobileNetwork: Boolean(row.is_mobile_network ?? row.isMobileNetwork),
-    deviceBrand: cleanText(row.device_brand ?? row.deviceBrand),
-    deviceModel: cleanText(row.device_model ?? row.deviceModel),
-    deviceType,
-    osName: cleanText(row.os_name ?? row.osName),
-    osVersion: cleanText(row.os_version ?? row.osVersion),
-    browserName: cleanText(row.browser_name ?? row.browserName),
-    browserVersion: cleanText(row.browser_version ?? row.browserVersion),
-    userAgent: cleanText(row.user_agent ?? row.userAgent),
-    lat: typeof row.lat === 'number' ? row.lat : 0,
-    lon: typeof row.lon === 'number' ? row.lon : 0,
-    pages: Array.isArray(row.pages) ? row.pages : [],
-    createdAt: cleanText(row.created_at ?? row.createdAt),
-    updatedAt: cleanText(row.updated_at ?? row.updatedAt),
-  };
-}
-
-function isKnown(value: string): boolean {
-  const normalized = value.trim().toLocaleLowerCase('tr-TR');
-  return Boolean(
-    normalized &&
-      normalized !== 'bilinmiyor' &&
-      normalized !== 'bilinmeyen' &&
-      normalized !== 'bilinmeyen operatör' &&
-      normalized !== 'unknown' &&
-      normalized !== '—'
-  );
-}
-
-function buildStats(sessions: VisitorSession[]) {
-  let storedPageSteps = 0;
-  const fifteenMinsAgo = Date.now() - 15 * 60 * 1000;
-  let activeLast15Minutes = 0;
-
-  const cityCounts: Record<string, number> = {};
-  const countryCounts: Record<string, number> = {};
-  const deviceCounts: Record<string, number> = {};
-  const browserCounts: Record<string, number> = {};
-  const ispCounts: Record<string, number> = {};
-  const pageCounts: Record<string, number> = {};
-
-  sessions.forEach((session) => {
-    const steps = Array.isArray(session.pages) ? session.pages : [];
-    storedPageSteps += steps.length;
-
-    const updatedTime = new Date(session.updatedAt || session.createdAt).getTime();
-    if (Number.isFinite(updatedTime) && updatedTime >= fifteenMinsAgo) {
-      activeLast15Minutes += 1;
-    }
-
-    if (isKnown(session.city)) {
-      cityCounts[session.city] = (cityCounts[session.city] || 0) + 1;
-    }
-    if (isKnown(session.country)) {
-      countryCounts[session.country] = (countryCounts[session.country] || 0) + 1;
-    }
-    if (isKnown(session.isp)) {
-      ispCounts[session.isp] = (ispCounts[session.isp] || 0) + 1;
-    }
-
-    const deviceParts = [session.deviceBrand, session.deviceType].filter(isKnown);
-    if (deviceParts.length > 0) {
-      const deviceLabel =
-        deviceParts.length === 2 ? `${deviceParts[0]} (${deviceParts[1]})` : deviceParts[0];
-      deviceCounts[deviceLabel] = (deviceCounts[deviceLabel] || 0) + 1;
-    }
-
-    const browserParts = [session.browserName, session.osName].filter(isKnown);
-    if (browserParts.length > 0) {
-      const browserLabel =
-        browserParts.length === 2 ? `${browserParts[0]} (${browserParts[1]})` : browserParts[0];
-      browserCounts[browserLabel] = (browserCounts[browserLabel] || 0) + 1;
-    }
-
-    steps.forEach((step) => {
-      const path = cleanText(step?.path) || '/';
-      pageCounts[path] = (pageCounts[path] || 0) + 1;
-    });
-  });
-
-  const getTop = (values: Record<string, number>, limit = 5) =>
-    Object.entries(values)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, limit);
-
-  return {
-    storedPageSteps,
-    legacyPageHistoryTruncated: sessions.some(
-      (session) => (session.pages || []).length >= 100
-    ),
-    recordedLegacySessions: sessions.length,
-    activeLast15Minutes,
-    topCities: getTop(cityCounts),
-    topCountries: getTop(countryCounts),
-    topDevices: getTop(deviceCounts),
-    topBrowsers: getTop(browserCounts),
-    topISPs: getTop(ispCounts),
-    topPages: getTop(pageCounts),
-  };
-}
-
 function ensureAnalyticsBackend() {
   if (!hasSupabaseServiceRole || !supabase) {
     return errorResponse(
@@ -177,16 +57,30 @@ export async function GET(request: Request) {
   if (unavailableResponse) return unavailableResponse;
 
   try {
-    const { data, error } = await supabase!
-      .from('visitor_sessions')
-      .select(
-        'id, session_id, ip, country, country_code, city, region, isp, is_mobile_network, device_brand, device_model, device_type, os_name, os_version, browser_name, browser_version, pages, created_at, updated_at'
-      )
-      .order('updated_at', { ascending: false })
-      .limit(MAX_SESSIONS + 1);
+    const [sessionResult, logResult] = await Promise.all([
+      supabase!
+        .from('visitor_sessions')
+        .select(
+          'id, session_id, ip, country, country_code, city, region, isp, is_mobile_network, device_brand, device_model, device_type, os_name, os_version, browser_name, browser_version, pages, created_at, updated_at',
+          { count: 'exact' }
+        )
+        .order('updated_at', { ascending: false })
+        .limit(MAX_SESSIONS + 1),
+      supabase!
+        .from('visitor_logs')
+        .select(
+          'id, ip_address, country, country_code, city, region, isp, is_mobile_network, device_type, device_brand, device_model, os_name, os_version, browser_name, browser_version, page_path, created_at',
+          { count: 'exact' }
+        )
+        .order('created_at', { ascending: false })
+        .limit(MAX_SESSIONS + 1),
+    ]);
 
-    if (error) {
-      console.error('[visitors GET] Supabase query error:', error);
+    if (sessionResult.error || logResult.error) {
+      console.error('[visitors GET] Supabase query error:', {
+        visitorSessions: sessionResult.error?.code,
+        visitorLogs: logResult.error?.code,
+      });
       return errorResponse(
         503,
         'ANALYTICS_DATABASE_UNAVAILABLE',
@@ -194,15 +88,42 @@ export async function GET(request: Request) {
       );
     }
 
-    const rows = Array.isArray(data) ? data : [];
-    const isPartial = rows.length > MAX_SESSIONS;
-    const sessions = rows.slice(0, MAX_SESSIONS).map((row) => mapSession(row));
-    const stats = buildStats(sessions);
+    const sessionRows = Array.isArray(sessionResult.data)
+      ? sessionResult.data
+      : [];
+    const logRows = Array.isArray(logResult.data) ? logResult.data : [];
+    const sessions = [
+      ...sessionRows.map((row) => mapLegacySessionRow(row)),
+      ...logRows.map((row) => mapLegacyLogRow(row)),
+    ]
+      .sort((left, right) => {
+        const leftTime = Date.parse(left.updatedAt || left.createdAt) || 0;
+        const rightTime = Date.parse(right.updatedAt || right.createdAt) || 0;
+        return rightTime - leftTime;
+      })
+      .slice(0, MAX_SESSIONS);
+    const totalRows =
+      (sessionResult.count ?? sessionRows.length) +
+      (logResult.count ?? logRows.length);
+    const isPartial = totalRows > sessions.length;
+    const stats = buildLegacyStats(sessions);
     const meta = {
-      source: 'supabase',
+      source: 'supabase-legacy-combined',
       legacy: true,
       isPartial,
       limit: MAX_SESSIONS,
+      sourceCounts: {
+        visitorSessions: sessionResult.count ?? sessionRows.length,
+        visitorLogs: logResult.count ?? logRows.length,
+      },
+      displayedSourceCounts: {
+        visitorSessions: sessions.filter(
+          (session) => session.legacySource === 'visitor_sessions'
+        ).length,
+        visitorLogs: sessions.filter(
+          (session) => session.legacySource === 'visitor_logs'
+        ).length,
+      },
       activityWindowMinutes: 15,
       pageHistoryMayBeTruncated: stats.legacyPageHistoryTruncated,
       geoConfidence: 'unverified-legacy',
@@ -237,7 +158,7 @@ export async function DELETE(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const id = cleanText(searchParams.get('id'));
+    const id = cleanLegacyText(searchParams.get('id'));
     const clearAll = searchParams.get('clearAll') === 'true';
     let ids: string[] = [];
 
@@ -254,13 +175,17 @@ export async function DELETE(request: Request) {
         body !== null &&
         Array.isArray((body as { ids?: unknown }).ids)
       ) {
-        ids = (body as { ids: unknown[] }).ids.map(cleanText).filter(Boolean);
+        ids = (body as { ids: unknown[] }).ids
+          .map(cleanLegacyText)
+          .filter(Boolean);
       }
     }
 
-    const idsParam = cleanText(searchParams.get('ids'));
+    const idsParam = cleanLegacyText(searchParams.get('ids'));
     if (idsParam) {
-      ids.push(...idsParam.split(',').map(cleanText).filter(Boolean));
+      ids.push(
+        ...idsParam.split(',').map(cleanLegacyText).filter(Boolean)
+      );
     }
     if (id) ids.push(id);
     ids = Array.from(new Set(ids));
@@ -274,13 +199,22 @@ export async function DELETE(request: Request) {
     }
 
     if (clearAll) {
-      const { error, count } = await supabase!
-        .from('visitor_sessions')
-        .delete({ count: 'exact' })
-        .not('id', 'is', null);
+      const [sessionDelete, logDelete] = await Promise.all([
+        supabase!
+          .from('visitor_sessions')
+          .delete({ count: 'exact' })
+          .not('id', 'is', null),
+        supabase!
+          .from('visitor_logs')
+          .delete({ count: 'exact' })
+          .not('id', 'is', null),
+      ]);
 
-      if (error) {
-        console.error('[visitors DELETE] Supabase clearAll error:', error);
+      if (sessionDelete.error || logDelete.error) {
+        console.error('[visitors DELETE] Supabase clearAll error:', {
+          visitorSessions: sessionDelete.error?.code,
+          visitorLogs: logDelete.error?.code,
+        });
         return errorResponse(
           503,
           'ANALYTICS_DELETE_FAILED',
@@ -291,8 +225,11 @@ export async function DELETE(request: Request) {
       return NextResponse.json(
         {
           success: true,
-          data: { deletedCount: count ?? 0 },
-          count: count ?? 0,
+          data: {
+            deletedCount:
+              (sessionDelete.count ?? 0) + (logDelete.count ?? 0),
+          },
+          count: (sessionDelete.count ?? 0) + (logDelete.count ?? 0),
         },
         { headers: RESPONSE_HEADERS }
       );
@@ -302,13 +239,43 @@ export async function DELETE(request: Request) {
       return errorResponse(400, 'MISSING_IDS', 'Silinecek en az bir kayıt kimliği belirtilmelidir.');
     }
 
-    const { error, count } = await supabase!
-      .from('visitor_sessions')
-      .delete({ count: 'exact' })
-      .in('id', ids);
+    const references = ids.map(parseLegacyRecordId);
+    if (references.some((reference) => reference === null)) {
+      return errorResponse(
+        400,
+        'INVALID_RECORD_ID',
+        'Silinecek kayıtlardan en az birinin kaynak kimliği geçersiz.'
+      );
+    }
 
-    if (error) {
-      console.error('[visitors DELETE] Supabase delete error:', error);
+    const sessionIds = references
+      .filter(
+        (reference) => reference?.source === 'visitor_sessions'
+      )
+      .map((reference) => reference!.sourceId);
+    const logIds = references
+      .filter((reference) => reference?.source === 'visitor_logs')
+      .map((reference) => reference!.sourceId);
+    const deleteResults = await Promise.all([
+      sessionIds.length > 0
+        ? supabase!
+            .from('visitor_sessions')
+            .delete({ count: 'exact' })
+            .in('id', sessionIds)
+        : Promise.resolve({ error: null, count: 0 }),
+      logIds.length > 0
+        ? supabase!
+            .from('visitor_logs')
+            .delete({ count: 'exact' })
+            .in('id', logIds)
+        : Promise.resolve({ error: null, count: 0 }),
+    ]);
+
+    if (deleteResults.some((result) => result.error)) {
+      console.error('[visitors DELETE] Supabase delete error:', {
+        visitorSessions: deleteResults[0].error?.code,
+        visitorLogs: deleteResults[1].error?.code,
+      });
       return errorResponse(
         503,
         'ANALYTICS_DELETE_FAILED',
@@ -319,8 +286,16 @@ export async function DELETE(request: Request) {
     return NextResponse.json(
       {
         success: true,
-        data: { deletedCount: count ?? 0 },
-        count: count ?? 0,
+        data: {
+          deletedCount: deleteResults.reduce(
+            (sum, result) => sum + (result.count ?? 0),
+            0
+          ),
+        },
+        count: deleteResults.reduce(
+          (sum, result) => sum + (result.count ?? 0),
+          0
+        ),
       },
       { headers: RESPONSE_HEADERS }
     );

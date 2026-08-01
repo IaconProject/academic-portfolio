@@ -1300,8 +1300,9 @@ export function AnalyticsV2Dashboard() {
         <>
           {isEmpty && (
             <div className="rounded-xl border border-sky-200 bg-sky-50 p-5 text-center text-xs text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300">
-              Bu tarih aralığında henüz insan trafiği kaydı bulunmuyor. Collector
-              sağlıklıysa ilk izinli ziyaretten sonra veriler burada görünür.
+              {health && !health.prerequisites.enabled
+                ? 'Analytics v2 CMS anahtarı kapalı. SEO → Performans ve Entegrasyonlar bölümünde “Consent sonrasında analitiği etkinleştir” seçeneğini açıp kaydedin.'
+                : 'Bu tarih aralığında henüz insan trafiği kaydı bulunmuyor. Collector sağlıklıysa ilk izinli ziyaretten sonra veriler burada görünür.'}
             </div>
           )}
 
