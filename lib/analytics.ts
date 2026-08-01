@@ -14,15 +14,35 @@ import {
   ANALYTICS_WEB_VITAL_RATINGS,
   normalizeAnalyticsCampaignValue,
 } from './analytics-contract';
+import {
+  analyticsAuthorizationBasisFromVersion,
+  analyticsAuthorizationVersion,
+  AnalyticsAuthorizationBasis,
+} from './analytics-consent-policy';
 
 export {
   ANALYTICS_MAX_BATCH_EVENTS,
   ANALYTICS_SCHEMA_VERSION,
   ANALYTICS_SESSION_TIMEOUT_MS,
 };
-export const ANALYTICS_CONSENT_VERSION =
-  ANALYTICS_CONSENT_POLICY_VERSION;
+export const ANALYTICS_CONSENT_VERSION = analyticsAuthorizationVersion(
+  ANALYTICS_CONSENT_POLICY_VERSION,
+  'consent'
+);
+export const ANALYTICS_FIRST_PARTY_VERSION = analyticsAuthorizationVersion(
+  ANALYTICS_CONSENT_POLICY_VERSION,
+  'first-party-analytics'
+);
 export const ANALYTICS_MAX_BODY_BYTES = 32 * 1024;
+
+export function getAnalyticsAuthorizationBasis(
+  value: string
+): AnalyticsAuthorizationBasis | null {
+  return analyticsAuthorizationBasisFromVersion(
+    value,
+    ANALYTICS_CONSENT_POLICY_VERSION
+  );
+}
 
 const shortText = (max: number) => z.string().trim().max(max);
 const optionalCampaignValue = shortText(100)

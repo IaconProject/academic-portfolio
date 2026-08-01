@@ -151,7 +151,9 @@ function legacySourceLabel(session: VisitorSession): string {
     : 'Legacy oturum';
 }
 
-const LegacyVisitorLogsManager: React.FC = () => {
+const LegacyVisitorLogsManager: React.FC<{
+  onOpenAnalyticsV2: () => void;
+}> = ({ onOpenAnalyticsV2 }) => {
   const [sessions, setSessions] = useState<VisitorSession[]>([]);
   const [stats, setStats] = useState<VisitorStats | null>(null);
   const [meta, setMeta] = useState<VisitorsMeta | null>(null);
@@ -552,7 +554,7 @@ const LegacyVisitorLogsManager: React.FC = () => {
           <div className="flex items-center gap-3">
             <Activity className="w-6 h-6 text-amber-600 dark:text-amber-400" />
             <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight">
-              Ziyaretçi Takip & Cihaz Analitiği
+              Eski Sistem Analitik Arşivi
             </h2>
             {(stats?.activeLast15Minutes || 0) > 0 && (
               <span className="px-2.5 py-0.5 bg-emerald-600 text-white text-xs font-bold rounded-full shadow-sm flex items-center gap-1">
@@ -562,8 +564,8 @@ const LegacyVisitorLogsManager: React.FC = () => {
             )}
           </div>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-            Legacy oturum kayıtları, kronolojik sayfa gezinti akışı ve mevcut cihaz sinyalleri.
-            Bu veriler tekil kişi ölçümü değildir.
+            30 Temmuz 2026 öncesindeki eski collector kayıtları. Bu veriler
+            tekil kişi ölçümü değildir.
           </p>
         </div>
 
@@ -598,6 +600,25 @@ const LegacyVisitorLogsManager: React.FC = () => {
             <span>CSV İndir</span>
           </button>
         </div>
+      </div>
+
+      <div
+        role="status"
+        className="flex flex-col gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4 text-xs text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <p>
+          Bu alan tarihî ve salt arşiv niteliğindedir; yeni masaüstü veya
+          mobil ziyaretler buraya yazılmaz. Güncel ziyaretler, oturumlar ve
+          sayfa hareketleri <strong>Analytics v2</strong> alanında görünür.
+          Bu nedenle arşiv sayısının artmaması bir kayıt hatası değildir.
+        </p>
+        <button
+          type="button"
+          onClick={onOpenAnalyticsV2}
+          className="shrink-0 rounded-lg bg-sky-900 px-3 py-2 font-bold text-white hover:bg-sky-800 dark:bg-sky-200 dark:text-sky-950"
+        >
+          Analytics v2’ye geç
+        </button>
       </div>
 
       {analyticsHealth ? (
@@ -1157,7 +1178,7 @@ export const VisitorLogsManager: React.FC = () => {
               : 'text-stone-600 hover:text-stone-950 dark:text-stone-400 dark:hover:text-stone-100'
           }`}
         >
-          Legacy kayıtlar
+          Arşiv (eski sistem)
         </button>
       </div>
 
@@ -1171,7 +1192,9 @@ export const VisitorLogsManager: React.FC = () => {
         {activeView === 'v2' ? (
           <AnalyticsV2Dashboard />
         ) : (
-          <LegacyVisitorLogsManager />
+          <LegacyVisitorLogsManager
+            onOpenAnalyticsV2={() => setActiveView('v2')}
+          />
         )}
       </div>
     </section>

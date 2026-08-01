@@ -3,8 +3,12 @@
 import Link from 'next/link';
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ANALYTICS_CONSENT_POLICY_VERSION } from '@/lib/analytics-contract';
+import {
+  AnalyticsAuthorizationBasis,
+  AnalyticsCollectionMode,
+} from '@/lib/analytics-consent-policy';
 
 export type ConsentValue = 'granted' | 'denied';
 export type ConsentChangeReason =
@@ -13,10 +17,12 @@ export type ConsentChangeReason =
   | 'expired'
   | 'invalid'
   | 'analytics-disabled'
+  | 'regional-policy'
   | 'restored';
 
 export interface AnalyticsConsentRecord {
   state: ConsentValue;
+  basis: AnalyticsAuthorizationBasis;
   policyVersion: string;
   decidedAt: string;
   expiresAt: string;
@@ -24,6 +30,7 @@ export interface AnalyticsConsentRecord {
 
 export interface AnalyticsConsentChangeDetail {
   state: ConsentValue;
+  basis: AnalyticsAuthorizationBasis | null;
   policyVersion: string;
   reason: ConsentChangeReason;
 }
@@ -31,6 +38,8 @@ export interface AnalyticsConsentChangeDetail {
 export { ANALYTICS_CONSENT_POLICY_VERSION };
 export const ANALYTICS_CONSENT_KEY = 'analytics_consent';
 export const ANALYTICS_CONSENT_EVENT = 'analytics-consent-changed';
+export const ANALYTICS_PREFERENCES_OPEN_EVENT =
+  'analytics-preferences-open';
 
 export const ANALYTICS_STORAGE_KEYS = {
   visitorId: 'analytics_visitor_id_v2',
@@ -67,6 +76,8 @@ function isConsentRecord(value: unknown): value is AnalyticsConsentRecord {
   const record = value as Partial<AnalyticsConsentRecord>;
   return (
     (record.state === 'granted' || record.state === 'denied') &&
+    (record.basis === 'consent' ||
+      record.basis === 'first-party-analytics') &&
     record.policyVersion === ANALYTICS_CONSENT_POLICY_VERSION &&
     typeof record.decidedAt === 'string' &&
     Number.isFinite(Date.parse(record.decidedAt)) &&
@@ -75,10 +86,7 @@ function isConsentRecord(value: unknown): value is AnalyticsConsentRecord {
   );
 }
 
-/**
- * Removes every first-party analytics identifier and pending event.
- * The consent choice itself is intentionally retained unless it is invalid/expired.
- */
+/** Removes every first-party analytics identifier and pending event. */
 export function clearAnalyticsClientState(): void {
   if (typeof window === 'undefined') return;
 
@@ -95,7 +103,16 @@ export function clearAnalyticsClientState(): void {
     sessionStorage.removeItem(ANALYTICS_STORAGE_KEYS.tabId);
     sessionStorage.removeItem(ANALYTICS_STORAGE_KEYS.sequence);
   } catch {
-    // Storage may be blocked.
+    // Session storage is optional.
+  }
+}
+
+function removeAnalyticsConsentRecord(): void {
+  volatileConsent = null;
+  try {
+    localStorage.removeItem(ANALYTICS_CONSENT_KEY);
+  } catch {
+    // The in-memory record is still removed for this page lifetime.
   }
 }
 
@@ -116,19 +133,12 @@ export function readAnalyticsConsent(): AnalyticsConsentRecord | null {
       return null;
     }
 
-    // Plain `granted`/`denied` values belong to the legacy, unversioned policy.
-    // Re-consent is required rather than silently carrying them forward.
     const parsed: unknown = JSON.parse(raw);
-    if (!isConsentRecord(parsed)) {
-      localStorage.removeItem(ANALYTICS_CONSENT_KEY);
-      volatileConsent = null;
-      clearAnalyticsClientState();
-      return null;
-    }
-
-    if (Date.parse(parsed.expiresAt) <= Date.now()) {
-      localStorage.removeItem(ANALYTICS_CONSENT_KEY);
-      volatileConsent = null;
+    if (
+      !isConsentRecord(parsed) ||
+      Date.parse(parsed.expiresAt) <= Date.now()
+    ) {
+      removeAnalyticsConsentRecord();
       clearAnalyticsClientState();
       return null;
     }
@@ -148,34 +158,44 @@ export function readAnalyticsConsent(): AnalyticsConsentRecord | null {
   }
 }
 
-function writeAnalyticsConsent(state: ConsentValue): AnalyticsConsentRecord {
+function writeAnalyticsConsent(
+  state: ConsentValue,
+  basis: AnalyticsAuthorizationBasis
+): AnalyticsConsentRecord {
   const decidedAt = new Date();
   const record: AnalyticsConsentRecord = {
     state,
+    basis,
     policyVersion: ANALYTICS_CONSENT_POLICY_VERSION,
     decidedAt: decidedAt.toISOString(),
-    expiresAt: new Date(decidedAt.getTime() + CONSENT_LIFETIME_MS).toISOString(),
+    expiresAt: new Date(
+      decidedAt.getTime() + CONSENT_LIFETIME_MS
+    ).toISOString(),
   };
 
   volatileConsent = record;
   try {
     localStorage.setItem(ANALYTICS_CONSENT_KEY, JSON.stringify(record));
   } catch {
-    // A blocked storage API must not prevent the user's choice being applied
-    // for the current page. It simply cannot persist across navigations.
+    // The decision remains valid in memory for this page lifetime.
   }
   return record;
 }
 
-function dispatchConsentChange(state: ConsentValue, reason: ConsentChangeReason): void {
+function dispatchConsentChange(
+  state: ConsentValue,
+  reason: ConsentChangeReason,
+  basis: AnalyticsAuthorizationBasis | null
+): void {
   window.dispatchEvent(
     new CustomEvent<AnalyticsConsentChangeDetail>(ANALYTICS_CONSENT_EVENT, {
       detail: {
         state,
+        basis,
         policyVersion: ANALYTICS_CONSENT_POLICY_VERSION,
         reason,
       },
-    }),
+    })
   );
 }
 
@@ -208,21 +228,105 @@ function normalizeMeasurementId(value?: string): string | null {
   return GA_MEASUREMENT_ID_PATTERN.test(candidate) ? candidate : null;
 }
 
+function recordAppliesToMode(
+  record: AnalyticsConsentRecord,
+  collectionMode: AnalyticsCollectionMode
+): boolean {
+  return !(
+    record.state === 'granted' &&
+    record.basis === 'first-party-analytics' &&
+    collectionMode !== 'first-party-analytics'
+  );
+}
+
 export function ConsentManager({
   measurementId,
   enabled,
+  collectionMode,
 }: {
   measurementId?: string;
   enabled: boolean;
+  collectionMode: AnalyticsCollectionMode;
 }) {
   const pathname = usePathname();
   const [consent, setConsent] = useState<ConsentValue | null>(null);
+  const [basis, setBasis] = useState<AnalyticsAuthorizationBasis | null>(
+    null
+  );
   const [open, setOpen] = useState(false);
   const consentChannelRef = useRef<BroadcastChannel | null>(null);
-  const safeMeasurementId = useMemo(() => normalizeMeasurementId(measurementId), [measurementId]);
+  const safeMeasurementId = useMemo(
+    () => normalizeMeasurementId(measurementId),
+    [measurementId]
+  );
   const isAdminRoute =
     pathname === '/admin' || pathname.startsWith('/admin/');
   const analyticsActive = enabled && !isAdminRoute;
+
+  const activateRecord = useCallback(
+    (record: AnalyticsConsentRecord, reason: ConsentChangeReason) => {
+      setConsent(record.state);
+      setBasis(record.basis);
+      setOpen(false);
+
+      const googleConsentGranted =
+        analyticsActive &&
+        record.state === 'granted' &&
+        record.basis === 'consent';
+      applyGoogleConsent(googleConsentGranted ? 'granted' : 'denied');
+
+      if (record.state === 'denied' || !analyticsActive) {
+        clearAnalyticsClientState();
+      }
+      if (!googleConsentGranted) resetGoogleAnalyticsRuntime();
+
+      dispatchConsentChange(
+        analyticsActive ? record.state : 'denied',
+        analyticsActive ? reason : 'analytics-disabled',
+        analyticsActive ? record.basis : null
+      );
+    },
+    [analyticsActive]
+  );
+
+  const activateFallback = useCallback(
+    (reason: 'expired' | 'invalid') => {
+      if (
+        analyticsActive &&
+        collectionMode === 'first-party-analytics'
+      ) {
+        const regionalRecord = writeAnalyticsConsent(
+          'granted',
+          'first-party-analytics'
+        );
+        consentChannelRef.current?.postMessage(regionalRecord);
+        activateRecord(regionalRecord, 'regional-policy');
+        return;
+      }
+
+      setConsent(null);
+      setBasis(null);
+      setOpen(analyticsActive);
+      applyGoogleConsent('denied');
+      clearAnalyticsClientState();
+      resetGoogleAnalyticsRuntime();
+      dispatchConsentChange(
+        'denied',
+        analyticsActive ? reason : 'analytics-disabled',
+        null
+      );
+    },
+    [activateRecord, analyticsActive, collectionMode]
+  );
+
+  const readApplicableRecord = useCallback(() => {
+    const saved = readAnalyticsConsent();
+    if (!saved || recordAppliesToMode(saved, collectionMode)) return saved;
+
+    removeAnalyticsConsentRecord();
+    clearAnalyticsClientState();
+    return null;
+  }, [collectionMode]);
 
   useEffect(() => {
     ensureGtag()('consent', 'default', {
@@ -233,70 +337,31 @@ export function ConsentManager({
       wait_for_update: 500,
     });
 
-    const saved = readAnalyticsConsent();
+    const saved = readApplicableRecord();
     if (saved) {
-      setConsent(saved.state);
-      applyGoogleConsent(analyticsActive ? saved.state : 'denied');
-      if (saved.state === 'denied') clearAnalyticsClientState();
-      dispatchConsentChange(
-        analyticsActive ? saved.state : 'denied',
-        analyticsActive ? 'restored' : 'analytics-disabled',
-      );
-      if (!analyticsActive || saved.state === 'denied') {
-        resetGoogleAnalyticsRuntime();
-      }
-      return;
+      activateRecord(saved, 'restored');
+    } else {
+      activateFallback('invalid');
     }
-
-    setConsent(null);
-    applyGoogleConsent('denied');
-    clearAnalyticsClientState();
-    resetGoogleAnalyticsRuntime();
-    dispatchConsentChange(
-      'denied',
-      analyticsActive ? 'invalid' : 'analytics-disabled',
-    );
-    setOpen(analyticsActive);
-  }, [analyticsActive]);
+  }, [activateFallback, activateRecord, readApplicableRecord]);
 
   useEffect(() => {
-    const applyExternalRecord = (
-      record: AnalyticsConsentRecord | null
-    ) => {
+    const applyExternalRecord = (record: AnalyticsConsentRecord | null) => {
       const validRecord =
         record &&
         isConsentRecord(record) &&
-        Date.parse(record.expiresAt) > Date.now()
+        Date.parse(record.expiresAt) > Date.now() &&
+        recordAppliesToMode(record, collectionMode)
           ? record
           : null;
       volatileConsent = validRecord;
 
       if (validRecord) {
-        setConsent(validRecord.state);
-        setOpen(false);
-        applyGoogleConsent(
-          analyticsActive ? validRecord.state : 'denied'
-        );
-        if (validRecord.state === 'denied' || !analyticsActive) {
-          clearAnalyticsClientState();
-          resetGoogleAnalyticsRuntime();
-        }
-        dispatchConsentChange(
-          analyticsActive ? validRecord.state : 'denied',
-          analyticsActive ? 'restored' : 'analytics-disabled'
-        );
-        return;
+        activateRecord(validRecord, 'restored');
+      } else {
+        removeAnalyticsConsentRecord();
+        activateFallback('invalid');
       }
-
-      setConsent(null);
-      setOpen(analyticsActive);
-      applyGoogleConsent('denied');
-      clearAnalyticsClientState();
-      resetGoogleAnalyticsRuntime();
-      dispatchConsentChange(
-        'denied',
-        analyticsActive ? 'invalid' : 'analytics-disabled'
-      );
     };
 
     const handleStorage = (event: StorageEvent) => {
@@ -315,28 +380,32 @@ export function ConsentManager({
       consentChannelRef.current = channel;
     }
 
+    const openPreferences = () => setOpen(analyticsActive);
     window.addEventListener('storage', handleStorage);
+    window.addEventListener(
+      ANALYTICS_PREFERENCES_OPEN_EVENT,
+      openPreferences
+    );
     return () => {
       window.removeEventListener('storage', handleStorage);
+      window.removeEventListener(
+        ANALYTICS_PREFERENCES_OPEN_EVENT,
+        openPreferences
+      );
       channel?.close();
       if (consentChannelRef.current === channel) {
         consentChannelRef.current = null;
       }
     };
-  }, [analyticsActive]);
+  }, [activateFallback, activateRecord, analyticsActive, collectionMode]);
 
   useEffect(() => {
     if (consent === null) return;
 
     const enforceExpiry = () => {
-      if (readAnalyticsConsent()) return;
-      setConsent(null);
-      setOpen(analyticsActive);
-      applyGoogleConsent('denied');
-      clearAnalyticsClientState();
-      resetGoogleAnalyticsRuntime();
+      if (readApplicableRecord()) return;
       consentChannelRef.current?.postMessage(null);
-      dispatchConsentChange('denied', 'expired');
+      activateFallback('expired');
     };
     const intervalId = window.setInterval(enforceExpiry, 60_000);
     const enforceWhenVisible = () => {
@@ -355,32 +424,22 @@ export function ConsentManager({
         enforceWhenVisible
       );
     };
-  }, [analyticsActive, consent]);
+  }, [activateFallback, consent, readApplicableRecord]);
 
   function choose(value: ConsentValue) {
-    const record = writeAnalyticsConsent(value);
+    const record = writeAnalyticsConsent(value, 'consent');
     consentChannelRef.current?.postMessage(record);
-    setConsent(value);
-    setOpen(false);
-    applyGoogleConsent(analyticsActive ? value : 'denied');
-
-    if (value === 'denied' || !analyticsActive) {
-      clearAnalyticsClientState();
-      resetGoogleAnalyticsRuntime();
-    }
-
-    dispatchConsentChange(
-      analyticsActive ? value : 'denied',
-      value === 'denied'
-        ? 'user-revoked'
-        : analyticsActive
-          ? 'user-choice'
-          : 'analytics-disabled',
+    activateRecord(
+      record,
+      value === 'denied' ? 'user-revoked' : 'user-choice'
     );
   }
 
   const loadAnalytics =
-    analyticsActive && Boolean(safeMeasurementId) && consent === 'granted';
+    analyticsActive &&
+    Boolean(safeMeasurementId) &&
+    consent === 'granted' &&
+    basis === 'consent';
 
   function initializeGoogleAnalytics() {
     if (!loadAnalytics || !safeMeasurementId) return;
@@ -400,43 +459,59 @@ export function ConsentManager({
     });
   }
 
+  const isRegionalFirstPartyMode =
+    collectionMode === 'first-party-analytics';
+
   return (
     <>
-      {loadAnalytics && safeMeasurementId && (
+      {loadAnalytics && safeMeasurementId ? (
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(safeMeasurementId)}`}
           strategy="afterInteractive"
           onReady={initializeGoogleAnalytics}
         />
-      )}
+      ) : null}
 
       {open && analyticsActive ? (
         <aside
-          aria-label="Analitik çerez tercihleri"
+          aria-label="Analitik tercihleri"
           className="fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-3xl rounded-2xl border border-stone-300 bg-white/95 p-5 shadow-2xl backdrop-blur-md dark:border-stone-700 dark:bg-stone-900/95"
         >
-          <p className="text-sm font-black text-stone-900 dark:text-stone-100">Gizlilik tercihiniz</p>
+          <p className="text-sm font-black text-stone-900 dark:text-stone-100">
+            Gizlilik tercihiniz
+          </p>
           <p className="mt-2 text-xs leading-5 text-stone-600 dark:text-stone-300">
-            Site, zorunlu olmayan analitik ölçümü yalnız izninizle çalıştırır. Reklam depolaması kullanılmaz.
-            Ayrıntılar için <Link href="/gizlilik" className="font-bold underline underline-offset-2">gizlilik ve çerez metnini</Link> inceleyebilirsiniz.
+            {isRegionalFirstPartyMode
+              ? 'Türkiye için site içi, birinci taraf ve siteler arası takip yapmayan performans ölçümü etkindir. İsterseniz bu ölçümü kapatabilir veya Google Analytics için ayrıca izin verebilirsiniz. Reklam depolaması kullanılmaz.'
+              : 'Site içi ölçüm ve Google Analytics yalnız izninizle çalışır. Reklam depolaması kullanılmaz.'}{' '}
+            Ayrıntılar için{' '}
+            <Link
+              href="/gizlilik"
+              className="font-bold underline underline-offset-2"
+            >
+              gizlilik ve analitik metnini
+            </Link>{' '}
+            inceleyebilirsiniz.
           </p>
           <div className="mt-4 flex flex-wrap justify-end gap-2">
-            <button type="button" onClick={() => choose('denied')} className="rounded-xl border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800">
-              Yalnız zorunlu
+            <button
+              type="button"
+              onClick={() => choose('denied')}
+              className="rounded-xl border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
+            >
+              {isRegionalFirstPartyMode
+                ? 'Site içi analitiği kapat'
+                : 'Yalnız zorunlu'}
             </button>
-            <button type="button" onClick={() => choose('granted')} className="rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white hover:bg-stone-800 dark:bg-amber-600 dark:text-stone-950">
+            <button
+              type="button"
+              onClick={() => choose('granted')}
+              className="rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white hover:bg-stone-800 dark:bg-amber-600 dark:text-stone-950"
+            >
               Analitiğe izin ver
             </button>
           </div>
         </aside>
-      ) : analyticsActive ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="fixed bottom-3 right-3 z-50 rounded-full border border-stone-300 bg-white/90 px-3 py-2 text-[10px] font-bold text-stone-600 shadow-sm backdrop-blur hover:bg-white dark:border-stone-700 dark:bg-stone-900/90 dark:text-stone-300"
-        >
-          Çerez tercihleri
-        </button>
       ) : null}
     </>
   );

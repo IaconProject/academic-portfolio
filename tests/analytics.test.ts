@@ -1,11 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   ANALYTICS_CONSENT_VERSION,
+  ANALYTICS_FIRST_PARTY_VERSION,
   analyticsBatchSchema,
   buildAnalyticsRequestContext,
   classifyObviousBot,
   getTransientRequestIp,
   groupAnalyticsEvents,
+  getAnalyticsAuthorizationBasis,
   hashAnalyticsIdentifier,
   isAnalyticsTimestampAccepted,
   normalizeAnalyticsPath,
@@ -45,6 +47,16 @@ afterEach(() => {
 });
 
 describe('Analytics v2 event sözleşmesi', () => {
+  it('açık rıza ve Türkiye birinci taraf işleme dayanaklarını ayırır', () => {
+    expect(getAnalyticsAuthorizationBasis(ANALYTICS_CONSENT_VERSION)).toBe(
+      'consent'
+    );
+    expect(getAnalyticsAuthorizationBasis(ANALYTICS_FIRST_PARTY_VERSION)).toBe(
+      'first-party-analytics'
+    );
+    expect(getAnalyticsAuthorizationBasis('eski-politika')).toBeNull();
+  });
+
   it('geçerli, küçük bir page_view batchini kabul eder', () => {
     const result = analyticsBatchSchema.safeParse({
       schemaVersion: 2,

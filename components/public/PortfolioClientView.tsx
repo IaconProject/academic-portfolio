@@ -45,16 +45,6 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
             profile={profile}
           />
 
-          {/* Single visible page heading on every viewport */}
-          <header className="mx-auto mb-10 flex max-w-2xl flex-col items-center border-b border-stone-200/80 pb-7 text-center lg:mb-12 lg:pb-8">
-            <h1 className="mb-3 font-serif text-3xl font-bold tracking-tight text-stone-900 md:text-4xl lg:text-5xl">
-              {profile.fullName} — Akademik Özgeçmiş
-            </h1>
-            <p className="text-base md:text-lg text-stone-600 font-sans leading-relaxed">
-              {profile.subtitle}
-            </p>
-          </header>
-
           {/* Stacked Academic Section Cards */}
           <AboutSection profile={profile} socialLinks={socialLinks} />
           <EducationSection education={education} />

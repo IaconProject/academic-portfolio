@@ -33,6 +33,7 @@ import {
   normalizeAnalyticsWebVitalRating,
   normalizeAnalyticsWebVitalValue,
 } from '@/lib/analytics-contract';
+import { analyticsAuthorizationVersion } from '@/lib/analytics-consent-policy';
 
 const ANALYTICS_ENDPOINT = '/api/analytics/events';
 const MAX_QUEUE_EVENTS = 100;
@@ -419,6 +420,20 @@ function hasGrantedConsent(): boolean {
   return readAnalyticsConsent()?.state === 'granted';
 }
 
+function currentAnalyticsAuthorizationVersion(): string | null {
+  const record = readAnalyticsConsent();
+  if (record?.state !== 'granted') return null;
+  return analyticsAuthorizationVersion(
+    ANALYTICS_CONSENT_POLICY_VERSION,
+    record.basis
+  );
+}
+
+function hasExplicitAnalyticsConsent(): boolean {
+  const record = readAnalyticsConsent();
+  return record?.state === 'granted' && record.basis === 'consent';
+}
+
 function trackGooglePageView(
   event: AnalyticsClientEventContract,
   path: string
@@ -464,11 +479,14 @@ function createBatchPayload(queue: AnalyticsClientEventContract[]): {
 } {
   const batch: AnalyticsClientEventContract[] = [];
   let payload = '';
+  const authorizationVersion = queue[0]?.consentVersion;
+  if (!authorizationVersion) return { batch, payload };
 
   for (const event of queue.slice(0, ANALYTICS_MAX_BATCH_EVENTS)) {
+    if (event.consentVersion !== authorizationVersion) break;
     const candidate = JSON.stringify({
       schemaVersion: ANALYTICS_SCHEMA_VERSION,
-      consentVersion: ANALYTICS_CONSENT_POLICY_VERSION,
+      consentVersion: authorizationVersion,
       events: [...batch, event],
     });
     if (new TextEncoder().encode(candidate).byteLength > MAX_BATCH_BYTES) break;
@@ -716,6 +734,10 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         return null;
       }
 
+      const authorizationVersion =
+        currentAnalyticsAuthorizationVersion();
+      if (!authorizationVersion) return null;
+
       const event = {
         eventId: createUuid(),
         ...identity,
@@ -728,12 +750,15 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         screen: screenContext(),
         language: (navigator.language || 'tr').slice(0, 35),
         timezone: currentTimezone().slice(0, 100),
-        consentVersion: ANALYTICS_CONSENT_POLICY_VERSION,
+        consentVersion: authorizationVersion,
         utm: allowedUtmProperties(),
         ...details,
       } as AnalyticsClientEventContract;
 
-      if (event.eventType === 'page_view') {
+      if (
+        event.eventType === 'page_view' &&
+        hasExplicitAnalyticsConsent()
+      ) {
         trackGooglePageView(event, event.path);
       }
       await enqueue(

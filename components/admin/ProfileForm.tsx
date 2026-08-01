@@ -32,7 +32,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onSave }) => 
           <span>Profil & Biyografi Ayarları</span>
         </h2>
         <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-          Kişisel akademik kimliğinizi, unvanınızı, profil fotoğrafınızı ve özet biyografinizi güncelleyin.
+          Ad soyad ana sayfanın tek H1 başlığıdır; akademik unvan hemen
+          altında görünür ve kişi yapılandırılmış verisini besler. Bu alanlar
+          kaydedildiğinde ana sayfa, mobil profil alanı ve SEO entity bilgisi
+          birlikte güncellenir.
         </p>
       </div>
 
@@ -45,7 +48,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onSave }) => 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
-            Ad Soyad
+            Ad Soyad (Ana sayfa H1)
           </label>
           <div className="relative">
             <User className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />
@@ -61,7 +64,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onSave }) => 
 
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 dark:text-stone-300 mb-2">
-            Akademik Unvan / Görev
+            Akademik Unvan / Görev (H1 alt başlığı)
           </label>
           <div className="relative">
             <Briefcase className="w-4 h-4 text-stone-400 absolute left-3.5 top-3.5" />

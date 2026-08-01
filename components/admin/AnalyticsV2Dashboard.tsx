@@ -299,6 +299,14 @@ function safeText(value: string | null | undefined, fallback = '—') {
   return trimmed || fallback;
 }
 
+function authorizationBasisLabel(version: string | null | undefined) {
+  if (version?.endsWith(':first-party-analytics')) {
+    return 'Türkiye · birinci taraf analitik';
+  }
+  if (version?.endsWith(':consent')) return 'Açık analitik izni';
+  return safeText(version, 'Bilinmiyor');
+}
+
 function reportingDateInput(date: Date) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: TIMEZONE,
@@ -566,7 +574,7 @@ function ratingLabel(rating: string, metric: string) {
 function qualityFlagLabel(key: string, value: unknown) {
   const labels: Record<string, string> = {
     no_events_in_window: 'Kalite penceresinde event yok',
-    missing_consent_events: 'Consent sürümü eksik event',
+    missing_consent_events: 'İşleme dayanağı eksik event',
     high_late_event_ratio: 'Geciken event oranı yüksek',
     high_client_error_ratio: 'İstemci hata oranı yüksek',
     collector_stale: 'Collector verisi güncel değil',
@@ -1302,7 +1310,7 @@ export function AnalyticsV2Dashboard() {
             <div className="rounded-xl border border-sky-200 bg-sky-50 p-5 text-center text-xs text-sky-800 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-300">
               {health && !health.prerequisites.enabled
                 ? 'Analytics v2 CMS anahtarı kapalı. SEO → Performans ve Entegrasyonlar bölümünde “Consent sonrasında analitiği etkinleştir” seçeneğini açıp kaydedin.'
-                : 'Bu tarih aralığında henüz insan trafiği kaydı bulunmuyor. Collector sağlıklıysa ilk izinli ziyaretten sonra veriler burada görünür.'}
+                : 'Bu tarih aralığında henüz insan trafiği kaydı bulunmuyor. Collector sağlıklıysa Türkiye’den ilk birinci taraf ziyaretinde veya diğer ülkelerden ilk izinli ziyarette veriler burada görünür.'}
             </div>
           )}
 
@@ -1697,7 +1705,7 @@ export function AnalyticsV2Dashboard() {
 
           <SectionCard
             title="Veri kalitesi ve operasyon"
-            description="Collector, bot ayrıştırması, consent sürümü, rollup ve retention görünümü."
+            description="Collector, bot ayrıştırması, işleme dayanağı, rollup ve retention görünümü."
           >
             <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -1739,12 +1747,12 @@ export function AnalyticsV2Dashboard() {
               <div className="space-y-4 rounded-xl border border-stone-200 bg-stone-50/70 p-4 dark:border-stone-700 dark:bg-stone-800/50">
                 <div>
                   <p className="text-[10px] font-bold uppercase text-stone-500">
-                    Consent sürümleri
+                    Analitik işleme dayanakları
                   </p>
                   <div className="mt-3">
                     <BreakdownBars
                       rows={dashboard.quality.consentVersions.map((row) => ({
-                        label: safeText(row.version, 'Bilinmiyor'),
+                        label: authorizationBasisLabel(row.version),
                         value: Number(row.count ?? row.sessions ?? 0),
                       }))}
                     />

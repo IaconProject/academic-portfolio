@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import {
-  ANALYTICS_CONSENT_VERSION,
   ANALYTICS_MAX_BODY_BYTES,
   AnalyticsIngestResult,
   analyticsBatchSchema,
   buildAnalyticsRequestContext,
   classifyObviousBot,
   getAnalyticsHashSecret,
+  getAnalyticsAuthorizationBasis,
   getTransientRequestIp,
   groupAnalyticsEvents,
   hashAnalyticsIdentifier,
@@ -14,6 +14,7 @@ import {
   normalizeAnalyticsPath,
   toDatabaseAnalyticsEvent,
 } from '@/lib/analytics';
+import { analyticsCollectionModeForRequest } from '@/lib/analytics-consent-policy';
 import { readAnalyticsCmsEnabled } from '@/lib/analytics-settings.server';
 import {
   hasSupabaseServiceRole,
@@ -23,7 +24,7 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const COLLECTOR_VERSION = '2.0.0';
+const COLLECTOR_VERSION = '2.1.0';
 const RATE_LIMIT_PER_MINUTE = 120;
 const RATE_LIMIT_PER_VISITOR_PER_MINUTE = 60;
 const REJECTION_RECORD_LIMIT_PER_MINUTE = 30;
@@ -298,11 +299,26 @@ export async function POST(request: Request) {
     );
   }
 
-  if (parsed.data.consentVersion !== ANALYTICS_CONSENT_VERSION) {
+  const authorizationBasis = getAnalyticsAuthorizationBasis(
+    parsed.data.consentVersion
+  );
+  if (!authorizationBasis) {
     return rejectedFailure(
       request,
       'CONSENT_VERSION_MISMATCH',
-      'Analitik izin metni güncellendi; yeniden izin alınmadan event kabul edilemez.',
+      'Analitik izin veya işleme dayanağı güncellendi; event kabul edilemez.',
+      422
+    );
+  }
+
+  if (
+    authorizationBasis === 'first-party-analytics' &&
+    analyticsCollectionModeForRequest(request) !== 'first-party-analytics'
+  ) {
+    return rejectedFailure(
+      request,
+      'ANALYTICS_REGION_POLICY_MISMATCH',
+      'Birinci taraf analitik işleme dayanağı bu istek bölgesi için geçerli değil.',
       422
     );
   }
@@ -412,6 +428,7 @@ export async function POST(request: Request) {
           ...requestContext,
           collector_version: COLLECTOR_VERSION,
           consent_version: parsed.data.consentVersion,
+          authorization_basis: authorizationBasis,
           traffic_class: trafficClass,
         },
       }

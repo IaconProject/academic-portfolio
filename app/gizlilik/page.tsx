@@ -1,6 +1,7 @@
 import { getSeoExperienceData } from '@/lib/seo-repository';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
 import { SeoPageShell } from '@/components/public/SeoPageShell';
+import { AnalyticsPreferencesControl } from '@/components/public/AnalyticsPreferencesControl';
 
 export const revalidate = 300;
 
@@ -48,14 +49,23 @@ export default async function PrivacyPage() {
         </section>
         <section>
           <h2 className="font-serif text-xl font-bold text-[#24211e]">
-            İsteğe bağlı analitik
+            Analitik ölçüm ve bölgesel uygulama
           </h2>
           <div className="mt-3 space-y-3">
             <p>
-              Google Analytics ve site içi ziyaret ölçümü yalnız analitik izni
-              verildiğinde etkinleşir. İzin verilmediğinde analitik depolama
-              kapalı kalır. Alt kısımdaki “Çerez tercihleri” bağlantısından
-              kararınızı değiştirebilirsiniz.
+              Türkiye’den yapılan ziyaretlerde yalnız bu alan adına ait,
+              siteler arası takip yapmayan ve site performansı ile hedef kitle
+              ölçümüyle sınırlı Analytics v2 çalışır. Bu bölgesel uygulama,
+              KVKK Çerez Uygulamaları Hakkında Rehberindeki birinci taraf
+              analitik yaklaşımıyla sınırlandırılmıştır. Google Analytics bu
+              kapsamda otomatik olarak yüklenmez.
+            </p>
+            <p>
+              Türkiye dışındaki ziyaretlerde site içi Analytics v2 ve Google
+              Analytics varsayılan olarak kapalıdır; yalnız açık analitik izni
+              sonrasında etkinleşir. Ülke güvenilir biçimde belirlenemezse de
+              aynı güvenli varsayılan uygulanır. Reklam depolaması hiçbir
+              bölgede açılmaz.
             </p>
             <p>
               Site içi ölçüm; ziyaret edilen canonical sayfa yolu ve başlığı,
@@ -72,14 +82,20 @@ export default async function PrivacyPage() {
               Analytics v2 kayıtlarında saklanmaz.
             </p>
             <p>
-              İzin tercihi 180 gün boyunca hatırlanır. İzin reddedildiğinde veya
-              geri çekildiğinde tarayıcıdaki analitik ziyaretçi/oturum
+              Analitik tercihi veya bölgesel işleme kaydı 180 gün boyunca
+              hatırlanır. Ölçüm reddedildiğinde veya izin geri çekildiğinde
+              tarayıcıdaki analitik ziyaretçi/oturum
               kimlikleri ve bekleyen event kuyruğu temizlenir. Analitik
               kayıtlarına yalnız yetkili yönetim katmanı erişebilir.
             </p>
+            <div className="pt-1">
+              <AnalyticsPreferencesControl />
+            </div>
             <p>
-              İzin süresi dolduğunda yeniden izin istenir ve önceki tarayıcı
-              ziyaretçi kimliği silinerek yenisi oluşturulur. Ham analitik
+              Tercih veya bölgesel işleme kaydının süresi dolduğunda güncel
+              bölge kuralı yeniden değerlendirilir; gerektiğinde tekrar izin
+              istenir ve önceki tarayıcı ziyaretçi kimliği silinerek yenisi
+              oluşturulur. Ham analitik
               eventleri ve bunlara bağlı etkin olmayan oturum/ziyaretçi
               kayıtları son aktiviteye göre en fazla {retentionDays} gün, kimlik
               içermeyen veri kalitesi kayıtları 730 gün ve yalnız günlük toplu
