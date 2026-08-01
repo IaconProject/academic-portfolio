@@ -161,7 +161,10 @@ export function parseIpApiResolution(
         : resolveTurkeyNetworkProvince(parsed.data.lat, parsed.data.lon);
     region = normalizedRegion || coordinateResolution?.province || null;
     confidence = normalizedRegion ? 'medium' : 'low';
-    if (city && normalizeTurkeyProvinceRegion(city) === region) city = null;
+    const cityAsProvince = city
+      ? normalizeTurkeyProvinceRegion(city)
+      : null;
+    if (cityAsProvince && region) city = null;
   }
 
   const organization = networkOrganization(parsed.data.org || parsed.data.as);
@@ -219,7 +222,13 @@ export function mergeAnalyticsIpGeo(
     country_name:
       resolution.countryName || base.country_name || resolution.countryCode,
     ...(resolution.region ? { region: resolution.region } : {}),
-    ...(resolution.city ? { city: resolution.city } : {}),
+    // Once the provider supplies a normalized province, do not retain an
+    // unrelated Vercel city when the provider has no city-level signal.
+    ...(resolution.region
+      ? { city: resolution.city || undefined }
+      : resolution.city
+        ? { city: resolution.city }
+        : {}),
     ...(hasProviderGeo || hasProviderNetwork
       ? {
           geo_source: combinedSource,

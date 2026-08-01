@@ -49,7 +49,7 @@ sonrasında otomatik açılır.
    - `supabase/migrations/20260801094500_analytics_geo_reporting_index.sql`
    - `supabase/migrations/20260801155538_analytics_technology_admin_delete.sql`
    - `supabase/migrations/20260801163723_analytics_network_geo_enrichment.sql`
-   - `supabase/migrations/20260801205256_analytics_ip_geo_network.sql`
+   - `supabase/migrations/20260801210247_analytics_ip_geo_network.sql`
 3. Vercel environment değerlerini ekleyin.
 4. Production deployment oluşturun.
 5. Admin panelinde **SEO → Performans ve Entegrasyonlar** bölümündeki

@@ -89,6 +89,27 @@ describe('Analytics IP konum çözümleme', () => {
     expect(merged.asn).toBe('AS16135');
   });
 
+  it('sağlayıcı yalnız il döndürdüğünde çelişkili Vercel şehrini temizler', () => {
+    const resolution = parseIpApiResolution({
+      ...sirnakResponse,
+      city: undefined,
+    });
+    expect(resolution).not.toBeNull();
+    const merged = mergeAnalyticsIpGeo(
+      {
+        country_code: 'TR',
+        country_name: 'Türkiye',
+        region: 'İstanbul',
+        city: 'Istanbul',
+        geo_source: 'vercel-edge',
+        geo_confidence: 'medium',
+      },
+      resolution!
+    );
+    expect(merged.region).toBe('Şırnak');
+    expect(merged.city).toBeUndefined();
+  });
+
   it('ülke çelişkisinde Vercel coğrafyasını korur fakat ağ sınıfını saklar', () => {
     const resolution = parseIpApiResolution({
       ...sirnakResponse,
