@@ -1,20 +1,27 @@
 import { PortfolioData, AdminCredentials } from './types';
 import { initialPortfolioData } from './initial-data';
 import { supabase, isSupabaseConfigured } from './supabase/client';
+import {
+  omitAdminCredentials,
+  redactAdminPassword,
+} from './admin-credentials-safety';
 
 const STORAGE_KEY = 'academic_portfolio_cms_v1';
 const CREDS_KEY = 'academic_portfolio_admin_creds_v1';
 
 export const defaultAdminCredentials: AdminCredentials = {
   email: 'bilgi@muhammedakan.com',
-  password: 'admin',
+  password: '',
 };
 
 export function getAdminCredentials(): AdminCredentials {
   if (typeof window === 'undefined') return defaultAdminCredentials;
   try {
     const cached = localStorage.getItem(CREDS_KEY);
-    if (cached) return JSON.parse(cached);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      return { ...parsed, password: '' };
+    }
   } catch (e) {
     console.error('Failed to read admin credentials:', e);
   }
@@ -24,7 +31,7 @@ export function getAdminCredentials(): AdminCredentials {
 export function saveAdminCredentials(creds: AdminCredentials): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(CREDS_KEY, JSON.stringify(creds));
+    localStorage.setItem(CREDS_KEY, JSON.stringify({ ...creds, password: '' }));
   } catch (e) {
     console.error('Failed to save admin credentials:', e);
   }
@@ -40,7 +47,7 @@ export function getPortfolioData(): PortfolioData {
     if (cached) {
       const parsed = JSON.parse(cached);
       if (parsed && parsed.profile) {
-        return parsed;
+        return redactAdminPassword(parsed);
       }
     }
   } catch (e) {
@@ -62,7 +69,7 @@ export function savePortfolioDataLocally(data: PortfolioData): void {
     ) {
       data.profile.avatarUrl = existing.profile.avatarUrl;
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(redactAdminPassword(data)));
   } catch (e) {
     console.error('Failed to save to localStorage:', e);
   }
@@ -90,7 +97,7 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
       if (apiData && apiData.profile) {
         // Sync Admin Credentials if returned by server
         if (apiData.adminCredentials && apiData.adminCredentials.email) {
-          saveAdminCredentials(apiData.adminCredentials);
+          saveAdminCredentials({ ...apiData.adminCredentials, password: '' });
         }
 
         // Check if server returned default initial data while client has local custom edits
@@ -104,13 +111,14 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         if (isServerInitial && isClientCustom) {
           // Re-hydrate server with client's custom data so deploy never wipes client edits
           const token = sessionStorage.getItem('admin_token') || '';
+          const localDataWithoutCredentials = omitAdminCredentials(localData);
           fetch('/api/cms', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               ...(token ? { 'X-Admin-Token': token } : {}),
             },
-            body: JSON.stringify({ ...localData, adminCredentials: localCreds }),
+            body: JSON.stringify(localDataWithoutCredentials),
           }).catch(() => {});
           
           return localData;
@@ -158,14 +166,7 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
     const { data: refData } = await supabase.from('references_list').select('*').order('created_at', { ascending: true });
     const { data: socData } = await supabase.from('social_links').select('*').order('created_at', { ascending: true });
     const { data: seoRows } = await supabase.from('seo_settings').select('*').limit(1);
-    const { data: credRows } = await supabase.from('admin_credentials').select('*').limit(1);
-
     const seoData = seoRows && seoRows.length > 0 ? seoRows[0] : null;
-    const credData = credRows && credRows.length > 0 ? credRows[0] : null;
-
-    if (credData) {
-      saveAdminCredentials({ email: credData.email, password: credData.password });
-    }
 
     const result: PortfolioData = {
       profile: {
@@ -264,10 +265,10 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         canonicalUrl: seoData.canonical_url,
         authorName: seoData.author_name,
       } : initialPortfolioData.seoSettings,
-      adminCredentials: credData ? {
-        email: credData.email,
-        password: credData.password,
-      } : localCreds,
+      adminCredentials: {
+        email: localCreds.email,
+        password: '',
+      },
     };
 
     savePortfolioDataLocally(result);

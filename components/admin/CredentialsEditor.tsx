@@ -41,8 +41,8 @@ export const CredentialsEditor: React.FC = () => {
       return;
     }
 
-    if (!newPassword || newPassword.length < 6) {
-      toast.error('Yeni şifre en az 6 karakter olmalıdır.');
+    if (!newPassword || newPassword.length < 8) {
+      toast.error('Yeni şifre en az 8 karakter olmalıdır.');
       return;
     }
 
@@ -76,7 +76,7 @@ export const CredentialsEditor: React.FC = () => {
         const updatedEmail = json.email || (newEmail.trim() ? newEmail.trim().toLowerCase() : currentEmail);
         saveAdminCredentials({
           email: updatedEmail,
-          password: newPassword,
+          password: '',
           updatedAt: new Date().toISOString(),
         });
 
@@ -160,7 +160,7 @@ export const CredentialsEditor: React.FC = () => {
               required
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="En az 6 karakter..."
+              placeholder="En az 8 karakter..."
               className="w-full pl-4 pr-11 py-3 bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 rounded-xl text-sm text-stone-900 dark:text-stone-100 focus:border-stone-900 dark:focus:border-amber-400 outline-none"
             />
             <button

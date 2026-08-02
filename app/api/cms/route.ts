@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { initialPortfolioData } from '@/lib/initial-data';
-import { PortfolioData, AdminCredentials } from '@/lib/types';
+import { PortfolioData } from '@/lib/types';
 import {
   serverSupabase as supabase,
   isServerSupabaseConfigured as isSupabaseConfigured,
 } from '@/lib/supabase/server';
 import { validateAdminSession } from '@/lib/auth-helpers';
 import { revalidateSeoRoutes } from '@/lib/admin-api';
+import { omitAdminCredentials } from '@/lib/admin-credentials-safety';
 import fs from 'fs';
 import path from 'path';
 
@@ -74,7 +75,7 @@ export async function GET(request: Request) {
         .limit(1);
 
       const profileData = profileRows && profileRows.length > 0 ? profileRows[0] : null;
-      const { data: credRows } = await supabase.from('admin_credentials').select('*').limit(1);
+      const { data: credRows } = await supabase.from('admin_credentials').select('email').limit(1);
       const credData = credRows && credRows.length > 0 ? credRows[0] : null;
       const { data: notifRows } = await supabase.from('notification_settings').select('*').limit(1);
       const notifData = notifRows && notifRows.length > 0 ? notifRows[0] : null;
@@ -189,7 +190,7 @@ export async function GET(request: Request) {
           } : currentTmp.seoSettings,
           adminCredentials: credData ? {
             email: credData.email,
-            password: credData.password,
+            password: '',
           } : currentTmp.adminCredentials,
           notificationSettings: notifData ? {
             emailNotificationsEnabled: notifData.email_notifications_enabled ?? true,
@@ -225,37 +226,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Yetkisiz erişim. Lütfen giriş yapın.' }, { status: 401 });
     }
 
-    const body = await request.json();
+    const receivedBody = await request.json();
+    // Credentials may only be changed through the dedicated authenticated routes.
+    const body = omitAdminCredentials(receivedBody);
     const currentTmp = readTmpStore();
 
-    // 1. Admin Credentials Upsert
-    if (body.adminCredentials) {
-      const creds: AdminCredentials = body.adminCredentials;
-      const updatedFull = { ...currentTmp, adminCredentials: creds };
-      writeTmpStore(updatedFull);
-
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data: credRows } = await supabase.from('admin_credentials').select('id').limit(1);
-          const existingId = credRows && credRows.length > 0 ? credRows[0].id : undefined;
-
-          await supabase.from('admin_credentials').upsert({
-            ...(existingId ? { id: existingId } : {}),
-            email: creds.email,
-            password: creds.password,
-            updated_at: new Date().toISOString(),
-          });
-        } catch (e) {
-          console.warn('Supabase admin_credentials upsert error:', e);
-        }
-      }
-    }
-
-    // 2. Notification Settings Sync
+    // 1. Notification Settings Sync
     if (body.notificationSettings) {
       const notif = body.notificationSettings;
       const updatedFull = { ...currentTmp, notificationSettings: notif };
-      writeTmpStore(updatedFull);
+      writeTmpStore(sanitizePublicData(updatedFull));
 
       if (isSupabaseConfigured && supabase) {
         try {
@@ -279,13 +259,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Full Portfolio Data Sync
+    // 2. Full Portfolio Data Sync
     if (body.profile) {
       const updatedData: PortfolioData = {
         ...currentTmp,
         ...body,
       };
-      writeTmpStore(updatedData);
+      writeTmpStore(sanitizePublicData(updatedData));
 
       if (isSupabaseConfigured && supabase) {
         try {

@@ -1,20 +1,15 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { getActiveRecipientEmail, getStoredData, sendOtpEmail } from '@/lib/email-service';
-import {
-  serverSupabase as supabase,
-  isServerSupabaseConfigured as isSupabaseConfigured,
-} from '@/lib/supabase/server';
+import { sendOtpEmail } from '@/lib/email-service';
 import { hashPassword } from '@/lib/auth-helpers';
 import { checkRateLimit } from '@/lib/rate-limiter';
-import fs from 'fs';
-import path from 'path';
+import {
+  readAdminCredentials,
+  writeAdminCredentials,
+} from '@/lib/admin-credentials.server';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-const TMP_FILE_PATH = path.join('/tmp', 'academic_portfolio_data_v2.json');
-const INITIAL_DATA_FILE = path.join(process.cwd(), 'lib', 'initial-data.ts');
 
 // Server-side OTP memory store (Email -> { code, expiresAt, attempts })
 const otpStore: Record<string, { code: string; expiresAt: number; attempts: number }> = {};
@@ -26,7 +21,17 @@ export async function POST(request: Request) {
     const { action, email, otpCode, newPassword } = body;
 
     const normalizedEmail = (email || '').trim().toLowerCase();
-    const activeAdminEmail = getActiveRecipientEmail();
+    let credentials;
+    try {
+      credentials = await readAdminCredentials();
+    } catch (error) {
+      console.error('[reset-password] credential read failed', error);
+      return NextResponse.json(
+        { success: false, error: 'Yönetici hesabı şu anda doğrulanamıyor.' },
+        { status: 503 }
+      );
+    }
+    const activeAdminEmail = credentials.email.trim().toLowerCase();
 
     // ── ACTION 1: Request OTP Code ──
     if (action === 'request_otp') {
@@ -46,15 +51,10 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: 'Lütfen geçerli bir e-posta adresi girin.' }, { status: 400 });
       }
 
-      const storedData = getStoredData();
       const envAdminEmail = process.env.CMS_ADMIN_EMAIL?.trim().toLowerCase();
       const validAdminEmails = [
         envAdminEmail,
         activeAdminEmail,
-        (storedData.adminCredentials?.email || '').trim().toLowerCase(),
-        (storedData.notificationSettings?.recipientEmail || '').trim().toLowerCase(),
-        (storedData.profile?.email || '').trim().toLowerCase(),
-        'bilgi@muhammedakan.com',
       ].filter(Boolean);
 
       const isValidEmail = validAdminEmails.includes(normalizedEmail);
@@ -79,11 +79,17 @@ export async function POST(request: Request) {
       // Send OTP via Resend API
       const sent = await sendOtpEmail({ toEmail: normalizedEmail, otpCode: code });
 
+      if (!sent) {
+        delete otpStore[normalizedEmail];
+        return NextResponse.json(
+          { success: false, error: 'Doğrulama e-postası gönderilemedi. Lütfen kısa süre sonra tekrar deneyin.' },
+          { status: 502 }
+        );
+      }
+
       return NextResponse.json({
         success: true,
-        message: sent
-          ? `6 haneli doğrulama kodu ${normalizedEmail} adresine gönderildi. Lütfen e-posta gelen kutunuzu (ve Spam klasörünü) kontrol edin.`
-          : `Doğrulama kodu oluşturuldu. (${normalizedEmail})`,
+        message: `6 haneli doğrulama kodu ${normalizedEmail} adresine gönderildi. Lütfen e-posta gelen kutunuzu (ve Spam klasörünü) kontrol edin.`,
       });
     }
 
@@ -133,51 +139,20 @@ export async function POST(request: Request) {
         );
       }
 
-      // OTP Validated Successfully! Update Admin Password with hashed string.
-      delete otpStore[normalizedEmail];
-
       const hashedPassword = hashPassword(newPassword);
-      const currentData = getStoredData();
-      const updatedCreds = {
-        email: normalizedEmail,
-        password: hashedPassword,
-        updatedAt: new Date().toISOString(),
-      };
-
-      const updatedFull = {
-        ...currentData,
-        adminCredentials: updatedCreds,
-      };
-
-      // 1. Write /tmp
       try {
-        fs.writeFileSync(TMP_FILE_PATH, JSON.stringify(updatedFull, null, 2), 'utf-8');
-      } catch (e) {}
-
-      // 2. Write initial-data.ts
-      try {
-        if (fs.existsSync(INITIAL_DATA_FILE)) {
-          const content = `import { PortfolioData } from './types';\n\nexport const initialPortfolioData: PortfolioData = ${JSON.stringify(updatedFull, null, 2)};\n`;
-          fs.writeFileSync(INITIAL_DATA_FILE, content, 'utf-8');
-        }
-      } catch (e) {}
-
-      // 3. Upsert Supabase admin_credentials
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data: credRows } = await supabase.from('admin_credentials').select('id').limit(1);
-          const existingId = credRows && credRows.length > 0 ? credRows[0].id : undefined;
-
-          await supabase.from('admin_credentials').upsert({
-            ...(existingId ? { id: existingId } : {}),
-            email: normalizedEmail,
-            password: hashedPassword,
-            updated_at: new Date().toISOString(),
-          });
-        } catch (e) {
-          console.warn('[reset-password] Supabase admin_credentials update warning:', e);
-        }
+        await writeAdminCredentials({
+          email: normalizedEmail,
+          password: hashedPassword,
+        });
+      } catch (error) {
+        console.error('[reset-password] credential write failed', error);
+        return NextResponse.json(
+          { success: false, error: 'Yeni şifre kalıcı olarak kaydedilemedi. Lütfen tekrar deneyin.' },
+          { status: 503 }
+        );
       }
+      delete otpStore[normalizedEmail];
 
       return NextResponse.json({
         success: true,

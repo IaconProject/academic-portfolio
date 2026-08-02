@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import {
-  serverSupabase as supabase,
-  isServerSupabaseConfigured as isSupabaseConfigured,
-} from '@/lib/supabase/server';
 import { validateAdminSession, verifyPassword, hashPassword } from '@/lib/auth-helpers';
-import { getStoredData, saveStoredData } from '@/lib/email-service';
+import {
+  readAdminCredentials,
+  writeAdminCredentials,
+} from '@/lib/admin-credentials.server';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,67 +22,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Mevcut şifre ve yeni şifre zorunludur.' }, { status: 400 });
     }
 
-    if (newPassword.length < 6) {
-      return NextResponse.json({ success: false, error: 'Yeni şifre en az 6 karakter olmalıdır.' }, { status: 400 });
+    if (newPassword.length < 8) {
+      return NextResponse.json({ success: false, error: 'Yeni şifre en az 8 karakter olmalıdır.' }, { status: 400 });
     }
 
-    // Fetch existing stored credentials
-    let storedEmail = 'bilgi@muhammedakan.com';
-    let storedPassword = '';
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data } = await supabase.from('admin_credentials').select('*').limit(1);
-        if (data && data.length > 0) {
-          storedEmail = data[0].email || storedEmail;
-          storedPassword = data[0].password || '';
-        }
-      } catch (e) {
-        console.warn('[Change Password] Supabase fetch error:', e);
-      }
-    }
-
-    if (!storedPassword) {
-      const localData = getStoredData();
-      storedEmail = localData.adminCredentials?.email || storedEmail;
-      storedPassword = localData.adminCredentials?.password || 'admin123456';
+    let credentials;
+    try {
+      credentials = await readAdminCredentials();
+    } catch (error) {
+      console.error('[change-password] credential read failed', error);
+      return NextResponse.json(
+        { success: false, error: 'Giriş bilgileri şu anda doğrulanamıyor.' },
+        { status: 503 }
+      );
     }
 
     // Verify current password
-    const isCurrentValid = verifyPassword(currentPassword, storedPassword);
+    const isCurrentValid = verifyPassword(currentPassword, credentials.password);
     if (!isCurrentValid) {
       return NextResponse.json({ success: false, error: 'Mevcut şifreniz hatalı. Lütfen kontrol edin.' }, { status: 400 });
     }
 
     // Hash the new password before storing
     const hashedNewPassword = hashPassword(newPassword);
-    const updatedEmail = newEmail && newEmail.trim() ? newEmail.trim().toLowerCase() : storedEmail;
+    const updatedEmail = newEmail && newEmail.trim()
+      ? newEmail.trim().toLowerCase()
+      : credentials.email;
 
-    // Update local storage
-    const localData = getStoredData();
-    const updatedCreds = {
-      email: updatedEmail,
-      password: hashedNewPassword,
-      updatedAt: new Date().toISOString(),
-    };
-    localData.adminCredentials = updatedCreds;
-    saveStoredData(localData);
-
-    // Update Supabase
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data: credRows } = await supabase.from('admin_credentials').select('id').limit(1);
-        const existingId = credRows && credRows.length > 0 ? credRows[0].id : undefined;
-
-        await supabase.from('admin_credentials').upsert({
-          ...(existingId ? { id: existingId } : {}),
-          email: updatedEmail,
-          password: hashedNewPassword,
-          updated_at: new Date().toISOString(),
-        });
-      } catch (e) {
-        console.warn('[Change Password] Supabase upsert error:', e);
-      }
+    try {
+      await writeAdminCredentials({ email: updatedEmail, password: hashedNewPassword });
+    } catch (error) {
+      console.error('[change-password] credential write failed', error);
+      return NextResponse.json(
+        { success: false, error: 'Yeni şifre kalıcı olarak kaydedilemedi. Mevcut şifreniz değişmedi.' },
+        { status: 503 }
+      );
     }
 
     return NextResponse.json({

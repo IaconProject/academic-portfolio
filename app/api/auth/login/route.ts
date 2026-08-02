@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
-import {
-  serverSupabase as supabase,
-  isServerSupabaseConfigured as isSupabaseConfigured,
-} from '@/lib/supabase/server';
 import { verifyPassword, createSessionToken } from '@/lib/auth-helpers';
 import { checkRateLimit } from '@/lib/rate-limiter';
-import { getStoredData } from '@/lib/email-service';
+import { readAdminCredentials } from '@/lib/admin-credentials.server';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,33 +30,24 @@ export async function POST(request: Request) {
 
     const inputEmail = (email || '').trim().toLowerCase();
 
-    // Get current credentials from Supabase or local fallback
-    let storedEmail = 'bilgi@muhammedakan.com';
-    let storedPassword = '';
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const { data } = await supabase.from('admin_credentials').select('*').limit(1);
-        if (data && data.length > 0) {
-          storedEmail = (data[0].email || storedEmail).trim().toLowerCase();
-          storedPassword = data[0].password || '';
-        }
-      } catch (e) {
-        console.warn('[Login Route] Supabase fetch error:', e);
-      }
+    let credentials;
+    try {
+      credentials = await readAdminCredentials();
+    } catch (error) {
+      console.error('[login] credential store unavailable', error);
+      return NextResponse.json(
+        { success: false, error: 'Giriş bilgileri şu anda doğrulanamıyor. Lütfen kısa süre sonra tekrar deneyin.' },
+        { status: 503 }
+      );
     }
 
-    if (!storedPassword) {
-      const localData = getStoredData();
-      storedEmail = (localData.adminCredentials?.email || storedEmail).trim().toLowerCase();
-      storedPassword = localData.adminCredentials?.password || 'admin123456';
-    }
+    const storedEmail = credentials.email.trim().toLowerCase();
+    const storedPassword = credentials.password;
 
     // Email match check
     const validEmails = [
       storedEmail,
       (process.env.CMS_ADMIN_EMAIL || '').trim().toLowerCase(),
-      'bilgi@muhammedakan.com',
     ].filter(Boolean);
 
     if (!validEmails.includes(inputEmail)) {
@@ -92,7 +79,7 @@ export async function POST(request: Request) {
 
     // Set secure cookie
     response.cookies.set('admin_token', token, {
-      httpOnly: false, // Accessible by client JS if needed
+      httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60, // 24 hours
