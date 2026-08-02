@@ -8,6 +8,7 @@ import {
   zodFields,
 } from '@/lib/admin-api';
 import { normalizePath, slugifyTurkish } from '@/lib/seo';
+import { optionalUrlSchema } from '@/lib/admin-content-validation';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,9 +20,9 @@ const baseDetail = {
   translationGroupId: z.union([z.literal(''), z.string().uuid()]).optional(),
   excerpt: z.string().max(1000).default(''),
   content: z.string().max(100000).default(''),
-  coverImageUrl: z.union([z.literal(''), z.string().url()]).default(''),
+  coverImageUrl: optionalUrlSchema.default(''),
   coverImageAlt: z.string().max(300).default(''),
-  publishedAt: z.string().datetime().optional().or(z.literal('')),
+  publishedAt: z.string().datetime({ offset: true }).optional().or(z.literal('')),
 };
 
 const publicationSchema = z.object({
@@ -30,7 +31,7 @@ const publicationSchema = z.object({
   title: z.string().min(3).max(300),
   publisher: z.string().max(300).default(''),
   year: z.string().min(4).max(30),
-  url: z.union([z.literal(''), z.string().url()]).default(''),
+  url: optionalUrlSchema.default(''),
   doi: z.string().max(300).default(''),
   detailStatus: status.default('none'),
 }).superRefine((value, context) => {
@@ -44,7 +45,7 @@ const projectSchema = z.object({
   years: z.string().min(2).max(80),
   tags: z.array(z.string().max(100)).max(30).default([]),
   relatedPublicationIds: z.array(z.string().uuid()).max(50).default([]),
-  url: z.union([z.literal(''), z.string().url()]).default(''),
+  url: optionalUrlSchema.default(''),
   detailStatus: status.default('none'),
 }).superRefine((value, context) => {
   validatePublishable(value, value.detailStatus, context);
@@ -215,11 +216,17 @@ async function save(
   }
   const parsed = schemaFor(kind).safeParse(await request.json());
   if (!parsed.success) {
+    const fields = zodFields(parsed.error);
+    console.warn('[admin/content] validation rejected', {
+      kind,
+      method: isPatch ? 'PATCH' : 'POST',
+      fields,
+    });
     return apiError(
       'VALIDATION_ERROR',
       'İçerik alanlarını kontrol edin.',
       422,
-      zodFields(parsed.error)
+      fields
     );
   }
   const value = parsed.data as Record<string, any>;
@@ -260,6 +267,13 @@ async function save(
     .select('*')
     .single();
   if (error) {
+    console.error('[admin/content] database write failed', {
+      kind,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
     return apiError(
       'DATABASE_WRITE_FAILED',
       error.code === '23505'

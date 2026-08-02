@@ -5,6 +5,10 @@ import toast from 'react-hot-toast';
 import { BookOpen, Edit3, FileText, GitBranch, Plus, Save, Trash2, X } from 'lucide-react';
 import type { ArticleItem, ContentStatus, ProjectItem, PublicationItem } from '@/lib/types';
 import { slugifyTurkish } from '@/lib/seo';
+import {
+  firstValidationMessage,
+  normalizeOptionalUrl,
+} from '@/lib/admin-content-utils';
 
 type Kind = 'articles' | 'publications' | 'projects';
 type CmsItem = ArticleItem | PublicationItem | ProjectItem;
@@ -94,7 +98,7 @@ function normalizeRow(kind: Kind, row: Record<string, any>): CmsItem {
     translationGroupId: row.translation_group_id || row.translationGroupId || '',
     excerpt: row.excerpt || '',
     content: row.content || '',
-    coverImageUrl: row.cover_image_url || row.coverImageUrl || '',
+    coverImageUrl: normalizeOptionalUrl(row.cover_image_url || row.coverImageUrl || '') as string,
     coverImageAlt: row.cover_image_alt || row.coverImageAlt || '',
     publishedAt: row.published_at || row.publishedAt || '',
     updatedAt: row.updated_at || row.updatedAt || '',
@@ -117,7 +121,7 @@ function normalizeRow(kind: Kind, row: Record<string, any>): CmsItem {
       title: row.title,
       publisher: row.publisher || '',
       year: row.year,
-      url: row.url || '',
+      url: normalizeOptionalUrl(row.url || '') as string,
       doi: row.doi || '',
       detailStatus: row.detail_status || row.detailStatus || 'none',
     } as PublicationItem;
@@ -130,7 +134,7 @@ function normalizeRow(kind: Kind, row: Record<string, any>): CmsItem {
     tags: row.tags || [],
     relatedPublicationIds:
       row.related_publication_ids || row.relatedPublicationIds || [],
-    url: row.url || '',
+    url: normalizeOptionalUrl(row.url || '') as string,
     detailStatus: row.detail_status || row.detailStatus || 'none',
   } as ProjectItem;
 }
@@ -148,6 +152,7 @@ export function ContentPublishingEditor({
   const [form, setForm] = useState<Record<string, any>>(emptyItem(kind));
   const [busy, setBusy] = useState(false);
   const [listInputs, setListInputs] = useState({ tags: '', relatedKeywords: '', references: '' });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({});
 
   const orderedItems = useMemo(
     () => [...items].sort((a, b) => String(b.updatedAt || b.publishedAt || '').localeCompare(String(a.updatedAt || a.publishedAt || ''))),
@@ -177,6 +182,7 @@ export function ContentPublishingEditor({
     setEditingId('new');
     setForm(emptyItem(kind));
     setListInputs({ tags: '', relatedKeywords: '', references: '' });
+    setValidationErrors({});
   }
 
   function startEdit(item: CmsItem) {
@@ -188,12 +194,14 @@ export function ContentPublishingEditor({
       relatedKeywords: (value.relatedKeywords || []).join(', '),
       references: (value.references || []).join('\n'),
     });
+    setValidationErrors({});
   }
 
   function cancel() {
     setEditingId(null);
     setForm(emptyItem(kind));
     setListInputs({ tags: '', relatedKeywords: '', references: '' });
+    setValidationErrors({});
   }
 
   async function request(input: string, init: RequestInit) {
@@ -208,7 +216,14 @@ export function ContentPublishingEditor({
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload?.success) {
-      throw new Error(payload?.error?.message || 'İşlem tamamlanamadı.');
+      const error = new Error(
+        firstValidationMessage(
+          payload?.error?.fields,
+          payload?.error?.message || 'İşlem tamamlanamadı.'
+        )
+      ) as Error & { fields?: Record<string, string[]> };
+      error.fields = payload?.error?.fields;
+      throw error;
     }
     return payload.data;
   }
@@ -241,6 +256,7 @@ export function ContentPublishingEditor({
     }
 
     setBusy(true);
+    setValidationErrors({});
     try {
       const saved = normalizeRow(
         kind,
@@ -257,6 +273,8 @@ export function ContentPublishingEditor({
       toast.success(`${copy.singular} kaydedildi.`);
       cancel();
     } catch (error) {
+      const fields = (error as Error & { fields?: Record<string, string[]> }).fields;
+      if (fields) setValidationErrors(fields);
       toast.error(error instanceof Error ? error.message : 'İçerik kaydedilemedi.');
     } finally {
       setBusy(false);
@@ -384,6 +402,18 @@ export function ContentPublishingEditor({
               </>
             )}
           </div>
+          {Object.keys(validationErrors).length > 0 && (
+            <div role="alert" className="rounded-xl border border-rose-300 bg-rose-50 p-4 text-xs text-rose-900 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-200">
+              <p className="font-black">Kaydedilemeyen alanlar</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {Object.entries(validationErrors).flatMap(([field, messages]) =>
+                  messages.map((message) => (
+                    <li key={`${field}-${message}`}>{firstValidationMessage({ [field]: [message] }, message)}</li>
+                  ))
+                )}
+              </ul>
+            </div>
+          )}
           <div className="flex justify-end gap-2">
             {editingId !== 'new' && (
               <button type="button" onClick={preview} className="seo-secondary-button">
