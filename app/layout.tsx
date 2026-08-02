@@ -5,7 +5,9 @@ import { getSeoExperienceData } from '@/lib/seo-repository';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
 import './globals.css';
 
-const SITE_THEME_COLOR = '#f7f5f0';
+// Android Chrome ignores theme colors whose computed lightness exceeds 0.94.
+// Keep this in sync with `academic-bg` in tailwind.config.js.
+const SITE_THEME_COLOR = '#f3efe6';
 
 export const viewport: Viewport = {
   themeColor: SITE_THEME_COLOR,

@@ -112,7 +112,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
       id="iletisim"
       title="İletişim & Mesaj Gönderin"
       icon={Mail}
-      className="bg-[#f7f5f0] border-none shadow-none"
+      className="bg-academic-bg border-none shadow-none"
     >
       <div className="space-y-8 max-w-2xl mx-auto">
         {/* 1. Direct Visitor Message Form Box (TOP) */}

@@ -10,7 +10,9 @@ module.exports = {
       colors: {
         'academic-navy': '#1c1917',
         'academic-blue': '#292524',
-        'academic-bg': '#f7f5f0',
+        // Closest warm site background that Android Chrome accepts as a
+        // toolbar theme color (its bright-theme cutoff is 0.94 lightness).
+        'academic-bg': '#f3efe6',
         'academic-surface': '#ffffff',
         'academic-slate': '#57534e',
         'academic-border': '#e7e3d8',

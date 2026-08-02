@@ -170,7 +170,7 @@ export async function POST(request: Request) {
       subject: `📩 Yeni İletişim Mesajı: ${newMessage.name} (${newMessage.subject})`,
       plainText: `Yeni ziyaretçi mesajı alındı.\nAd Soyad: ${newMessage.name}\nE-posta: ${newMessage.email}\nKonu: ${newMessage.subject}\nTelefon: ${newMessage.phone || '-'}\nMesaj:\n${newMessage.message}`,
       htmlText: `
-        <div style="font-family: sans-serif; padding: 20px; background-color: #f7f5f0; color: #1c1917;">
+        <div style="font-family: sans-serif; padding: 20px; background-color: #f3efe6; color: #1c1917;">
           <h2 style="color: #d97706;">📩 Yeni Ziyaretçi Mesajı Alındı</h2>
           <p><strong>Gönderen:</strong> ${newMessage.name} (${newMessage.email})</p>
           <p><strong>Konu:</strong> ${newMessage.subject}</p>

@@ -23,7 +23,7 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
   const { profile, education, publications, projects, conferences, activities, references, socialLinks } = data;
 
   return (
-    <div className="min-h-screen bg-[#f7f5f0] text-stone-800 font-sans antialiased flex flex-col selection:bg-amber-200">
+    <div className="min-h-screen bg-academic-bg text-stone-800 font-sans antialiased flex flex-col selection:bg-amber-200">
       {/* JSON-LD Structured Data for SEO */}
       <JsonLdSchema data={data} />
 

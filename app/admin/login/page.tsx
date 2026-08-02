@@ -179,7 +179,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f5f0] dark:bg-[#121110] text-stone-900 dark:text-stone-100 flex items-center justify-center p-4 selection:bg-amber-200 relative overflow-hidden transition-colors duration-300 font-sans">
+    <div className="min-h-screen bg-academic-bg dark:bg-[#121110] text-stone-900 dark:text-stone-100 flex items-center justify-center p-4 selection:bg-amber-200 relative overflow-hidden transition-colors duration-300 font-sans">
       {/* Interactive Particle Animation Background */}
       <BlockchainCanvasAnimation theme={theme} />
 

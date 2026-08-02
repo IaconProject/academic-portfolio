@@ -31,7 +31,7 @@ export function SeoPageShell({
   children,
 }: SeoPageShellProps) {
   return (
-    <div className="min-h-screen bg-[#f7f5f0] text-[#24211e]">
+    <div className="min-h-screen bg-academic-bg text-[#24211e]">
       <header className="border-b border-[#ded9cb] bg-[#1c2128] text-[#f0ebe1]">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-5 px-5 py-5 md:px-8">
           <Link href="/" className="group min-w-0">

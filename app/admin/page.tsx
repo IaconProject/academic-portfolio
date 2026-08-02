@@ -195,7 +195,7 @@ function AdminDashboardContent() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-[#f7f5f0] dark:bg-[#121110] flex items-center justify-center text-stone-700 dark:text-stone-300 relative font-sans">
+      <div className="min-h-screen bg-academic-bg dark:bg-[#121110] flex items-center justify-center text-stone-700 dark:text-stone-300 relative font-sans">
         <BlockchainCanvasAnimation theme={theme} />
         <div className="flex flex-col items-center gap-3 relative z-10 p-8 rounded-2xl bg-white/80 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800 shadow-lg backdrop-blur-md">
           <RefreshCw className="w-8 h-8 animate-spin text-stone-800 dark:text-amber-500" />
@@ -225,7 +225,7 @@ function AdminDashboardContent() {
 
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
-      <div className="min-h-screen bg-[#f7f5f0] dark:bg-[#121110] text-stone-900 dark:text-stone-100 font-sans selection:bg-amber-200 dark:selection:bg-amber-900 relative transition-colors duration-300">
+      <div className="min-h-screen bg-academic-bg dark:bg-[#121110] text-stone-900 dark:text-stone-100 font-sans selection:bg-amber-200 dark:selection:bg-amber-900 relative transition-colors duration-300">
         {/* Interactive Mouse Particle Canvas */}
         <BlockchainCanvasAnimation theme={theme} />
 
@@ -369,7 +369,7 @@ export default function AdminDashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#f7f5f0] flex items-center justify-center text-stone-700">
+        <div className="min-h-screen bg-academic-bg flex items-center justify-center text-stone-700">
           <RefreshCw className="w-8 h-8 animate-spin" />
         </div>
       }

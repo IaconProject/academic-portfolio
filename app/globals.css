@@ -6,7 +6,7 @@
   html {
     scroll-behavior: smooth;
     /* Keep the browser canvas/overscroll area aligned with the site shell on mobile. */
-    background-color: #f7f5f0;
+    background-color: #f3efe6;
   }
   body {
     @apply min-h-full bg-academic-bg text-stone-800 font-sans antialiased overflow-x-hidden;

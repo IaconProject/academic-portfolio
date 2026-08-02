@@ -220,7 +220,7 @@ export async function sendOtpEmail({ toEmail, otpCode }: { toEmail: string; otpC
   const from = getSenderEmail();
   const subject = `🔑 Şifre Sıfırlama Kodu: ${otpCode}`;
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 30px; background-color: #f7f5f0; color: #1c1917; max-width: 480px; margin: 0 auto; border-radius: 16px; border: 1px solid #e7e3d8;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 30px; background-color: #f3efe6; color: #1c1917; max-width: 480px; margin: 0 auto; border-radius: 16px; border: 1px solid #e7e3d8;">
       <h2 style="color: #1c1917; margin-top: 0; font-size: 20px;">🔑 Şifre Sıfırlama Doğrulaması</h2>
       <p style="color: #57534e; font-size: 14px; line-height: 1.6;">
         Yönetim paneli şifrenizi sıfırlamak için tek kullanımlık doğrulama kodunuz:
@@ -271,7 +271,7 @@ export async function sendTestEmailDirect({ to }: { to?: string }): Promise<{
   const now = new Date();
   const subject = `🧪 CMS E-posta Testi — ${now.toLocaleTimeString('tr-TR')}`;
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 25px; background-color: #f7f5f0; color: #1c1917; max-width: 480px; margin: 0 auto; border-radius: 16px; border: 1px solid #e7e3d8;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 25px; background-color: #f3efe6; color: #1c1917; max-width: 480px; margin: 0 auto; border-radius: 16px; border: 1px solid #e7e3d8;">
       <h2 style="color: #d97706; margin-top: 0;">🧪 E-posta Testi Başarılı!</h2>
       <p style="color: #57534e; font-size: 14px; line-height: 1.6;">CMS e-posta bildirimleri doğru çalışmaktadır.</p>
       <table style="font-size: 13px; color: #44403c; margin-top: 12px;">
