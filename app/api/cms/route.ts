@@ -4,6 +4,7 @@ import { PortfolioData } from '@/lib/types';
 import {
   serverSupabase as supabase,
   isServerSupabaseConfigured as isSupabaseConfigured,
+  hasSupabaseServiceRole,
 } from '@/lib/supabase/server';
 import { validateAdminSession } from '@/lib/auth-helpers';
 import { revalidateSeoRoutes } from '@/lib/admin-api';
@@ -234,29 +235,46 @@ export async function POST(request: Request) {
     // 1. Notification Settings Sync
     if (body.notificationSettings) {
       const notif = body.notificationSettings;
+      if (!isSupabaseConfigured || !supabase || !hasSupabaseServiceRole) {
+        return NextResponse.json(
+          { success: false, error: { code: 'CMS_STORE_UNAVAILABLE', message: 'Kalıcı CMS veritabanı bağlantısı yapılandırılmamış.' } },
+          { status: 503 }
+        );
+      }
+
+      const { data: notifRows, error: lookupError } = await supabase
+        .from('notification_settings')
+        .select('id')
+        .limit(1);
+      if (lookupError) {
+        console.error('[cms] notification settings lookup failed', lookupError);
+        return NextResponse.json(
+          { success: false, error: { code: 'NOTIFICATION_SETTINGS_READ_FAILED', message: 'Bildirim ayarları veritabanından okunamadı.' } },
+          { status: 503 }
+        );
+      }
+      const existingId = notifRows?.[0]?.id;
+      const { error: upsertError } = await supabase.from('notification_settings').upsert({
+        ...(existingId ? { id: existingId } : {}),
+        email_notifications_enabled: notif.emailNotificationsEnabled ?? true,
+        notify_on_new_message: notif.notifyOnNewMessage ?? true,
+        notify_on_new_visitor: notif.notifyOnNewVisitor ?? false,
+        recipient_email: notif.recipientEmail || 'bilgi@muhammedakan.com',
+        recipient_emails: notif.recipientEmails || [notif.recipientEmail || 'bilgi@muhammedakan.com'],
+        resend_api_key: notif.resendApiKey || '',
+        sender_email: notif.senderEmail || 'noreply@muhammedakan.com',
+        updated_at: new Date().toISOString(),
+      });
+      if (upsertError) {
+        console.error('[cms] notification settings upsert failed', upsertError);
+        return NextResponse.json(
+          { success: false, error: { code: 'NOTIFICATION_SETTINGS_WRITE_FAILED', message: 'Bildirim ayarları kalıcı olarak kaydedilemedi.' } },
+          { status: 503 }
+        );
+      }
+
       const updatedFull = { ...currentTmp, notificationSettings: notif };
       writeTmpStore(sanitizePublicData(updatedFull));
-
-      if (isSupabaseConfigured && supabase) {
-        try {
-          const { data: notifRows } = await supabase.from('notification_settings').select('id').limit(1);
-          const existingId = notifRows && notifRows.length > 0 ? notifRows[0].id : undefined;
-
-          await supabase.from('notification_settings').upsert({
-            ...(existingId ? { id: existingId } : {}),
-            email_notifications_enabled: notif.emailNotificationsEnabled ?? true,
-            notify_on_new_message: notif.notifyOnNewMessage ?? true,
-            notify_on_new_visitor: notif.notifyOnNewVisitor ?? false,
-            recipient_email: notif.recipientEmail || 'bilgi@muhammedakan.com',
-            recipient_emails: notif.recipientEmails || [notif.recipientEmail || 'bilgi@muhammedakan.com'],
-            resend_api_key: notif.resendApiKey || '',
-            sender_email: notif.senderEmail || 'noreply@muhammedakan.com',
-            updated_at: new Date().toISOString(),
-          });
-        } catch (e) {
-          console.warn('Supabase notification_settings upsert error:', e);
-        }
-      }
     }
 
     // 2. Full Portfolio Data Sync

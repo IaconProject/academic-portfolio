@@ -109,8 +109,6 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
         },
       };
 
-      savePortfolioDataLocally(updatedFull);
-
       const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
 
       const res = await fetch('/api/cms', {
@@ -122,11 +120,16 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
         body: JSON.stringify({ notificationSettings: updatedFull.notificationSettings }),
       });
 
-      if (res.ok) {
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.success === true) {
+        savePortfolioDataLocally(updatedFull);
         onUpdate(updatedFull);
         toast.success('E-posta bildirim ayarları başarıyla kaydedildi.');
       } else {
-        toast.error('Ayarlar kaydedilirken bir hata oluştu.');
+        const message = typeof json?.error === 'string'
+          ? json.error
+          : json?.error?.message || 'Ayarlar kaydedilirken bir hata oluştu.';
+        toast.error(message);
       }
     } catch (err) {
       toast.error('Sunucu bağlantı hatası.');

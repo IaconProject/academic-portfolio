@@ -1,291 +1,189 @@
 import { NextResponse } from 'next/server';
-import {
-  serverSupabase as supabase,
-  isServerSupabaseConfigured as isSupabaseConfigured,
-} from '@/lib/supabase/server';
-import { ContactMessage } from '@/lib/types';
-import { sendNotificationEmail } from '@/lib/email-service';
+import { z } from 'zod';
 import { validateAdminSession } from '@/lib/auth-helpers';
+import {
+  contactMessageInputSchema,
+  escapeHtml,
+} from '@/lib/contact-messages';
+import {
+  MessageStoreError,
+  createMessage,
+  deleteMessage,
+  deleteReadMessages,
+  listMessages,
+  markAllMessagesRead,
+  updateMessage,
+} from '@/lib/contact-messages.server';
+import { sendNotificationEmail } from '@/lib/email-service';
 import { checkRateLimit } from '@/lib/rate-limiter';
-import fs from 'fs';
-import path from 'path';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const MESSAGES_TMP_FILE = path.join('/tmp', 'academic_contact_messages_v1.json');
+const updateSchema = z.object({
+  id: z.string().uuid().optional(),
+  isRead: z.boolean().optional(),
+  isStarred: z.boolean().optional(),
+  markAllRead: z.boolean().optional(),
+});
 
-let memoryMessages: ContactMessage[] = [];
-
-function readLocalMessages(): ContactMessage[] {
-  if (memoryMessages.length > 0) return memoryMessages;
-  try {
-    if (fs.existsSync(MESSAGES_TMP_FILE)) {
-      const content = fs.readFileSync(MESSAGES_TMP_FILE, 'utf-8');
-      if (content) {
-        memoryMessages = JSON.parse(content);
-        return memoryMessages;
-      }
-    }
-  } catch (e) {
-    console.error('Failed reading local messages file:', e);
-  }
-  return [];
-}
-
-function writeLocalMessages(msgs: ContactMessage[]): void {
-  memoryMessages = msgs;
-  try {
-    fs.writeFileSync(MESSAGES_TMP_FILE, JSON.stringify(msgs, null, 2), 'utf-8');
-  } catch (e) {
-    console.error('Failed writing local messages file:', e);
-  }
-}
-
-// GET: List all messages with unread count
-export async function GET(request: Request) {
-  if (!validateAdminSession(request)) {
-    return NextResponse.json({ success: false, error: 'Yetkisiz işlem.' }, { status: 401 });
-  }
-  let messages: ContactMessage[] = [];
-
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('contact_messages')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!error && data) {
-        messages = data.map((row: any) => ({
-          id: row.id,
-          name: row.name,
-          email: row.email,
-          subject: row.subject,
-          phone: row.phone || '',
-          message: row.message,
-          isRead: row.is_read ?? false,
-          isStarred: row.is_starred ?? false,
-          ipAddress: row.ip_address || '',
-          createdAt: row.created_at,
-        }));
-        writeLocalMessages(messages);
-      } else {
-        messages = readLocalMessages();
-      }
-    } catch (e) {
-      messages = readLocalMessages();
-    }
-  } else {
-    messages = readLocalMessages();
-  }
-
-  const unreadCount = messages.filter((m) => !m.isRead).length;
-
-  return NextResponse.json({
-    success: true,
-    unreadCount,
-    messages,
+function response(body: unknown, status = 200) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      'Cache-Control': 'no-store, max-age=0',
+      'X-Robots-Tag': 'noindex',
+    },
   });
 }
 
-// POST: Submit a new visitor message
+function errorResponse(error: unknown) {
+  if (error instanceof MessageStoreError) {
+    return response(
+      { success: false, error: { code: error.code, message: error.message } },
+      error.status
+    );
+  }
+  if (error instanceof z.ZodError) {
+    return response(
+      {
+        success: false,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: error.issues[0]?.message || 'Gönderilen bilgiler geçersiz.',
+          fields: error.flatten().fieldErrors,
+        },
+      },
+      400
+    );
+  }
+  console.error('[messages] unexpected error', error);
+  return response(
+    {
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Mesaj işlemi tamamlanamadı.' },
+    },
+    500
+  );
+}
+
+function requireAdmin(request: Request) {
+  if (!validateAdminSession(request)) {
+    throw new MessageStoreError('Yetkisiz işlem.', 401, 'UNAUTHORIZED');
+  }
+}
+
+function getClientIp(request: Request): string {
+  return (
+    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    request.headers.get('x-real-ip')?.trim() ||
+    'unknown'
+  ).slice(0, 128);
+}
+
+export async function GET(request: Request) {
+  try {
+    requireAdmin(request);
+    const messages = await listMessages();
+    return response({
+      success: true,
+      data: { messages, unreadCount: messages.filter((message) => !message.isRead).length },
+      // Kept during the UI transition for older deployed clients.
+      messages,
+      unreadCount: messages.filter((message) => !message.isRead).length,
+    });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
 export async function POST(request: Request) {
   try {
-    const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
-
-    // Rate Limit: 3 messages per minute per IP
-    const rateCheck = checkRateLimit(`msg_${clientIp}`, 3, 60000);
-    if (!rateCheck.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Çok fazla mesaj gönderildi. Lütfen ${rateCheck.resetSeconds} saniye sonra tekrar deneyin.`,
-        },
-        { status: 429 }
+    const clientIp = getClientIp(request);
+    const quickLimit = checkRateLimit(`msg_${clientIp}`, 3, 60_000);
+    if (!quickLimit.allowed) {
+      throw new MessageStoreError(
+        `Çok fazla mesaj gönderildi. Lütfen ${quickLimit.resetSeconds} saniye sonra tekrar deneyin.`,
+        429,
+        'RATE_LIMITED'
       );
     }
 
-    const body = await request.json();
-    const { name, email, subject, phone, message, website_hp } = body;
-
-    // 1. Anti-spam Honeypot Protection
-    if (website_hp) {
-      // Spam bot filled hidden honeypot field -> silent fail
-      return NextResponse.json({ success: true, message: 'Mesajınız iletildi.' });
+    const input = contactMessageInputSchema.parse(await request.json());
+    if (input.website_hp) {
+      return response({ success: true, message: 'Mesajınız iletildi.' });
     }
 
-    // 2. Validation
-    if (!name || typeof name !== 'string' || name.trim().length < 2) {
-      return NextResponse.json({ success: false, error: 'Lütfen geçerli bir ad soyad girin.' }, { status: 400 });
-    }
-
-    if (!email || !email.includes('@') || !email.includes('.')) {
-      return NextResponse.json({ success: false, error: 'Lütfen geçerli bir e-posta adresi girin.' }, { status: 400 });
-    }
-
-    if (!message || typeof message !== 'string' || message.trim().length < 5) {
-      return NextResponse.json({ success: false, error: 'Lütfen en az 5 karakterlik mesaj yazın.' }, { status: 400 });
-    }
-
-    const newMessage: ContactMessage = {
-      id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      subject: (subject || 'Genel İletişim').trim(),
-      phone: (phone || '').trim(),
-      message: message.trim(),
-      isRead: false,
-      isStarred: false,
-      ipAddress: clientIp,
-      createdAt: new Date().toISOString(),
+    // Persistence is the source of truth. No success response is returned before this completes.
+    const newMessage = await createMessage(input, clientIp);
+    const safe = {
+      name: escapeHtml(newMessage.name),
+      email: escapeHtml(newMessage.email),
+      subject: escapeHtml(newMessage.subject),
+      phone: escapeHtml(newMessage.phone || '-'),
+      ip: escapeHtml(newMessage.ipAddress || '-'),
+      message: escapeHtml(newMessage.message),
     };
 
-    // Save locally
-    const current = readLocalMessages();
-    const updated = [newMessage, ...current];
-    writeLocalMessages(updated);
-
-    // Save to Supabase
-    if (isSupabaseConfigured && supabase) {
-      try {
-        await supabase.from('contact_messages').insert({
-          name: newMessage.name,
-          email: newMessage.email,
-          subject: newMessage.subject,
-          phone: newMessage.phone,
-          message: newMessage.message,
-          is_read: false,
-          is_starred: false,
-          ip_address: newMessage.ipAddress,
-        });
-      } catch (e) {
-        console.warn('Supabase message insert error:', e);
-      }
-    }
-
-    // Trigger email notification asynchronously
-    sendNotificationEmail({
+    const notificationSent = await sendNotificationEmail({
       type: 'message',
       subject: `📩 Yeni İletişim Mesajı: ${newMessage.name} (${newMessage.subject})`,
       plainText: `Yeni ziyaretçi mesajı alındı.\nAd Soyad: ${newMessage.name}\nE-posta: ${newMessage.email}\nKonu: ${newMessage.subject}\nTelefon: ${newMessage.phone || '-'}\nMesaj:\n${newMessage.message}`,
       htmlText: `
         <div style="font-family: sans-serif; padding: 20px; background-color: #f3efe6; color: #1c1917;">
           <h2 style="color: #d97706;">📩 Yeni Ziyaretçi Mesajı Alındı</h2>
-          <p><strong>Gönderen:</strong> ${newMessage.name} (${newMessage.email})</p>
-          <p><strong>Konu:</strong> ${newMessage.subject}</p>
-          <p><strong>Telefon:</strong> ${newMessage.phone || '-'}</p>
-          <p><strong>IP Adresi:</strong> ${newMessage.ipAddress}</p>
+          <p><strong>Gönderen:</strong> ${safe.name} (${safe.email})</p>
+          <p><strong>Konu:</strong> ${safe.subject}</p>
+          <p><strong>Telefon:</strong> ${safe.phone}</p>
+          <p><strong>IP Adresi:</strong> ${safe.ip}</p>
           <hr style="border: none; border-top: 1px solid #e7e3d8; margin: 15px 0;" />
-          <p style="white-space: pre-wrap; background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e7e3d8;">${newMessage.message}</p>
+          <p style="white-space: pre-wrap; background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e7e3d8;">${safe.message}</p>
           <p style="font-size: 12px; color: #78716c; margin-top: 20px;">Bu bildirim Akademik Portfolyo CMS yönetim paneliniz tarafından gönderilmiştir.</p>
         </div>
       `,
-    }).catch(() => {});
-
-    return NextResponse.json({ success: true, data: newMessage });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: 'Mesaj iletilirken bir hata oluştu.' }, { status: 500 });
-  }
-}
-
-// PATCH: Update isRead or isStarred status (Requires Admin Auth)
-export async function PATCH(request: Request) {
-  try {
-    if (!validateAdminSession(request)) {
-      return NextResponse.json({ success: false, error: 'Yetkisiz işlem.' }, { status: 401 });
-    }
-
-    const { id, isRead, isStarred, markAllRead } = await request.json();
-    let current = readLocalMessages();
-
-    if (markAllRead) {
-      current = current.map((m) => ({ ...m, isRead: true }));
-      writeLocalMessages(current);
-
-      if (isSupabaseConfigured && supabase) {
-        try {
-          await supabase.from('contact_messages').update({ is_read: true }).neq('id', '00000000-0000-0000-0000-000000000000');
-        } catch (e) {}
-      }
-
-      return NextResponse.json({ success: true });
-    }
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Mesaj ID zorunludur.' }, { status: 400 });
-    }
-
-    current = current.map((m) => {
-      if (m.id === id) {
-        return {
-          ...m,
-          ...(typeof isRead === 'boolean' ? { isRead } : {}),
-          ...(typeof isStarred === 'boolean' ? { isStarred } : {}),
-        };
-      }
-      return m;
     });
 
-    writeLocalMessages(current);
-
-    if (isSupabaseConfigured && supabase) {
-      try {
-        const updatePayload: any = {};
-        if (typeof isRead === 'boolean') updatePayload.is_read = isRead;
-        if (typeof isStarred === 'boolean') updatePayload.is_starred = isStarred;
-
-        await supabase.from('contact_messages').update(updatePayload).eq('id', id);
-      } catch (e) {}
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+    console.info('[messages] message persisted', {
+      id: newMessage.id,
+      notificationSent,
+    });
+    return response({ success: true, data: newMessage, notificationSent }, 201);
+  } catch (error) {
+    return errorResponse(error);
   }
 }
 
-// DELETE: Delete single message or read messages (Requires Admin Auth)
+export async function PATCH(request: Request) {
+  try {
+    requireAdmin(request);
+    const input = updateSchema.parse(await request.json());
+    if (input.markAllRead) {
+      await markAllMessagesRead();
+      return response({ success: true });
+    }
+    if (!input.id) {
+      throw new MessageStoreError('Mesaj ID zorunludur.', 400, 'VALIDATION_ERROR');
+    }
+    const message = await updateMessage(input.id, input);
+    return response({ success: true, data: message });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
 export async function DELETE(request: Request) {
   try {
-    if (!validateAdminSession(request)) {
-      return NextResponse.json({ success: false, error: 'Yetkisiz işlem.' }, { status: 401 });
-    }
-
+    requireAdmin(request);
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    const deleteRead = searchParams.get('deleteRead');
-
-    let current = readLocalMessages();
-
-    if (deleteRead === 'true') {
-      current = current.filter((m) => !m.isRead);
-      writeLocalMessages(current);
-
-      if (isSupabaseConfigured && supabase) {
-        try {
-          await supabase.from('contact_messages').delete().eq('is_read', true);
-        } catch (e) {}
-      }
-
-      return NextResponse.json({ success: true });
+    if (searchParams.get('deleteRead') === 'true') {
+      await deleteReadMessages();
+      return response({ success: true });
     }
 
-    if (id) {
-      current = current.filter((m) => m.id !== id);
-      writeLocalMessages(current);
-
-      if (isSupabaseConfigured && supabase) {
-        try {
-          await supabase.from('contact_messages').delete().eq('id', id);
-        } catch (e) {}
-      }
-
-      return NextResponse.json({ success: true });
-    }
-
-    return NextResponse.json({ success: false, error: 'Parametre eksik.' }, { status: 400 });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: String(err) }, { status: 500 });
+    const id = z.string().uuid().parse(searchParams.get('id'));
+    await deleteMessage(id);
+    return response({ success: true });
+  } catch (error) {
+    return errorResponse(error);
   }
 }

@@ -24,6 +24,7 @@ export const MessagesManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [filterTab, setFilterTab] = useState<'all' | 'unread' | 'starred'>('all');
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+  const [loadError, setLoadError] = useState<string>('');
   const adminHeaders = (json = false) => {
     const token = sessionStorage.getItem('admin_token') || '';
     return {
@@ -32,27 +33,40 @@ export const MessagesManager: React.FC = () => {
     };
   };
 
-  const fetchMessages = async () => {
-    setLoading(true);
+  const parseResponse = async (res: Response) => {
+    const json = await res.json().catch(() => null);
+    if (!res.ok || json?.success !== true) {
+      const message = typeof json?.error === 'string'
+        ? json.error
+        : json?.error?.message || 'Mesaj işlemi tamamlanamadı.';
+      throw new Error(message);
+    }
+    return json;
+  };
+
+  const fetchMessages = async (showLoader = true) => {
+    if (showLoader) setLoading(true);
     try {
       const res = await fetch('/api/messages?t=' + Date.now(), {
         headers: adminHeaders(),
+        cache: 'no-store',
       });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.messages) {
-          setMessages(json.messages);
-        }
-      }
+      const json = await parseResponse(res);
+      setMessages(json.data?.messages || json.messages || []);
+      setLoadError('');
     } catch (e) {
-      toast.error('Mesajlar yüklenemedi.');
+      const message = e instanceof Error ? e.message : 'Mesajlar yüklenemedi.';
+      setLoadError(message);
+      if (showLoader) toast.error(message);
     } finally {
-      setLoading(false);
+      if (showLoader) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchMessages();
+    const interval = window.setInterval(() => fetchMessages(false), 30_000);
+    return () => window.clearInterval(interval);
     // The loader is intentionally bound once when the manager mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -60,81 +74,86 @@ export const MessagesManager: React.FC = () => {
   const handleToggleStar = async (msg: ContactMessage, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const newStarred = !msg.isStarred;
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msg.id ? { ...m, isStarred: newStarred } : m))
-    );
-    if (selectedMessage?.id === msg.id) {
-      setSelectedMessage((prev) => (prev ? { ...prev, isStarred: newStarred } : null));
-    }
-
     try {
-      await fetch('/api/messages', {
+      const res = await fetch('/api/messages', {
         method: 'PATCH',
         headers: adminHeaders(true),
         body: JSON.stringify({ id: msg.id, isStarred: newStarred }),
       });
-    } catch (e) {}
+      const json = await parseResponse(res);
+      const updated = json.data as ContactMessage;
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? updated : m)));
+      if (selectedMessage?.id === msg.id) setSelectedMessage(updated);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Yıldız durumu güncellenemedi.');
+    }
   };
 
   const handleMarkAsRead = async (msg: ContactMessage, isRead = true) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msg.id ? { ...m, isRead } : m))
-    );
-    if (selectedMessage?.id === msg.id) {
-      setSelectedMessage((prev) => (prev ? { ...prev, isRead } : null));
-    }
-
     try {
-      await fetch('/api/messages', {
+      const res = await fetch('/api/messages', {
         method: 'PATCH',
         headers: adminHeaders(true),
         body: JSON.stringify({ id: msg.id, isRead }),
       });
-    } catch (e) {}
+      const json = await parseResponse(res);
+      const updated = json.data as ContactMessage;
+      setMessages((prev) => prev.map((m) => (m.id === msg.id ? updated : m)));
+      if (selectedMessage?.id === msg.id) setSelectedMessage(updated);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Okundu durumu güncellenemedi.');
+    }
   };
 
   const handleMarkAllRead = async () => {
-    setMessages((prev) => prev.map((m) => ({ ...m, isRead: true })));
-    toast.success('Tüm mesajlar okundu olarak işaretlendi.');
     try {
-      await fetch('/api/messages', {
+      const res = await fetch('/api/messages', {
         method: 'PATCH',
         headers: adminHeaders(true),
         body: JSON.stringify({ markAllRead: true }),
       });
-    } catch (e) {}
+      await parseResponse(res);
+      setMessages((prev) => prev.map((m) => ({ ...m, isRead: true })));
+      setSelectedMessage((prev) => prev ? { ...prev, isRead: true } : null);
+      toast.success('Tüm mesajlar okundu olarak işaretlendi.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Mesajlar güncellenemedi.');
+    }
   };
 
   const handleDelete = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (!confirm('Bu mesajı silmek istediğinize emin misiniz?')) return;
 
-    setMessages((prev) => prev.filter((m) => m.id !== id));
-    if (selectedMessage?.id === id) {
-      setSelectedMessage(null);
-    }
-    toast.success('Mesaj silindi.');
-
     try {
-      await fetch(`/api/messages?id=${id}`, {
+      const res = await fetch(`/api/messages?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
         headers: adminHeaders(),
       });
-    } catch (e) {}
+      await parseResponse(res);
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+      if (selectedMessage?.id === id) setSelectedMessage(null);
+      toast.success('Mesaj silindi.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Mesaj silinemedi.');
+    }
   };
 
   const handleDeleteAllRead = async () => {
     if (!confirm('Okunmuş tüm mesajları silmek istediğinize emin misiniz?')) return;
 
-    setMessages((prev) => prev.filter((m) => !m.isRead));
-    toast.success('Okunan mesajlar temizlendi.');
-
     try {
-      await fetch('/api/messages?deleteRead=true', {
+      const res = await fetch('/api/messages?deleteRead=true', {
         method: 'DELETE',
         headers: adminHeaders(),
       });
-    } catch (e) {}
+      await parseResponse(res);
+      setMessages((prev) => prev.filter((m) => !m.isRead));
+      if (selectedMessage?.isRead) setSelectedMessage(null);
+      toast.success('Okunan mesajlar temizlendi.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Okunan mesajlar silinemedi.');
+    }
   };
 
   const handleOpenDetail = (msg: ContactMessage) => {
@@ -226,7 +245,7 @@ export const MessagesManager: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={fetchMessages}
+            onClick={() => fetchMessages()}
             disabled={loading}
             className="p-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl border border-stone-200 dark:border-stone-700 transition-colors"
             title="Yenile"
@@ -242,6 +261,12 @@ export const MessagesManager: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+          <strong>Mesaj veritabanına ulaşılamıyor:</strong> {loadError}
+        </div>
+      )}
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

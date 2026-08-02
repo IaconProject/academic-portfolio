@@ -98,7 +98,10 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
         setPhone('');
         setMessage('');
       } else {
-        toast.error(json.error || 'Mesaj gönderilemedi. Lütfen tekrar deneyin.');
+        const errorMessage = typeof json?.error === 'string'
+          ? json.error
+          : json?.error?.message || 'Mesaj gönderilemedi. Lütfen tekrar deneyin.';
+        toast.error(errorMessage);
       }
     } catch (err) {
       toast.error('Sunucu bağlantı hatası oluştu.');
