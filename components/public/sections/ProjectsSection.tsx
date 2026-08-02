@@ -15,10 +15,10 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
       <div className="space-y-6">
         {projects.map((project, idx) => (
           <React.Fragment key={project.id}>
-            {idx > 0 && <hr className="border-[#ece8dc] my-6" />}
+            {idx > 0 && <hr className="border-academic-border my-6" />}
             <div className="group">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 mb-2">
-                <h3 className="font-bold text-[#24211e] text-base md:text-lg">
+                <h3 className="font-bold text-academic-ink text-base md:text-lg">
                   {isContentPublished(project.detailStatus, project.publishedAt) ? (
                     <Link
                       href={`/projeler/${projectSlug(project)}`}
@@ -30,12 +30,12 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
                     project.title
                   )}
                 </h3>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#57534e] bg-[#efece4] px-2.5 py-1 rounded-lg border border-[#ded9cb] w-fit">
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-academic-slate bg-academic-surface-muted px-2.5 py-1 rounded-lg border border-academic-border w-fit">
                   <Calendar className="w-3 h-3 text-[#78716c]" />
                   {project.years}
                 </span>
               </div>
-              <p className="text-sm text-[#57534e] leading-relaxed mb-3 text-justify font-sans">
+              <p className="text-sm text-academic-slate leading-relaxed mb-3 text-justify font-sans">
                 {project.description}
               </p>
 
@@ -44,7 +44,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
                   {project.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold bg-[#efece4] text-[#2c2825] px-2.5 py-1 rounded-lg border border-[#ded9cb] hover:border-[#b0a999] transition-colors"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold bg-academic-surface-muted text-academic-ink px-2.5 py-1 rounded-lg border border-academic-border hover:border-[#a99d89] transition-colors"
                     >
                       <Tag className="w-3 h-3 text-[#78716c]" />
                       {tag}

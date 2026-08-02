@@ -13,9 +13,11 @@ module.exports = {
         // Closest warm site background that Android Chrome accepts as a
         // toolbar theme color (its bright-theme cutoff is 0.94 lightness).
         'academic-bg': '#f3efe6',
-        'academic-surface': '#ffffff',
-        'academic-slate': '#57534e',
-        'academic-border': '#e7e3d8',
+        'academic-surface': '#e8dfd0',
+        'academic-surface-muted': '#f0e9dd',
+        'academic-ink': '#29241f',
+        'academic-slate': '#4b453f',
+        'academic-border': '#d2c6b4',
       },
       fontFamily: {
         serif: ['Georgia', 'Cambria', '"Times New Roman"', 'serif'],

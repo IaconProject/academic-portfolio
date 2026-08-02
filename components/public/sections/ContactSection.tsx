@@ -112,14 +112,14 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
       id="iletisim"
       title="İletişim & Mesaj Gönderin"
       icon={Mail}
-      className="bg-academic-bg border-none shadow-none"
+      className="bg-academic-surface"
     >
       <div className="space-y-8 max-w-2xl mx-auto">
         {/* 1. Direct Visitor Message Form Box (TOP) */}
-        <div className="bg-[#faf8f4] p-6 md:p-8 rounded-2xl border border-[#e6e2d5] shadow-sm space-y-6">
-          <div className="border-b border-[#ece8dc] pb-4">
-            <h3 className="text-lg font-bold text-[#24211e] flex items-center gap-2">
-              <MessageSquare className="w-5 h-5 text-[#57534e]" />
+        <div className="bg-academic-surface-muted p-6 md:p-8 rounded-2xl border border-academic-border shadow-sm space-y-6">
+          <div className="border-b border-academic-border pb-4">
+            <h3 className="text-lg font-bold text-academic-ink flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-academic-slate" />
               <span>Doğrudan Mesaj Bırakın</span>
             </h3>
             <p className="text-xs text-[#78716c] mt-1">
@@ -275,8 +275,8 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
         </div>
 
         {/* 2. Direct Email Header Card (BOTTOM) */}
-        <div className="text-center py-4 space-y-5 bg-[#faf8f4] p-6 md:p-8 rounded-2xl border border-[#e6e2d5] shadow-sm">
-          <p className="text-[#57534e] text-sm md:text-base leading-relaxed">
+        <div className="text-center py-4 space-y-5 bg-academic-surface-muted p-6 md:p-8 rounded-2xl border border-academic-border shadow-sm">
+          <p className="text-academic-slate text-sm md:text-base leading-relaxed">
             Akademik davetler, seminerler, proje işbirlikleri ve görüş alışverişi için doğrudan e-posta adresi üzerinden de iletişime geçebilirsiniz:
           </p>
 

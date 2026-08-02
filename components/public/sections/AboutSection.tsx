@@ -24,19 +24,19 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ profile, socialLinks
 
   return (
     <AcademicCard id="hakkinda" title="Hakkında" icon={User}>
-      <p className="text-[#57534e] text-base md:text-lg leading-relaxed mb-6 font-sans text-justify">
+      <p className="text-academic-slate text-base md:text-lg leading-relaxed mb-6 font-sans text-justify">
         {profile.bio}
       </p>
 
       {/* Social & Academic Buttons */}
-      <div className="flex flex-wrap gap-3 mt-6 pt-5 border-t border-[#ece8dc]">
+      <div className="flex flex-wrap gap-3 mt-6 pt-5 border-t border-academic-border">
         {socialLinks.map((link) => (
           <a
             key={link.id}
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 min-w-[130px] inline-flex items-center justify-center gap-2.5 py-3 px-4 bg-[#efece4] hover:bg-[#e5e1d5] border border-[#ded9cb] rounded-xl text-xs md:text-sm font-semibold text-[#2c2825] transition-all duration-150 active:scale-95 shadow-sm"
+            className="flex-1 min-w-[130px] inline-flex items-center justify-center gap-2.5 py-3 px-4 bg-academic-surface-muted hover:bg-[#e3d9ca] border border-academic-border rounded-xl text-xs md:text-sm font-semibold text-academic-ink transition-all duration-150 active:scale-95 shadow-sm"
           >
             {getSocialIcon(link.platform, link.iconName)}
             <span>{link.platform}</span>

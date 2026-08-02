@@ -12,7 +12,7 @@ export const ConferencesSection: React.FC<ConferencesSectionProps> = ({ conferen
     <AcademicCard id="sempozyum" title="Sempozyum & Konferans" icon={Mic}>
       <div className="space-y-4">
         {conferences.map((conf) => (
-          <div key={conf.id} className="p-5 bg-[#f5f2ea]/80 rounded-xl border border-[#e6e2d5]">
+          <div key={conf.id} className="p-5 bg-academic-surface-muted rounded-xl border border-academic-border">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
               <span className="text-[11px] font-semibold text-[#2c2825] bg-[#efece4] px-2.5 py-0.5 rounded-md border border-[#ded9cb] w-fit">
                 {conf.role || 'Bildiri Sunumu'}
@@ -23,11 +23,11 @@ export const ConferencesSection: React.FC<ConferencesSectionProps> = ({ conferen
               </span>
             </div>
 
-            <h3 className="font-serif font-bold text-[#24211e] text-base md:text-lg mb-1">
+            <h3 className="font-serif font-bold text-academic-ink text-base md:text-lg mb-1">
               {conf.title}
             </h3>
 
-            <p className="text-[#57534e] text-xs md:text-sm font-medium">
+            <p className="text-academic-slate text-xs md:text-sm font-medium">
               {conf.eventName}
             </p>
 

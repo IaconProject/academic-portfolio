@@ -16,7 +16,7 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
         {publications.map((pub) => (
           <div
             key={pub.id}
-            className="p-5 bg-[#f5f2ea]/80 rounded-xl border border-[#e6e2d5] transition-all hover:bg-[#efece4]"
+            className="p-5 bg-academic-surface-muted rounded-xl border border-academic-border transition-all hover:bg-[#e3d9ca]"
           >
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="text-[11px] font-semibold text-[#2c2825] bg-[#efece4] px-2.5 py-0.5 rounded-md border border-[#ded9cb]">
@@ -28,7 +28,7 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
               </div>
             </div>
 
-            <h3 className="font-serif font-bold text-[#24211e] text-base md:text-lg leading-snug mb-2">
+            <h3 className="font-serif font-bold text-academic-ink text-base md:text-lg leading-snug mb-2">
               {isContentPublished(pub.detailStatus, pub.publishedAt) ? (
                 <Link
                   href={`/yayinlar/${publicationSlug(pub)}`}
@@ -42,7 +42,7 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
             </h3>
 
             {pub.publisher && (
-              <p className="text-[#57534e] text-xs md:text-sm italic">
+              <p className="text-academic-slate text-xs md:text-sm italic">
                 {pub.publisher}
               </p>
             )}
