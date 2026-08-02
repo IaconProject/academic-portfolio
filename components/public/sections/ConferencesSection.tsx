@@ -17,7 +17,7 @@ export const ConferencesSection: React.FC<ConferencesSectionProps> = ({ conferen
               <span className="text-[11px] font-semibold text-[#2c2825] bg-[#efece4] px-2.5 py-0.5 rounded-md border border-[#ded9cb] w-fit">
                 {conf.role || 'Bildiri Sunumu'}
               </span>
-              <span className="text-xs text-[#6b625b] font-medium inline-flex items-center gap-1">
+              <span className="text-xs text-academic-slate font-medium inline-flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5" />
                 {conf.year}
               </span>
@@ -32,7 +32,7 @@ export const ConferencesSection: React.FC<ConferencesSectionProps> = ({ conferen
             </p>
 
             {conf.location && (
-              <div className="inline-flex items-center gap-1 text-xs text-[#6b625b] mt-2">
+              <div className="inline-flex items-center gap-1 text-xs text-academic-slate mt-2">
                 <MapPin className="w-3.5 h-3.5 text-[#a19b8f]" />
                 <span>{conf.location}</span>
               </div>

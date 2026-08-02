@@ -34,7 +34,7 @@ export const EducationSection: React.FC<EducationSectionProps> = ({ education })
               {item.institution}
             </p>
             {item.description && (
-              <p className="text-[#78716c] text-xs md:text-sm mt-2 leading-relaxed">
+              <p className="text-academic-slate text-xs md:text-sm mt-2 leading-relaxed">
                 {item.description}
               </p>
             )}

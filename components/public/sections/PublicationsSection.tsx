@@ -22,7 +22,7 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
               <span className="text-[11px] font-semibold text-[#2c2825] bg-[#efece4] px-2.5 py-0.5 rounded-md border border-[#ded9cb]">
                 {pub.type}
               </span>
-              <div className="flex items-center gap-1.5 text-xs text-[#6b625b] font-medium">
+              <div className="flex items-center gap-1.5 text-xs text-academic-slate font-medium">
                 <Calendar className="w-3.5 h-3.5 text-[#a19b8f]" />
                 <span>{pub.year}</span>
               </div>

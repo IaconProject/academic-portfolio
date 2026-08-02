@@ -122,7 +122,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
               <MessageSquare className="w-5 h-5 text-academic-slate" />
               <span>Doğrudan Mesaj Bırakın</span>
             </h3>
-            <p className="text-xs text-[#78716c] mt-1">
+            <p className="text-xs text-academic-slate mt-1">
               Aşağıdaki formu doldurarak iletinizi doğrudan yönetim panelime ulaştırabilirsiniz.
             </p>
           </div>
@@ -309,7 +309,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
           </div>
 
           {profile.location && (
-            <div className="inline-flex items-center gap-1.5 text-xs text-[#6b625b] font-medium pt-1">
+            <div className="inline-flex items-center gap-1.5 text-xs text-academic-slate font-medium pt-1">
               <MapPin className="w-4 h-4 text-[#a19b8f]" />
               <span>{profile.location}</span>
             </div>

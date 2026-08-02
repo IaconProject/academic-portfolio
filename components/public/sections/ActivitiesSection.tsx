@@ -26,7 +26,7 @@ export const ActivitiesSection: React.FC<ActivitiesSectionProps> = ({ activities
               {act.organization}
             </p>
             {act.description && (
-              <p className="text-[#6b625b] text-xs md:text-sm leading-relaxed">
+              <p className="text-academic-slate text-xs md:text-sm leading-relaxed">
                 {act.description}
               </p>
             )}

@@ -33,17 +33,17 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({ profile }) => {
       </div>
       <h1
         id="profile-heading"
-        className="font-serif text-2xl md:text-3xl font-bold text-stone-900 mb-1 tracking-wide"
+        className="font-serif text-2xl md:text-3xl font-bold text-academic-ink mb-1 tracking-wide"
       >
         {profile.fullName}
       </h1>
-      <p className="font-sans text-stone-600 text-sm md:text-base font-medium max-w-md mx-auto">
+      <p className="font-sans text-academic-slate text-sm md:text-base font-medium max-w-md mx-auto">
         {profile.title}
       </p>
 
       {profile.location && (
-        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#eae6dc] px-3 py-1 text-xs font-medium text-stone-700 lg:hidden">
-          <MapPin className="w-3.5 h-3.5 text-stone-500" />
+        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-academic-surface-muted px-3 py-1 text-xs font-medium text-academic-slate lg:hidden">
+          <MapPin className="w-3.5 h-3.5 text-academic-slate" />
           <span>{profile.location}</span>
         </div>
       )}
