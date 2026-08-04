@@ -42,4 +42,47 @@
   .editor-input {
     @apply w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm text-stone-900 outline-none transition focus:border-stone-900 focus:ring-2 focus:ring-stone-900/10 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100 dark:focus:border-amber-500 dark:focus:ring-amber-500/10;
   }
+
+  .admin-panel-card {
+    @apply min-w-0 rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-md backdrop-blur-md transition-colors dark:border-stone-800 dark:bg-stone-900/90 sm:p-6 md:p-8;
+  }
+
+  .admin-tabs {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overscroll-behavior-inline: contain;
+  }
+
+  .admin-tabs::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  #admin-root {
+    min-width: 0;
+  }
+
+  #admin-root button,
+  #admin-root a,
+  #admin-root select,
+  #admin-root input[type='checkbox'],
+  #admin-root input[type='radio'] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #admin-root button {
+    min-height: 2.5rem;
+  }
+
+  #admin-root .admin-panel-card,
+  #admin-root section,
+  #admin-root form {
+    min-width: 0;
+  }
+
+  #admin-root code,
+  #admin-root .font-mono {
+    overflow-wrap: anywhere;
+  }
 }

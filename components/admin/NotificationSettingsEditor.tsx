@@ -170,7 +170,7 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
   return (
     <form
       onSubmit={handleSave}
-      className="bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md space-y-6 transition-colors duration-300 font-sans"
+      className="admin-panel-card space-y-6 font-sans"
     >
       <div className="border-b border-stone-100 dark:border-stone-800 pb-4">
         <div className="flex items-center justify-between gap-4">

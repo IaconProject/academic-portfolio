@@ -53,29 +53,29 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
   };
 
   return (
-    <header className="bg-[#fcfbf9] dark:bg-[#181716] text-stone-800 dark:text-stone-100 px-4 sm:px-6 py-3.5 border-b border-stone-200/80 dark:border-stone-800/80 shadow-sm flex items-center justify-between backdrop-blur-md bg-opacity-95 sticky top-0 z-50 transition-colors duration-300">
+    <header className="sticky top-0 z-50 flex min-h-16 items-center justify-between gap-3 border-b border-stone-200/80 bg-[#fcfbf9]/95 px-3 py-3 text-stone-800 shadow-sm backdrop-blur-md transition-colors duration-300 dark:border-stone-800/80 dark:bg-[#181716]/95 dark:text-stone-100 sm:px-6 sm:py-3.5">
       {/* Left Logo / Branding */}
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950 rounded-xl shadow-sm shrink-0">
-          <LayoutDashboard className="w-5 h-5" />
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        <div className="shrink-0 rounded-xl bg-stone-900 p-2 text-stone-50 shadow-sm dark:bg-amber-600 dark:text-stone-950">
+          <LayoutDashboard className="h-5 w-5" />
         </div>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-sans font-bold text-sm sm:text-base tracking-tight text-stone-900 dark:text-stone-100">
+            <h1 className="truncate font-sans text-sm font-bold tracking-tight text-stone-900 dark:text-stone-100 sm:text-base">
               Yönetim Paneli
             </h1>
             <span className="hidden sm:inline-block text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
               CMS
             </span>
           </div>
-          <div className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 flex items-center gap-2">
-            <span className="flex items-center gap-1.5">
+          <div className="mt-0.5 flex items-center gap-2 text-[11px] text-stone-500 dark:text-stone-400">
+            <span className="flex min-w-0 items-center gap-1.5">
               <span
                 className={`w-2 h-2 rounded-full ${
                   isSupabaseConfigured ? 'bg-emerald-500' : 'bg-amber-500'
                 }`}
               />
-              <span className={isSupabaseConfigured ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-amber-700 dark:text-amber-400 font-medium'}>
+              <span className={`hidden truncate font-medium sm:inline ${isSupabaseConfigured ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
                 {isSupabaseConfigured ? 'Supabase Canlı Veritabanı' : 'Yerel Depolama (Demo)'}
               </span>
             </span>
@@ -84,11 +84,11 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
         {/* Theme Toggle Button */}
         <button
           onClick={onToggleTheme}
-          className="p-2.5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors shadow-sm"
+          className="min-h-10 min-w-10 rounded-xl border border-stone-200 bg-white p-2.5 text-stone-700 shadow-sm transition-colors hover:bg-stone-100 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
           title={theme === 'light' ? 'Koyu Temaya Geç' : 'Açık Bej Temaya Geç'}
           aria-label="Tema Değiştir"
         >
@@ -103,7 +103,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className={`relative p-2.5 rounded-xl border transition-all ${
+            className={`relative min-h-10 min-w-10 rounded-xl border p-2.5 transition-all ${
               unreadCount > 0
                 ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 shadow-sm'
                 : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white'
@@ -120,7 +120,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
 
           {/* Dropdown Panel */}
           {showDropdown && (
-            <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-xl p-4 space-y-3 text-stone-900 dark:text-stone-100 z-50 animate-fadeIn">
+            <div className="absolute right-0 mt-3 w-[calc(100vw-1.5rem)] max-w-96 space-y-3 rounded-2xl border border-stone-200 bg-white p-4 text-stone-900 shadow-xl animate-fadeIn dark:border-stone-800 dark:bg-stone-900 dark:text-stone-100">
               <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -180,7 +180,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
           href="/"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-semibold rounded-xl transition-all border border-stone-200 dark:border-stone-800 shadow-sm"
+          className="inline-flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-xs font-semibold text-stone-700 shadow-sm transition-all hover:bg-stone-100 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-200 dark:hover:bg-stone-800"
         >
           <Eye className="w-4 h-4 text-stone-500 dark:text-stone-400" />
           <span className="hidden sm:inline">Portfolyoyu Gör</span>
@@ -189,7 +189,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
         {/* Logout */}
         <button
           onClick={onLogout}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-700 dark:text-rose-300 text-xs font-semibold rounded-xl transition-all border border-rose-200 dark:border-rose-900/50 shadow-sm"
+          className="inline-flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700 shadow-sm transition-all hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-300 dark:hover:bg-rose-900/50"
         >
           <LogOut className="w-4 h-4 text-rose-600 dark:text-rose-400" />
           <span className="hidden sm:inline">Çıkış Yap</span>

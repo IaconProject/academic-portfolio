@@ -224,7 +224,7 @@ function AdminDashboardContent() {
   ];
 
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
+    <div id="admin-root" className={`min-h-screen ${theme === 'dark' ? 'dark' : ''}`}>
       <div className="min-h-screen bg-academic-bg dark:bg-[#121110] text-stone-900 dark:text-stone-100 font-sans selection:bg-amber-200 dark:selection:bg-amber-900 relative transition-colors duration-300">
         {/* Interactive Mouse Particle Canvas */}
         <BlockchainCanvasAnimation theme={theme} />
@@ -237,9 +237,9 @@ function AdminDashboardContent() {
             onToggleTheme={toggleTheme}
           />
 
-          <main className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+          <main className="mx-auto max-w-6xl min-w-0 space-y-4 p-3 sm:space-y-6 sm:p-6 lg:p-8">
             {/* Navigation Tabs Bar */}
-            <div className="flex overflow-x-auto gap-1.5 bg-[#eae6dc] dark:bg-[#1a1917] p-1.5 rounded-2xl border border-stone-300/70 dark:border-stone-800 shadow-sm backdrop-blur-md">
+            <div className="admin-tabs flex max-w-full gap-1.5 overflow-x-auto rounded-2xl border border-stone-300/70 bg-[#eae6dc] p-1.5 shadow-sm backdrop-blur-md dark:border-stone-800 dark:bg-[#1a1917]">
               {tabsConfig.map((tabItem) => {
                 const Icon = tabItem.icon;
                 const isActive = activeTab === tabItem.id;
@@ -247,7 +247,7 @@ function AdminDashboardContent() {
                   <button
                     key={tabItem.id}
                     onClick={() => handleSelectTab(tabItem.id)}
-                    className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 relative ${
+                    className={`flex min-h-10 shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2.5 text-xs font-bold transition-all relative ${
                       isActive
                         ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950 shadow-md font-extrabold'
                         : 'text-stone-700 dark:text-stone-400 hover:bg-stone-200/80 dark:hover:bg-stone-800/80 hover:text-stone-950 dark:hover:text-stone-100'

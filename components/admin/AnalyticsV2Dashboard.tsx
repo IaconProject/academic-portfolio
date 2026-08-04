@@ -1232,7 +1232,7 @@ export function AnalyticsV2Dashboard() {
   ]);
 
   return (
-    <div className="space-y-6 rounded-2xl border border-stone-200/80 bg-white/90 p-4 shadow-md backdrop-blur-md transition-colors dark:border-stone-800 dark:bg-stone-900/90 sm:p-6 md:p-8">
+    <div className="admin-panel-card space-y-6">
       <header className="flex flex-col gap-4 border-b border-stone-100 pb-5 dark:border-stone-800 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">

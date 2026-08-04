@@ -386,8 +386,8 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
   );
 
   return (
-    <div className="space-y-5">
-      <header className="rounded-2xl border border-stone-200/80 bg-white/90 p-6 shadow-md dark:border-stone-800 dark:bg-stone-900/90">
+    <div className="min-w-0 space-y-5">
+      <header className="admin-panel-card">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div>
             <h2 className="flex items-center gap-2 text-xl font-bold">
@@ -412,7 +412,7 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
         </div>
       </header>
 
-      <nav className="flex gap-1.5 overflow-x-auto rounded-2xl border border-stone-200 bg-white/80 p-1.5 dark:border-stone-800 dark:bg-stone-900/80">
+      <nav className="admin-tabs flex max-w-full gap-1.5 overflow-x-auto rounded-2xl border border-stone-200 bg-white/80 p-1.5 dark:border-stone-800 dark:bg-stone-900/80">
         {TAB_ITEMS.map((item) => {
           const Icon = item.icon;
           return (

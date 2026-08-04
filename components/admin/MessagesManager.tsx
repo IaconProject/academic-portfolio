@@ -223,7 +223,7 @@ export const MessagesManager: React.FC = () => {
   });
 
   return (
-    <div className="bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md space-y-6 transition-colors duration-300">
+    <div className="admin-panel-card space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
         <div>
@@ -293,10 +293,10 @@ export const MessagesManager: React.FC = () => {
 
       {/* Filter Tabs & Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200 dark:border-stone-700 shrink-0">
+        <div className="admin-tabs flex max-w-full shrink-0 items-center gap-2 overflow-x-auto rounded-xl border border-stone-200 bg-stone-100 p-1 dark:border-stone-700 dark:bg-stone-800">
           <button
             onClick={() => setFilterTab('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`min-h-10 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
               filterTab === 'all' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
@@ -304,7 +304,7 @@ export const MessagesManager: React.FC = () => {
           </button>
           <button
             onClick={() => setFilterTab('unread')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`min-h-10 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
               filterTab === 'unread' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
@@ -312,7 +312,7 @@ export const MessagesManager: React.FC = () => {
           </button>
           <button
             onClick={() => setFilterTab('starred')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`min-h-10 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
               filterTab === 'starred' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
@@ -335,10 +335,10 @@ export const MessagesManager: React.FC = () => {
 
       {/* Quick Actions Bar */}
       {messages.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 pt-1">
+        <div className="flex flex-col gap-3 pt-1 text-xs text-stone-500 dark:text-stone-400 sm:flex-row sm:items-center sm:justify-between">
           <span>Gösterilen: <strong className="text-stone-800 dark:text-stone-200">{filteredMessages.length}</strong> / {totalMessages}</span>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {unreadCount > 0 && (
               <button
                 onClick={handleMarkAllRead}

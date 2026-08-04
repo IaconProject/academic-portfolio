@@ -547,7 +547,7 @@ const LegacyVisitorLogsManager: React.FC<{
   }, [selectedSession]);
 
   return (
-    <div className="bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md space-y-6 transition-colors duration-300">
+    <div className="admin-panel-card space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-4">
         <div>
@@ -773,10 +773,10 @@ const LegacyVisitorLogsManager: React.FC<{
 
       {/* Filter Tabs & Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 font-sans">
-        <div className="flex items-center gap-2 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200 dark:border-stone-700 shrink-0">
+        <div className="admin-tabs flex max-w-full shrink-0 items-center gap-2 overflow-x-auto rounded-xl border border-stone-200 bg-stone-100 p-1 dark:border-stone-700 dark:bg-stone-800">
           <button
             onClick={() => setFilterType('all')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`min-h-10 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
               filterType === 'all' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100'
             }`}
           >
@@ -784,7 +784,7 @@ const LegacyVisitorLogsManager: React.FC<{
           </button>
           <button
             onClick={() => setFilterType('active')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`min-h-10 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
               filterType === 'active' ? 'bg-emerald-600 text-white' : 'text-stone-600 dark:text-stone-400 hover:text-emerald-600'
             }`}
           >
@@ -792,7 +792,7 @@ const LegacyVisitorLogsManager: React.FC<{
           </button>
           <button
             onClick={() => setFilterType('mobile')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`min-h-10 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
               filterType === 'mobile' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
             }`}
           >
@@ -800,7 +800,7 @@ const LegacyVisitorLogsManager: React.FC<{
           </button>
           <button
             onClick={() => setFilterType('desktop')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            className={`min-h-10 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
               filterType === 'desktop' ? 'bg-stone-900 dark:bg-amber-600 text-stone-50 dark:text-stone-950' : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
             }`}
           >
@@ -827,8 +827,8 @@ const LegacyVisitorLogsManager: React.FC<{
 
       {/* Selection Control Bar */}
       {filteredSessions.length > 0 && (
-        <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 pt-1 border-t border-stone-100 dark:border-stone-800">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 pt-3 text-xs text-stone-500 dark:text-stone-400 border-t border-stone-100 dark:border-stone-800 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleSelectAll}
               className="inline-flex items-center gap-1.5 text-stone-800 dark:text-stone-200 hover:text-stone-950 font-bold transition-colors"
@@ -852,7 +852,7 @@ const LegacyVisitorLogsManager: React.FC<{
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span>Gösterilen: <strong className="text-stone-800 dark:text-stone-200">{filteredSessions.length}</strong> / {sessions.length}</span>
             <button
               onClick={handleClearAll}
@@ -1146,7 +1146,7 @@ export const VisitorLogsManager: React.FC = () => {
       <div
         role="tablist"
         aria-label="Ziyaretçi analizi veri kaynağı"
-        className="inline-flex w-full sm:w-auto items-center gap-1 rounded-xl border border-stone-200 bg-white/90 p-1 shadow-sm dark:border-stone-800 dark:bg-stone-900/90"
+        className="flex w-full max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-stone-200 bg-white/90 p-1 shadow-sm dark:border-stone-800 dark:bg-stone-900/90 sm:inline-flex sm:w-auto"
       >
         <button
           type="button"
@@ -1156,7 +1156,7 @@ export const VisitorLogsManager: React.FC = () => {
           aria-controls="analytics-v2-panel"
           tabIndex={0}
           onClick={() => setActiveView('v2')}
-          className={`flex-1 rounded-lg px-4 py-2 text-xs font-bold transition-colors sm:flex-none ${
+          className={`min-h-10 flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-colors sm:flex-none ${
             activeView === 'v2'
               ? 'bg-stone-900 text-white dark:bg-amber-600 dark:text-stone-950'
               : 'text-stone-600 hover:text-stone-950 dark:text-stone-400 dark:hover:text-stone-100'
@@ -1172,7 +1172,7 @@ export const VisitorLogsManager: React.FC = () => {
           aria-controls="analytics-legacy-panel"
           tabIndex={0}
           onClick={() => setActiveView('legacy')}
-          className={`flex-1 rounded-lg px-4 py-2 text-xs font-bold transition-colors sm:flex-none ${
+          className={`min-h-10 flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-colors sm:flex-none ${
             activeView === 'legacy'
               ? 'bg-stone-900 text-white dark:bg-amber-600 dark:text-stone-950'
               : 'text-stone-600 hover:text-stone-950 dark:text-stone-400 dark:hover:text-stone-100'

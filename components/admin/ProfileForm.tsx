@@ -25,7 +25,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onSave }) => 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 bg-white/90 dark:bg-stone-900/90 p-6 md:p-8 rounded-2xl border border-stone-200/80 dark:border-stone-800 shadow-md backdrop-blur-md transition-colors duration-300">
+    <form onSubmit={handleSubmit} className="admin-panel-card space-y-6">
       <div className="border-b border-stone-100 dark:border-stone-800 pb-4 mb-6">
         <h2 className="text-xl font-bold text-stone-900 dark:text-stone-100 tracking-tight flex items-center gap-2">
           <User className="w-5 h-5 text-amber-600 dark:text-amber-400" />

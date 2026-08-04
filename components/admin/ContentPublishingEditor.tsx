@@ -318,7 +318,7 @@ export function ContentPublishingEditor({
   const statusKey = kind === 'articles' ? 'status' : 'detailStatus';
 
   return (
-    <section className="space-y-6 rounded-2xl border border-stone-200/80 bg-white/90 p-6 shadow-md backdrop-blur-md dark:border-stone-800 dark:bg-stone-900/90 md:p-8">
+    <section className="admin-panel-card space-y-6">
       <header className="flex flex-col justify-between gap-4 border-b border-stone-100 pb-4 dark:border-stone-800 sm:flex-row sm:items-center">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-bold tracking-tight">
@@ -333,7 +333,7 @@ export function ContentPublishingEditor({
       </header>
 
       {editingId && (
-        <div className="space-y-5 rounded-2xl border border-amber-200 bg-amber-50/50 p-5 dark:border-amber-900 dark:bg-amber-950/20">
+        <div className="min-w-0 space-y-5 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-900 dark:bg-amber-950/20 sm:p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-black">{editingId === 'new' ? `Yeni ${copy.singular}` : `${copy.singular} düzenle`}</h3>
             <button type="button" onClick={cancel} aria-label="Düzenleyiciyi kapat" className="rounded-lg p-2 hover:bg-black/5 dark:hover:bg-white/5"><X className="h-4 w-4" /></button>
