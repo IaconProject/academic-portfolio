@@ -9,6 +9,7 @@ import {
 import {
   AnalyticsIpGeoResolution,
   buildIpApiUrl,
+  discardUnverifiedTurkeyEdgeGeo,
   isPublicAnalyticsIp,
   mergeAnalyticsIpGeo,
   parseIpApiResolution,
@@ -21,10 +22,14 @@ import {
 const IP_API_TIMEOUT_MS = 2_000;
 const IP_API_MAX_RESPONSE_BYTES = 16 * 1024;
 const IP_API_FREE_RATE_LIMIT = 40;
-const FIXED_NETWORK_CACHE_MS = 24 * 60 * 60 * 1000;
-const MOBILE_NETWORK_CACHE_MS = 2 * 60 * 60 * 1000;
+const FIXED_NETWORK_CACHE_MS = 60 * 60 * 1000;
+const MOBILE_NETWORK_CACHE_MS = 15 * 60 * 1000;
+const PROVIDER_RATE_WINDOW_MS = 60 * 1000;
 
 let providerBlockedUntil = 0;
+let localProviderWindowStartedAt = 0;
+let localProviderRequestCount = 0;
+let lastQuotaFallbackLogAt = 0;
 
 type GeoProviderOutcome =
   | 'success'
@@ -42,6 +47,8 @@ export function getAnalyticsGeoRuntimeStatus() {
     transport: apiKeyConfigured ? ('https' as const) : ('http' as const),
     secureTransport: apiKeyConfigured,
     apiKeyConfigured,
+    quotaStrategy: 'supabase-rpc-with-local-fallback' as const,
+    turkeyFallback: 'country-only' as const,
     timeoutMs: IP_API_TIMEOUT_MS,
     cacheTtlHours: {
       mobile: MOBILE_NETWORK_CACHE_MS / (60 * 60 * 1000),
@@ -66,6 +73,7 @@ type GeoCacheRow = {
   is_proxy: boolean | null;
   is_hosting: boolean | null;
   geo_confidence: 'medium' | 'low';
+  updated_at: string;
 };
 
 function resolutionFromCache(row: GeoCacheRow): AnalyticsIpGeoResolution {
@@ -91,17 +99,39 @@ async function readCachedResolution(
   const { data, error } = await serverSupabase
     .from('analytics_geo_cache')
     .select(
-      'country_code,country_name,region,city,isp_name,network_organization,asn,is_mobile_network,is_proxy,is_hosting,geo_confidence'
+      'country_code,country_name,region,city,isp_name,network_organization,asn,is_mobile_network,is_proxy,is_hosting,geo_confidence,updated_at'
     )
     .eq('ip_hash', ipHash)
     .gt('expires_at', new Date().toISOString())
     .maybeSingle();
   if (error || !data) return null;
-  return resolutionFromCache(data as GeoCacheRow);
+  const row = data as GeoCacheRow;
+  const updatedAt = Date.parse(row.updated_at);
+  const ttl = row.is_mobile_network === false
+    ? FIXED_NETWORK_CACHE_MS
+    : MOBILE_NETWORK_CACHE_MS;
+  if (!Number.isFinite(updatedAt) || Date.now() - updatedAt > ttl) {
+    return null;
+  }
+  return resolutionFromCache(row);
+}
+
+function reserveLocalProviderQuota(now = Date.now()): boolean {
+  if (
+    localProviderWindowStartedAt === 0 ||
+    now - localProviderWindowStartedAt >= PROVIDER_RATE_WINDOW_MS
+  ) {
+    localProviderWindowStartedAt = now;
+    localProviderRequestCount = 0;
+  }
+  if (localProviderRequestCount >= IP_API_FREE_RATE_LIMIT) return false;
+  localProviderRequestCount += 1;
+  return true;
 }
 
 async function providerQuotaAvailable(): Promise<boolean> {
-  if (!serverSupabase || Date.now() < providerBlockedUntil) return false;
+  if (Date.now() < providerBlockedUntil) return false;
+  if (!serverSupabase) return reserveLocalProviderQuota();
   const keyHash = hashAnalyticsIdentifier('provider:ip-api', 'rate-limit');
   const { data, error } = await serverSupabase.rpc(
     'check_analytics_rate_limit',
@@ -112,7 +142,27 @@ async function providerQuotaAvailable(): Promise<boolean> {
       p_cost: 1,
     }
   );
-  return !error && Boolean((data as { allowed?: boolean } | null)?.allowed);
+  if (!error && data && typeof data === 'object') {
+    return Boolean((data as { allowed?: boolean }).allowed);
+  }
+
+  // Geolocation must not silently disappear because the shared quota RPC is
+  // temporarily unavailable or a production migration is behind. The free
+  // provider's own rate-limit headers remain authoritative; this conservative
+  // in-process window only bridges that database failure.
+  if (Date.now() - lastQuotaFallbackLogAt >= PROVIDER_RATE_WINDOW_MS) {
+    lastQuotaFallbackLogAt = Date.now();
+    console.warn(
+      JSON.stringify({
+        level: 'warning',
+        message: 'analytics_geo_quota_rpc_unavailable',
+        provider: 'ip-api',
+        errorCode: error?.code || 'INVALID_RESPONSE',
+        fallback: 'local_rate_window',
+      })
+    );
+  }
+  return reserveLocalProviderQuota();
 }
 
 function applyProviderRateHeaders(headers: Headers) {
@@ -278,15 +328,18 @@ export async function resolveAnalyticsRequestContext(
     return baseContext;
   }
 
+  const conservativeFallback =
+    discardUnverifiedTurkeyEdgeGeo(baseContext);
+
   const ip = getTransientRequestIp(request);
-  if (!isPublicAnalyticsIp(ip)) return baseContext;
+  if (!isPublicAnalyticsIp(ip)) return conservativeFallback;
   const ipHash = hashAnalyticsIdentifier(ip, 'geo-cache');
 
   const cached = await readCachedResolution(ipHash);
   if (cached) return mergeAnalyticsIpGeo(baseContext, cached);
 
   const resolution = await requestIpApi(ip);
-  if (!resolution) return baseContext;
+  if (!resolution) return conservativeFallback;
 
   // Cache persistence is deliberately non-critical. A missing migration or a
   // transient database error must never reject a valid analytics event batch.

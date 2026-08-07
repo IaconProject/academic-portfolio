@@ -235,6 +235,8 @@ type AnalyticsHealth = {
     transport: 'http' | 'https';
     secureTransport: boolean;
     apiKeyConfigured: boolean;
+    quotaStrategy: 'supabase-rpc-with-local-fallback';
+    turkeyFallback: 'country-only';
     timeoutMs: number;
     cacheTtlHours: { mobile: number; fixed: number };
     blockedUntil: string | null;
@@ -1444,15 +1446,18 @@ export function AnalyticsV2Dashboard() {
             {formatNumber(health.location.activeCacheEntries)} etkin cache ·{' '}
             {formatNumber(health.location.successes)}/
             {formatNumber(health.location.requests)} başarılı sağlayıcı sorgusu
+            {' · '}cache: mobil {health.location.cacheTtlHours.mobile} saat,
+            sabit {health.location.cacheTtlHours.fixed} saat
             {health.location.lastSuccessAt
               ? ` · son başarı ${formatDateTime(health.location.lastSuccessAt)}`
               : ''}
             {!health.location.schemaReady
-              ? ' · sağlayıcı sağlık migrationı eksik'
+              ? ' · sağlık migrationı eksik; yerel güvenli kota yedeği etkin'
               : ''}
             {!health.location.secureTransport
               ? ' · ücretsiz sağlayıcı katmanı HTTP kullanıyor'
               : ''}
+            {' · '}Türkiye sağlayıcı hatasında yalnız ülke kaydedilir
           </div>
         </div>
       )}

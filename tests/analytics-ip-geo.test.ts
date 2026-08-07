@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildIpApiUrl,
+  discardUnverifiedTurkeyEdgeGeo,
   isPublicAnalyticsIp,
   mergeAnalyticsIpGeo,
   parseIpApiResolution,
@@ -133,7 +134,7 @@ describe('Analytics IP konum çözümleme', () => {
     expect(merged.city).toBeUndefined();
   });
 
-  it('ülke çelişkisinde Vercel coğrafyasını korur fakat ağ sınıfını saklar', () => {
+  it('başarılı sağlayıcı yanıtını Vercel ülke sinyalinden öncelikli tutar', () => {
     const resolution = parseIpApiResolution({
       ...sirnakResponse,
       country: 'Germany',
@@ -152,10 +153,32 @@ describe('Analytics IP konum çözümleme', () => {
       },
       resolution!
     );
-    expect(merged.country_code).toBe('TR');
-    expect(merged.region).toBe('Şırnak');
-    expect(merged.geo_source).toBe('vercel-edge');
+    expect(merged.country_code).toBe('DE');
+    expect(merged.country_name).toBe('Germany');
+    expect(merged.region).toBe('Hesse');
+    expect(merged.city).toBe('Frankfurt am Main');
+    expect(merged.geo_source).toBe('vercel-edge+ip-api');
     expect(merged.asn).toBe('AS16135');
+  });
+
+  it('sağlayıcı yoksa yanlış Türkiye şehir sinyalini kalıcılaştırmaz', () => {
+    expect(
+      discardUnverifiedTurkeyEdgeGeo({
+        country_code: 'TR',
+        country_name: 'Türkiye',
+        region: 'Uşak',
+        city: 'Usak',
+        geo_source: 'vercel-edge',
+        geo_confidence: 'medium',
+        device_type: 'mobile',
+      })
+    ).toEqual({
+      country_code: 'TR',
+      country_name: 'Türkiye',
+      geo_source: 'vercel-edge',
+      geo_confidence: 'low',
+      device_type: 'mobile',
+    });
   });
 
   it('başarısız veya biçimsiz sağlayıcı yanıtını kabul etmez', () => {

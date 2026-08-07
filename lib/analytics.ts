@@ -519,7 +519,6 @@ export function buildAnalyticsRequestContext(
 
         if (normalizedRegion) {
           context.region = normalizedRegion;
-          context.geo_confidence = 'medium';
         } else if (coordinateResolution) {
           context.region = coordinateResolution.province;
           // The edge coordinate belongs to a public IP/network centroid, not
@@ -529,11 +528,9 @@ export function buildAnalyticsRequestContext(
         }
       } else if (rawRegion) {
         context.region = rawRegion;
-        context.geo_confidence = 'medium';
       }
 
       if (city) context.city = city;
-      if (city) context.geo_confidence = 'medium';
     }
   }
 
@@ -610,12 +607,12 @@ export function classifyObviousBot(userAgent: string): AnalyticsTrafficClass {
 export function getTransientRequestIp(request: Request): string {
   if (process.env.VERCEL !== '1') return '';
 
-  // Vercel overwrites these forwarding headers at its platform boundary.
-  // Prefer the Vercel-specific copy when a customer proxy may have replaced
-  // x-forwarded-for, then fall back to the documented aliases.
+  // Vercel overwrites x-forwarded-for at its platform boundary with the
+  // public client IP. This mirrors the reference engine's getRequestIP()
+  // behavior; the Vercel-specific and x-real-ip copies remain fallbacks.
   const candidate = [
-    'x-vercel-forwarded-for',
     'x-forwarded-for',
+    'x-vercel-forwarded-for',
     'x-real-ip',
   ]
     .map((name) => request.headers.get(name)?.split(',')[0]?.trim() || '')

@@ -196,63 +196,32 @@ export function mergeAnalyticsIpGeo(
   base: AnalyticsRequestContext,
   resolution: AnalyticsIpGeoResolution
 ): AnalyticsRequestContext {
-  const countriesAgree =
-    !base.country_code || base.country_code === resolution.countryCode;
   const hasProviderGeo = Boolean(resolution.region || resolution.city);
   const hasProviderNetwork = Boolean(
     resolution.ispName || resolution.networkOrganization || resolution.asn
   );
-
-  if (!countriesAgree) {
-    return {
-      ...base,
-      ...(hasProviderNetwork
-        ? {
-            isp_name: resolution.ispName || undefined,
-            network_organization:
-              resolution.networkOrganization || undefined,
-            asn: resolution.asn || undefined,
-            is_mobile_network: resolution.isMobileNetwork ?? undefined,
-            is_proxy: resolution.isProxy ?? undefined,
-            is_hosting: resolution.isHosting ?? undefined,
-          }
-        : {}),
-    };
-  }
-
   const combinedSource = base.geo_source
     ? 'vercel-edge+ip-api'
     : 'ip-api';
-  const baseRegion = normalizeTurkeyProvinceRegion(base.region);
-  const providerRegion = normalizeTurkeyProvinceRegion(resolution.region);
-  const sourcesDisagree = Boolean(
-    base.country_code === 'TR' &&
-      baseRegion &&
-      providerRegion &&
-      baseRegion !== providerRegion
-  );
-  const mergedConfidence = sourcesDisagree
-    ? 'low'
-    : resolution.confidence;
+  const {
+    country_code: _baseCountryCode,
+    country_name: _baseCountryName,
+    region: _baseRegion,
+    city: _baseCity,
+    geo_source: _baseGeoSource,
+    geo_confidence: _baseGeoConfidence,
+    ...baseWithoutGeo
+  } = base;
   return {
-    ...base,
+    ...baseWithoutGeo,
     country_code: resolution.countryCode,
-    country_name:
-      resolution.countryName || base.country_name || resolution.countryCode,
+    country_name: resolution.countryName || resolution.countryCode,
     ...(resolution.region ? { region: resolution.region } : {}),
-    // Once the provider supplies a normalized province, do not retain an
-    // unrelated Vercel city when the provider has no city-level signal.
-    ...(resolution.region
-      ? { city: resolution.city || undefined }
-      : resolution.city
-        ? { city: resolution.city }
-        : {}),
+    ...(resolution.city ? { city: resolution.city } : {}),
     ...(hasProviderGeo || hasProviderNetwork
       ? {
           geo_source: combinedSource,
-          geo_confidence: hasProviderGeo
-            ? mergedConfidence
-            : base.geo_confidence || 'low',
+          geo_confidence: hasProviderGeo ? resolution.confidence : 'low',
         }
       : {}),
     isp_name: resolution.ispName || undefined,
@@ -261,5 +230,31 @@ export function mergeAnalyticsIpGeo(
     is_mobile_network: resolution.isMobileNetwork ?? undefined,
     is_proxy: resolution.isProxy ?? undefined,
     is_hosting: resolution.isHosting ?? undefined,
+  };
+}
+
+/**
+ * Vercel's Türkiye region/city headers and IP coordinates are useful hints,
+ * but mobile carrier exit nodes can be hundreds of kilometres away. If the
+ * dedicated IP provider cannot resolve the request, retaining only the
+ * country is more honest than persisting a confidently wrong province.
+ */
+export function discardUnverifiedTurkeyEdgeGeo(
+  context: AnalyticsRequestContext
+): AnalyticsRequestContext {
+  if (
+    context.country_code !== 'TR' ||
+    context.geo_source !== 'vercel-edge'
+  ) {
+    return context;
+  }
+  const {
+    region: _region,
+    city: _city,
+    ...countryOnlyContext
+  } = context;
+  return {
+    ...countryOnlyContext,
+    geo_confidence: 'low',
   };
 }

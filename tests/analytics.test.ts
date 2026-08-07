@@ -484,7 +484,7 @@ describe('Analytics pseudonimleştirme ve sınıflama', () => {
       region: 'Eskişehir',
       city: 'Eskişehir',
       geo_source: 'vercel-edge',
-      geo_confidence: 'medium',
+      geo_confidence: 'low',
       device_type: 'mobile',
       browser_name: 'Mobile Safari',
       browser_version: '17.5',
@@ -606,7 +606,7 @@ describe('Analytics pseudonimleştirme ve sınıflama', () => {
         'x-forwarded-for': '203.0.113.50',
       },
     });
-    expect(getTransientRequestIp(trusted)).toBe('198.51.100.12');
+    expect(getTransientRequestIp(trusted)).toBe('203.0.113.50');
 
     const documentedFallback = new Request(
       'https://www.muhammedakan.com',
