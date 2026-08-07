@@ -61,7 +61,7 @@ describe('Analytics IP konum çözümleme', () => {
       isMobileNetwork: true,
       isProxy: false,
       isHosting: false,
-      confidence: 'medium',
+      confidence: 'low',
     });
     expect(result).not.toHaveProperty('query');
     expect(result).not.toHaveProperty('lat');
@@ -85,8 +85,31 @@ describe('Analytics IP konum çözümleme', () => {
     expect(merged.region).toBe('Şırnak');
     expect(merged.city).toBe('Cizre');
     expect(merged.geo_source).toBe('vercel-edge+ip-api');
+    expect(merged.geo_confidence).toBe('low');
     expect(merged.isp_name).toBe('Turkcell Superonline');
     expect(merged.asn).toBe('AS16135');
+  });
+
+  it('aynı ilde uzlaşan sabit ağ kaynaklarını orta güvenle korur', () => {
+    const resolution = parseIpApiResolution({
+      ...sirnakResponse,
+      mobile: false,
+    });
+    expect(resolution).not.toBeNull();
+    const merged = mergeAnalyticsIpGeo(
+      {
+        country_code: 'TR',
+        country_name: 'Türkiye',
+        region: 'TR-73',
+        city: 'Şırnak',
+        geo_source: 'vercel-edge',
+        geo_confidence: 'medium',
+      },
+      resolution!
+    );
+    expect(merged.region).toBe('Şırnak');
+    expect(merged.city).toBe('Cizre');
+    expect(merged.geo_confidence).toBe('medium');
   });
 
   it('sağlayıcı yalnız il döndürdüğünde çelişkili Vercel şehrini temizler', () => {

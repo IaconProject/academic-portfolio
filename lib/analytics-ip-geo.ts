@@ -146,7 +146,8 @@ export function parseIpApiResolution(
   const rawCountry = cleanText(parsed.data.country, 128);
   let region = cleanText(parsed.data.regionName, 128) || null;
   let city = cleanText(parsed.data.city, 128) || null;
-  let confidence: 'medium' | 'low' = region || city ? 'medium' : 'low';
+  let confidence: 'medium' | 'low' =
+    region || city ? 'medium' : 'low';
 
   if (countryCode === 'TR') {
     const normalizedRegion =
@@ -168,6 +169,12 @@ export function parseIpApiResolution(
   }
 
   const organization = networkOrganization(parsed.data.org || parsed.data.as);
+  // Mobile carrier gateways, proxies and hosting networks can resolve to a
+  // perfectly valid network location that is still far from the person using
+  // it. Keep the useful province/city signal but label it conservatively.
+  if (parsed.data.mobile || parsed.data.proxy || parsed.data.hosting) {
+    confidence = 'low';
+  }
   return {
     countryCode,
     countryName: countryCode === 'TR' ? 'Türkiye' : rawCountry || null,
@@ -216,6 +223,17 @@ export function mergeAnalyticsIpGeo(
   const combinedSource = base.geo_source
     ? 'vercel-edge+ip-api'
     : 'ip-api';
+  const baseRegion = normalizeTurkeyProvinceRegion(base.region);
+  const providerRegion = normalizeTurkeyProvinceRegion(resolution.region);
+  const sourcesDisagree = Boolean(
+    base.country_code === 'TR' &&
+      baseRegion &&
+      providerRegion &&
+      baseRegion !== providerRegion
+  );
+  const mergedConfidence = sourcesDisagree
+    ? 'low'
+    : resolution.confidence;
   return {
     ...base,
     country_code: resolution.countryCode,
@@ -233,7 +251,7 @@ export function mergeAnalyticsIpGeo(
       ? {
           geo_source: combinedSource,
           geo_confidence: hasProviderGeo
-            ? resolution.confidence
+            ? mergedConfidence
             : base.geo_confidence || 'low',
         }
       : {}),

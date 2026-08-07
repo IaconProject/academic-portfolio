@@ -573,6 +573,23 @@ describe('Analytics pseudonimleştirme ve sınıflama', () => {
     });
   });
 
+  it('UA parser boşluklarını ham User-Agent saklamadan güvenli cihaz ayrıntılarıyla tamamlar', () => {
+    const request = new Request('https://www.muhammedakan.com/', {
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Linux; Android 14; SM-S928B Build/UP1A.231005.007) AppleWebKit/537.36 Chrome/126.0 Mobile Safari/537.36',
+      },
+    });
+    const context = buildAnalyticsRequestContext(request);
+    expect(context).toMatchObject({
+      device_type: 'mobile',
+      device_brand: 'Samsung',
+      device_model: 'SM-S928B',
+      os_name: 'Android',
+    });
+    expect(JSON.stringify(context)).not.toContain('Mozilla');
+  });
+
   it('rate-limit IP değerinde yalnız Vercel güven sınırını kullanır', () => {
     const spoofed = new Request('https://www.muhammedakan.com', {
       headers: {

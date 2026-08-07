@@ -23,6 +23,7 @@ import {
   analyticsAuthorizationVersion,
   AnalyticsAuthorizationBasis,
 } from './analytics-consent-policy';
+import { refineAnalyticsDeviceDetails } from './analytics-device';
 
 export {
   ANALYTICS_MAX_BATCH_EVENTS,
@@ -453,8 +454,14 @@ export function buildAnalyticsRequestContext(
   );
   const osName = cleanContextText(parsedAgent.os.name || '', 128);
   const osVersion = cleanContextText(parsedAgent.os.version || '', 64);
-  const deviceBrand = cleanContextText(parsedAgent.device.vendor || '', 128);
-  const deviceModel = cleanContextText(parsedAgent.device.model || '', 128);
+  const refinedDevice = refineAnalyticsDeviceDetails({
+    userAgent,
+    parsedBrand: parsedAgent.device.vendor,
+    parsedModel: parsedAgent.device.model,
+    osName,
+  });
+  const deviceBrand = cleanContextText(refinedDevice.brand || '', 128);
+  const deviceModel = cleanContextText(refinedDevice.model || '', 128);
   if (browserName) context.browser_name = browserName;
   if (browserVersion) context.browser_version = browserVersion;
   if (osName) context.os_name = osName;

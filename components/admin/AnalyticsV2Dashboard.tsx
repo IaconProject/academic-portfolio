@@ -373,7 +373,9 @@ function geoQualityLabel(session: AnalyticsSession): string {
       return 'IP ağı doğrulandı · yalnız ülke belirlenebildi';
     }
     return session.geoConfidence === 'low'
-      ? 'ip-api ağ merkezinden il tahmini · düşük güven'
+      ? session.isMobileNetwork
+        ? 'Mobil operatör çıkışından il/ilçe tahmini · düşük güven'
+        : 'Kaynaklar çelişiyor veya ağ merkezi kullanılıyor · düşük güven'
       : session.geoSource === 'vercel-edge+ip-api'
         ? 'Vercel edge + ip-api bölge sinyali · yaklaşık'
         : 'ip-api bölge/şehir sinyali · yaklaşık';
