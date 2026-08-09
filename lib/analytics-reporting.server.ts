@@ -207,6 +207,7 @@ export interface AnalyticsDashboardData {
     }>;
   };
   events: Array<{ eventType: string; count: number }>;
+  interactionEvents: Array<{ interactionKey: string; count: number }>;
   webVitals: Array<{
     metric: string;
     p75: number;
@@ -425,6 +426,14 @@ const dashboardOutputSchema = z
       z
         .object({
           eventType: z.string(),
+          count: finiteCountSchema,
+        })
+        .strict()
+    ),
+    interactionEvents: z.array(
+      z
+        .object({
+          interactionKey: z.string(),
           count: finiteCountSchema,
         })
         .strict()
@@ -656,15 +665,31 @@ export async function getAnalyticsDashboard(
   query: AnalyticsDashboardQuery
 ): Promise<AnalyticsDashboardData> {
   const client = requireReportingClient();
-  const { data, error } = await client.rpc('get_analytics_dashboard', {
-    p_from: query.from,
-    p_to: query.to,
-    p_timezone: query.timezone,
+  const [dashboardResult, interactionResult] = await Promise.all([
+    client.rpc('get_analytics_dashboard', {
+      p_from: query.from,
+      p_to: query.to,
+      p_timezone: query.timezone,
+    }),
+    client.rpc('get_analytics_interaction_breakdown', {
+      p_from: query.from,
+      p_to: query.to,
+      p_timezone: query.timezone,
+    }),
+  ]);
+
+  if (
+    dashboardResult.error ||
+    !dashboardResult.data ||
+    interactionResult.error
+  ) {
+    throw reportQueryFailed();
+  }
+
+  const parsed = dashboardOutputSchema.safeParse({
+    ...dashboardResult.data,
+    interactionEvents: interactionResult.data,
   });
-
-  if (error || !data) throw reportQueryFailed();
-
-  const parsed = dashboardOutputSchema.safeParse(data);
   if (!parsed.success) throw reportContractFailed();
   return parsed.data;
 }

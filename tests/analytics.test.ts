@@ -99,6 +99,20 @@ describe('Analytics v2 event sözleşmesi', () => {
       },
       {
         ...baseEvent,
+        eventType: 'engagement',
+        durationMs: 1,
+        contentType: 'profile_interaction',
+        contentKey: 'profile_photo_click',
+      },
+      {
+        ...baseEvent,
+        eventType: 'engagement',
+        durationMs: 1,
+        contentType: 'screen_interaction',
+        contentKey: 'screen_zoom',
+      },
+      {
+        ...baseEvent,
         eventType: 'consent_update',
         contentType: 'privacy_preference',
         contentKey: 'analytics_measurement',
@@ -251,6 +265,12 @@ describe('Analytics v2 event sözleşmesi', () => {
           rating: 'good',
           navigation_type: 'navigate',
         },
+      },
+      {
+        ...baseEvent,
+        eventType: 'engagement',
+        durationMs: 1,
+        contentType: 'profile_interaction',
       },
     ];
 
