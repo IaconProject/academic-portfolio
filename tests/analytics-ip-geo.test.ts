@@ -54,8 +54,10 @@ describe('Analytics IP konum çözümleme', () => {
     expect(result).toEqual({
       countryCode: 'TR',
       countryName: 'Türkiye',
-      region: 'Şırnak',
-      city: 'Cizre',
+      // Mobil ağlarda POP konumu yüzlerce km uzakta olabildiği için
+      // region/city gizlenir; yalnızca ülke + ISP/ASN korunur.
+      region: null,
+      city: null,
       ispName: 'Turkcell Superonline',
       networkOrganization: 'Turkcell Iletisim Hizmetleri A.S.',
       asn: 'AS16135',
@@ -83,8 +85,10 @@ describe('Analytics IP konum çözümleme', () => {
       },
       resolution!
     );
-    expect(merged.region).toBe('Şırnak');
-    expect(merged.city).toBe('Cizre');
+    // Mobil ağlarda region/city gizlendiği için Vercel'den gelen İstanbul
+    // bilgisi de artık gösterilmez; yalnızca ülke + ISP/ASN korunur.
+    expect(merged.region).toBeUndefined();
+    expect(merged.city).toBeUndefined();
     expect(merged.geo_source).toBe('vercel-edge+ip-api');
     expect(merged.geo_confidence).toBe('low');
     expect(merged.isp_name).toBe('Turkcell Superonline');
@@ -119,6 +123,9 @@ describe('Analytics IP konum çözümleme', () => {
       city: undefined,
     });
     expect(resolution).not.toBeNull();
+    // Mobile: true default; region/city zaten null gelmeli
+    expect(resolution?.region).toBeNull();
+    expect(resolution?.city).toBeNull();
     const merged = mergeAnalyticsIpGeo(
       {
         country_code: 'TR',
@@ -130,7 +137,8 @@ describe('Analytics IP konum çözümleme', () => {
       },
       resolution!
     );
-    expect(merged.region).toBe('Şırnak');
+    // Mobil ağ olduğu için Vercel'den gelen İstanbul bilgisi de gizlenir
+    expect(merged.region).toBeUndefined();
     expect(merged.city).toBeUndefined();
   });
 
@@ -141,6 +149,8 @@ describe('Analytics IP konum çözümleme', () => {
       countryCode: 'DE',
       regionName: 'Hesse',
       city: 'Frankfurt am Main',
+      // Sabit ağ senaryosu: mobil ağlarda region/city zaten gizlenir.
+      mobile: false,
     });
     expect(resolution).not.toBeNull();
     const merged = mergeAnalyticsIpGeo(
@@ -159,6 +169,42 @@ describe('Analytics IP konum çözümleme', () => {
     expect(merged.city).toBe('Frankfurt am Main');
     expect(merged.geo_source).toBe('vercel-edge+ip-api');
     expect(merged.asn).toBe('AS16135');
+  });
+
+  it('mobil/proxy/hosting ağlarda region ve city gizlenir', () => {
+    // Proxy senaryosu: bölge/şehir geliyor olsa bile POP konumu olabileceği
+    // için sadece ülke + ISP/ASN korunur.
+    const proxiedResolution = parseIpApiResolution({
+      ...sirnakResponse,
+      region: '34',
+      regionName: 'İstanbul',
+      city: 'Istanbul',
+      mobile: false,
+      proxy: true,
+    });
+    expect(proxiedResolution).toEqual({
+      countryCode: 'TR',
+      countryName: 'Türkiye',
+      region: null,
+      city: null,
+      ispName: 'Turkcell Superonline',
+      networkOrganization: 'Turkcell Iletisim Hizmetleri A.S.',
+      asn: 'AS16135',
+      isMobileNetwork: false,
+      isProxy: true,
+      isHosting: false,
+      confidence: 'low',
+    });
+
+    // Hosting senaryosu
+    const hostedResolution = parseIpApiResolution({
+      ...sirnakResponse,
+      mobile: false,
+      proxy: false,
+      hosting: true,
+    });
+    expect(hostedResolution?.region).toBeNull();
+    expect(hostedResolution?.city).toBeNull();
   });
 
   it('sağlayıcı yoksa yanlış Türkiye şehir sinyalini kalıcılaştırmaz', () => {

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Bell, Save, Send, ToggleLeft, ToggleRight, Key, Plus, X, AlertTriangle } from 'lucide-react';
 import { NotificationSettings, PortfolioData } from '@/lib/types';
 import { savePortfolioDataLocally } from '@/lib/cms-store';
+import { readSessionItem } from '@/lib/admin-session-storage';
 import toast from 'react-hot-toast';
 
 interface NotificationSettingsEditorProps {
@@ -109,7 +110,7 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
         },
       };
 
-      const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
+      const token = typeof window !== 'undefined' ? readSessionItem('admin_token') || '' : '';
 
       const res = await fetch('/api/cms', {
         method: 'POST',
@@ -141,7 +142,7 @@ export const NotificationSettingsEditor: React.FC<NotificationSettingsEditorProp
   const handleSendTestEmail = async () => {
     setTesting(true);
     try {
-      const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
+      const token = typeof window !== 'undefined' ? readSessionItem('admin_token') || '' : '';
 
       const res = await fetch('/api/cms/test-email', {
         method: 'POST',

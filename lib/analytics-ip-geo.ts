@@ -169,11 +169,18 @@ export function parseIpApiResolution(
   }
 
   const organization = networkOrganization(parsed.data.org || parsed.data.as);
-  // Mobile carrier gateways, proxies and hosting networks can resolve to a
-  // perfectly valid network location that is still far from the person using
-  // it. Keep the useful province/city signal but label it conservatively.
+  // Mobile carrier gateways (Türk Telekom / Turkcell / Vodafone POP'ları
+  // İstanbul, Ankara gibi büyük şehirlerde yoğunlaşır), proxy'ler ve hosting
+  // ağları IP-API'ye göre "doğru" bir network konumu verse de bu konum
+  // genellikle gerçek kullanıcının bulunduğu yerden yüzlerce kilometre
+  // uzakta olabiliyor (örn. Şırnak'taki bir ziyaretçi İstanbul'dan
+  // bağlanıyor gibi görünebilir). Bu durumlarda bölge/şehir bilgisini
+  // tamamen gizleyip yalnızca ülkeyi bırakmak daha dürüst bir sonuç verir;
+  // ISP/ASN sinyali ise hâlâ faydalı olduğu için korunur.
   if (parsed.data.mobile || parsed.data.proxy || parsed.data.hosting) {
     confidence = 'low';
+    region = null;
+    city = null;
   }
   return {
     countryCode,

@@ -32,6 +32,7 @@ import {
   SeoSettings,
 } from '@/lib/types';
 import { DEFAULT_SEO_PAGES } from '@/lib/seo';
+import { readSessionItem } from '@/lib/admin-session-storage';
 
 interface SeoEditorProps {
   seoSettings: SeoSettings;
@@ -117,7 +118,7 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
 
   const token =
     typeof window !== 'undefined'
-      ? sessionStorage.getItem('admin_token') || ''
+      ? readSessionItem('admin_token') || ''
       : '';
   const api = useCallback(
     async (url: string, options: RequestInit = {}) => {

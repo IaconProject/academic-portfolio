@@ -4,6 +4,10 @@ import React, { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PortfolioData } from '@/lib/types';
 import { getPortfolioData, savePortfolioDataLocally, fetchPortfolioFromSupabase } from '@/lib/cms-store';
+import {
+  readSessionItem,
+  removeSessionItem,
+} from '@/lib/admin-session-storage';
 import { AdminNavbar } from '@/components/admin/AdminNavbar';
 import { ProfileForm } from '@/components/admin/ProfileForm';
 import { EducationEditor } from '@/components/admin/EducationEditor';
@@ -72,7 +76,9 @@ function AdminDashboardContent() {
   const searchParams = useSearchParams();
 
   const [data, setData] = useState<PortfolioData | null>(null);
-  const [activeTab, setActiveTab] = useState<AdminTab>('profile');
+  // Varsayılan sekme artık Ziyaretçi Analizi. URL'de ?tab= yoksa da visitors
+  // açılır; kullanıcı isterse ?tab=profile vb. ile diğer sekmelere geçebilir.
+  const [activeTab, setActiveTab] = useState<AdminTab>('visitors');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [unreadMsgCount, setUnreadMsgCount] = useState<number>(0);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -121,9 +127,10 @@ function AdminDashboardContent() {
   };
 
   useEffect(() => {
-    // Auth Check
+    // Auth Check — localStorage TTL'li yardımcı kullanılır, böylece tarayıcı
+    // kapatılsa bile 7 gün boyunca oturum açık kalır.
     if (typeof window !== 'undefined') {
-      const isAuth = sessionStorage.getItem('academic_admin_auth');
+      const isAuth = readSessionItem('academic_admin_auth');
       if (!isAuth) {
         router.push('/admin/login');
         return;
@@ -140,7 +147,7 @@ function AdminDashboardContent() {
     });
 
     // Check unread messages count
-    const adminToken = sessionStorage.getItem('admin_token') || '';
+    const adminToken = readSessionItem('admin_token') || '';
     fetch('/api/messages?t=' + Date.now(), {
       headers: adminToken ? { 'X-Admin-Token': adminToken } : {},
     })
@@ -159,7 +166,7 @@ function AdminDashboardContent() {
     savePortfolioDataLocally(updated);
 
     try {
-      const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
+      const token = typeof window !== 'undefined' ? readSessionItem('admin_token') || '' : '';
       const response = await fetch('/api/cms', {
         method: 'POST',
         headers: {
@@ -186,8 +193,8 @@ function AdminDashboardContent() {
 
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('academic_admin_auth');
-      sessionStorage.removeItem('admin_token');
+      removeSessionItem('academic_admin_auth');
+      removeSessionItem('admin_token');
     }
     toast.success('Çıkış yapıldı.');
     router.push('/admin/login');

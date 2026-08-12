@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { KeyRound, Save, Eye, EyeOff } from 'lucide-react';
 import { getAdminCredentials, saveAdminCredentials } from '@/lib/cms-store';
+import { readSessionItem } from '@/lib/admin-session-storage';
 import toast from 'react-hot-toast';
 
 export const CredentialsEditor: React.FC = () => {
@@ -20,7 +21,7 @@ export const CredentialsEditor: React.FC = () => {
       setCurrentEmail(creds.email);
     }
 
-    const token = sessionStorage.getItem('admin_token') || '';
+    const token = readSessionItem('admin_token') || '';
     fetch('/api/cms', {
       headers: token ? { 'X-Admin-Token': token } : {},
     })
@@ -53,7 +54,7 @@ export const CredentialsEditor: React.FC = () => {
 
     setSaving(true);
     try {
-      const token = typeof window !== 'undefined' ? sessionStorage.getItem('admin_token') || '' : '';
+      const token = typeof window !== 'undefined' ? readSessionItem('admin_token') || '' : '';
 
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',

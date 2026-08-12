@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { BookOpen, Edit3, FileText, GitBranch, Plus, Save, Trash2, X } from 'lucide-react';
 import type { ArticleItem, ContentStatus, ProjectItem, PublicationItem } from '@/lib/types';
 import { slugifyTurkish } from '@/lib/seo';
+import { readSessionItem } from '@/lib/admin-session-storage';
 import {
   firstValidationMessage,
   normalizeOptionalUrl,
@@ -205,7 +206,7 @@ export function ContentPublishingEditor({
   }
 
   async function request(input: string, init: RequestInit) {
-    const token = sessionStorage.getItem('admin_token') || '';
+    const token = readSessionItem('admin_token') || '';
     const response = await fetch(input, {
       ...init,
       headers: {

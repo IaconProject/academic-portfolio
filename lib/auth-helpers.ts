@@ -2,7 +2,11 @@ import crypto from 'crypto';
 
 const SESSION_SECRET = process.env.ADMIN_SESSION_SECRET || '';
 const DEVELOPMENT_SESSION_SECRET = 'local-development-session-secret';
-const TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+// 7 günlük oturum süresi (tarayıcı kapansa bile localStorage TTL'i sayesinde
+// kullanıcı yeniden giriş yapmadan devam edebilir). Hem cookie hem de
+// istemci tarafındaki localStorage süresi ile aynı olmalıdır.
+const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+export const ADMIN_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 // Active in-memory session tokens store (Token -> { email, expiresAt })
 const activeSessions = new Map<string, { email: string; expiresAt: number }>();

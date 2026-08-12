@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { VisitorSession } from '@/lib/types';
+import { readSessionItem } from '@/lib/admin-session-storage';
 import {
   Activity,
   RefreshCw,
@@ -86,7 +87,7 @@ type AnalyticsHealth = {
 };
 
 function adminHeaders(json = false) {
-  const token = sessionStorage.getItem('admin_token') || '';
+  const token = readSessionItem('admin_token') || '';
   return {
     ...(json ? { 'Content-Type': 'application/json' } : {}),
     ...(token ? { 'X-Admin-Token': token } : {}),

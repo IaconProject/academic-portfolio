@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
-import { verifyPassword, createSessionToken } from '@/lib/auth-helpers';
+import {
+  verifyPassword,
+  createSessionToken,
+  ADMIN_SESSION_TTL_SECONDS,
+} from '@/lib/auth-helpers';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { readAdminCredentials } from '@/lib/admin-credentials.server';
 
@@ -77,12 +81,12 @@ export async function POST(request: Request) {
       message: 'Giriş başarılı. Yönlendiriliyorsunuz...',
     });
 
-    // Set secure cookie
+    // Set secure cookie (7 days — tarayıcı kapansa bile yeniden giriş gerekmez)
     response.cookies.set('admin_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 24 * 60 * 60, // 24 hours
+      maxAge: ADMIN_SESSION_TTL_SECONDS, // 7 days
       path: '/',
     });
 

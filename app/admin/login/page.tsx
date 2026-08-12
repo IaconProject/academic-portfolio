@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ShieldCheck, Lock, Mail, ArrowRight, Sun, Moon, KeyRound, CheckCircle2, RefreshCw, AlertCircle, ShieldAlert } from 'lucide-react';
 import { getAdminCredentials, saveAdminCredentials } from '@/lib/cms-store';
+import { writeSessionItem } from '@/lib/admin-session-storage';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
 import toast from 'react-hot-toast';
 
@@ -71,9 +72,11 @@ export default function AdminLoginPage() {
 
       if (res.ok && json.success) {
         if (typeof window !== 'undefined') {
-          sessionStorage.setItem('academic_admin_auth', 'true');
+          // 7 günlük TTL ile localStorage'a yazılır; tarayıcı kapatılsa bile
+          // oturum açık kalır.
+          writeSessionItem('academic_admin_auth', 'true');
           if (json.token) {
-            sessionStorage.setItem('admin_token', json.token);
+            writeSessionItem('admin_token', json.token);
           }
         }
         toast.success(json.message || 'Yönetici kimliği doğrulandı!');

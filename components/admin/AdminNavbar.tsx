@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Eye, LogOut, LayoutDashboard, Bell, Mail, ChevronRight, X, Sun, Moon } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { ContactMessage } from '@/lib/types';
+import { readSessionItem } from '@/lib/admin-session-storage';
 
 interface AdminNavbarProps {
   onLogout: () => void;
@@ -24,7 +25,7 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
 
   const fetchUnreadMessages = async () => {
     try {
-      const token = sessionStorage.getItem('admin_token') || '';
+      const token = readSessionItem('admin_token') || '';
       const res = await fetch('/api/messages?t=' + Date.now(), {
         headers: token ? { 'X-Admin-Token': token } : {},
       });

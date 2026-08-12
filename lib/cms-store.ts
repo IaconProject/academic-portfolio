@@ -5,6 +5,7 @@ import {
   omitAdminCredentials,
   redactAdminPassword,
 } from './admin-credentials-safety';
+import { readSessionItem } from './admin-session-storage';
 
 const STORAGE_KEY = 'academic_portfolio_cms_v1';
 const CREDS_KEY = 'academic_portfolio_admin_creds_v1';
@@ -85,8 +86,8 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache',
-        ...(typeof window !== 'undefined' && sessionStorage.getItem('admin_token')
-          ? { 'X-Admin-Token': sessionStorage.getItem('admin_token') || '' }
+        ...(typeof window !== 'undefined' && readSessionItem('admin_token')
+          ? { 'X-Admin-Token': readSessionItem('admin_token') || '' }
           : {}),
       },
     });
@@ -110,7 +111,7 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
 
         if (isServerInitial && isClientCustom) {
           // Re-hydrate server with client's custom data so deploy never wipes client edits
-          const token = sessionStorage.getItem('admin_token') || '';
+          const token = readSessionItem('admin_token') || '';
           const localDataWithoutCredentials = omitAdminCredentials(localData);
           fetch('/api/cms', {
             method: 'POST',

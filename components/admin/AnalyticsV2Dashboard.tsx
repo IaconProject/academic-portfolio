@@ -28,6 +28,7 @@ import {
   Trash2,
   Users,
 } from 'lucide-react';
+import { readSessionItem } from '@/lib/admin-session-storage';
 import toast from 'react-hot-toast';
 
 type DateRangeKey = '7d' | '30d' | '90d' | 'custom';
@@ -288,7 +289,7 @@ const CLS_FORMATTER = new Intl.NumberFormat('tr-TR', {
 });
 
 function adminHeaders(): Record<string, string> {
-  const token = sessionStorage.getItem('admin_token') || '';
+  const token = readSessionItem('admin_token') || '';
   const headers: Record<string, string> = {};
   if (token) headers['X-Admin-Token'] = token;
   return headers;

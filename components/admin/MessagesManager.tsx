@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ContactMessage } from '@/lib/types';
+import { readSessionItem } from '@/lib/admin-session-storage';
 import {
   Inbox,
   Mail,
@@ -26,7 +27,7 @@ export const MessagesManager: React.FC = () => {
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
   const [loadError, setLoadError] = useState<string>('');
   const adminHeaders = (json = false) => {
-    const token = sessionStorage.getItem('admin_token') || '';
+    const token = readSessionItem('admin_token') || '';
     return {
       ...(json ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { 'X-Admin-Token': token } : {}),
