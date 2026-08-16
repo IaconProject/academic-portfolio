@@ -3,12 +3,16 @@ import { initialPortfolioData } from '../lib/initial-data';
 import { buildSeoMetadata } from '../lib/seo-metadata';
 import {
   absoluteUrl,
+  buildHomeJsonLd,
   buildPublicationJsonLd,
+  buildRobotsTxt,
   createsRedirectLoop,
   findSeoPage,
   getSiteUrl,
   isContentPublished,
   normalizePath,
+  normalizeRobotsRules,
+  normalizeSitemapConfig,
   normalizeSiteUrl,
   runDataSeoAudit,
   slugifyTurkish,
@@ -74,6 +78,7 @@ describe('metadata önceliği ve indeksleme', () => {
     });
     expect(metadata.title).toBe('Özel SEO Başlığı');
     expect(metadata.description).toContain('Özel sayfa açıklaması');
+    expect(metadata.keywords).toContain('İslam Hukuku');
     expect(metadata.alternates?.canonical).toBe(
       'https://www.muhammedakan.com/yazilar/test'
     );
@@ -161,6 +166,22 @@ describe('yayın durumu, sayfa ve redirect kuralları', () => {
 });
 
 describe('schema ve entity güvenliği', () => {
+  it('ana sayfayı hedef sorgu ve tekil Person kimliğiyle tanımlar', () => {
+    const schema = buildHomeJsonLd(initialPortfolioData);
+    const graph = schema['@graph'];
+    const profile = graph.find((item) => item['@type'] === 'ProfilePage');
+    const person = graph.find((item) => item['@type'] === 'Person');
+
+    expect(profile?.name).toContain('Muhammed Akan Kimdir?');
+    expect(profile?.mainEntity).toEqual({
+      '@id': 'https://www.muhammedakan.com#person',
+    });
+    expect(person?.name).toBe('Muhammed Akan');
+    expect(person?.mainEntityOfPage).toEqual({
+      '@id': 'https://www.muhammedakan.com#profile',
+    });
+  });
+
   it('yayın türünü bibliyografik kayda göre seçer', () => {
     const chapter = buildPublicationJsonLd(
       {
@@ -206,5 +227,41 @@ describe('schema ve entity güvenliği', () => {
         0
       )
     ).toBe(audit.score);
+  });
+});
+
+describe('robots ve sitemap CMS kuralları', () => {
+  it('arama ve AI botları için açık politikaları robots.txt çıktısına yazar', () => {
+    const robots = buildRobotsTxt(initialPortfolioData.seoSettings, {
+      siteUrl: 'https://www.muhammedakan.com',
+      production: true,
+    });
+    expect(robots).toContain('User-Agent: OAI-SearchBot');
+    expect(robots).toContain('User-Agent: PerplexityBot');
+    expect(robots).toContain('Disallow: /api/');
+    expect(robots).toContain(
+      'Sitemap: https://www.muhammedakan.com/sitemap.xml'
+    );
+  });
+
+  it('bozuk crawler verisini güvenli varsayılanlara döndürür', () => {
+    expect(normalizeRobotsRules([])[0].userAgents).toEqual(['*']);
+    expect(
+      normalizeSitemapConfig({
+        enabled: true,
+        includePublications: true,
+        includeProjects: true,
+        includeArticles: true,
+        additionalPaths: ['/ozel/', '/api/gizli', '/admin'],
+      }).additionalPaths
+    ).toEqual(['/ozel']);
+  });
+
+  it('preview ortamında tüm taramayı kapatır', () => {
+    expect(
+      buildRobotsTxt(initialPortfolioData.seoSettings, {
+        production: false,
+      })
+    ).toBe('User-Agent: *\nDisallow: /');
   });
 });

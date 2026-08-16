@@ -6,9 +6,14 @@ import { AcademicCard } from '../AcademicCard';
 interface AboutSectionProps {
   profile: Profile;
   socialLinks: SocialLink[];
+  subjectName?: string;
 }
 
-export const AboutSection: React.FC<AboutSectionProps> = ({ profile, socialLinks }) => {
+export const AboutSection: React.FC<AboutSectionProps> = ({
+  profile,
+  socialLinks,
+  subjectName = profile.fullName,
+}) => {
   const getSocialIcon = (platform: string, iconName?: string) => {
     const name = (iconName || platform).toLowerCase();
     if (name.includes('instagram')) return <Instagram className="w-4 h-4 text-pink-700" />;
@@ -23,7 +28,11 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ profile, socialLinks
   };
 
   return (
-    <AcademicCard id="hakkinda" title="Hakkında" icon={User}>
+    <AcademicCard id="hakkinda" title="Muhammed Akan Kimdir?" icon={User}>
+      <p className="mb-4 text-base leading-relaxed text-academic-ink md:text-lg">
+        <strong>{subjectName}</strong>,{' '}
+        {profile.title.toLocaleLowerCase('tr-TR')}. {profile.subtitle}
+      </p>
       <p className="text-academic-slate text-base md:text-lg leading-relaxed mb-6 font-sans text-justify">
         {profile.bio}
       </p>

@@ -5,6 +5,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  Bot,
   CheckCircle2,
   Clock3,
   Code2,
@@ -13,6 +14,7 @@ import {
   Globe,
   History,
   Image as ImageIcon,
+  Info,
   KeyRound,
   Link2,
   Plus,
@@ -22,6 +24,7 @@ import {
   Settings2,
   Share2,
   Trash2,
+  X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
@@ -29,9 +32,15 @@ import {
   SeoPage,
   SeoRedirect,
   SeoRevision,
+  SeoRobotsRule,
   SeoSettings,
 } from '@/lib/types';
-import { DEFAULT_SEO_PAGES } from '@/lib/seo';
+import {
+  buildRobotsTxt,
+  DEFAULT_SEO_PAGES,
+  normalizeRobotsRules,
+  normalizeSitemapConfig,
+} from '@/lib/seo';
 import { readSessionItem } from '@/lib/admin-session-storage';
 
 interface SeoEditorProps {
@@ -68,6 +77,185 @@ const TAB_ITEMS: Array<{ id: Tab; label: string; icon: React.ElementType }> = [
   { id: 'history', label: 'Geçmiş', icon: History },
 ];
 
+const FIELD_HELP: Record<string, { description: string; example?: string }> = {
+  'Site Adı': {
+    description:
+      'WebSite şeması ve sosyal kartlarda görünen yayın adıdır. Kişi adı ile sitenin amacını kısa ve tutarlı yazın.',
+    example: 'Muhammed Akan | Akademik Biyografi',
+  },
+  'Yazar Adı': {
+    description:
+      'Person, Article ve author sinyallerinde kullanılacak tercih edilen gerçek addır. Tam adı normal büyük-küçük harfle yazın.',
+    example: 'Muhammed Akan',
+  },
+  'Varsayılan Meta Başlık': {
+    description:
+      'Sayfaya özel başlık yoksa title ve sosyal kart başlığı olur. Ana kişi ve ana arama niyetini doğal biçimde başa alın.',
+    example: 'Muhammed Akan Kimdir? | Akademik Biyografi',
+  },
+  'Varsayılan Meta Açıklama': {
+    description:
+      'Sayfaya özel açıklama yoksa arama sonucu özeti olarak önerilir. Kişiyi ilk cümlede tanımlayıp sayfanın kapsamını açıklayın; anahtar kelime yığını yapmayın.',
+    example:
+      'Muhammed Akan kimdir? İlahiyat öğrencisi ve araştırmacı Muhammed Akan’ın biyografisi, eğitimi, yayınları ve projeleri.',
+  },
+  'Başlık Şablonu': {
+    description:
+      'Detay sayfası başlığını site adıyla birleştirir. %s zorunlu yer tutucudur ve sayfa başlığıyla değiştirilir.',
+    example: '%s | Muhammed Akan',
+  },
+  'Canonical Origin (deployment ayarı)': {
+    description:
+      'Tüm canonical URL’lerin güvenilir alan adıdır. Koddan değil SITE_URL/NEXT_PUBLIC_SITE_URL deployment değişkenlerinden gelir ve panelden değiştirilemez.',
+    example: 'https://www.muhammedakan.com',
+  },
+  'Odak Konular (virgülle)': {
+    description:
+      'Person.knowsAbout ve sayfa anahtar konu sinyallerinde kullanılır. Gerçek uzmanlık/çalışma alanlarını virgülle ayırın; kişi adını veya ilgisiz popüler terimleri eklemeyin.',
+    example: 'İslam Hukuku, Yapay Zekâ Etiği, Blokzincir Teknolojisi',
+  },
+  'Alternatif Ad': {
+    description:
+      'Kişinin kamuya açık ve gerçekten kullandığı takma ad ya da farklı yazımıdır. Yoksa boş bırakın; anahtar kelime yazmayın.',
+    example: 'Yalnız doğrulanmış bir mahlas varsa girin',
+  },
+  'ORCID Profil URL': {
+    description:
+      'Person kimliğini akademik kayda bağlayan tam ORCID profil adresidir. Genel ORCID ana sayfasını değil size ait 16 haneli profil URL’sini girin.',
+    example: 'https://orcid.org/0000-0000-0000-0000',
+  },
+  'Google Scholar URL': {
+    description:
+      'Size ait Google Scholar citations profilinin tam adresidir. URL’de user= kimliği bulunmalıdır; profiliniz yoksa boş bırakın.',
+    example: 'https://scholar.google.com/citations?user=PROFIL_KIMLIGI',
+  },
+  'Sayfa Yolu': {
+    description:
+      'SEO kaydının bağlandığı site içi yoldur. / ile başlamalı ve gerçek route ile birebir aynı olmalıdır.',
+    example: '/',
+  },
+  'SEO Başlığı': {
+    description:
+      'Bu sayfanın benzersiz title değeridir. Ana sorguyu doğal biçimde başa yakın kullanın, sayfanın gerçekte sunduğu içeriği yazın.',
+    example: 'Muhammed Akan Kimdir? | Akademik Biyografi',
+  },
+  'Meta Açıklama': {
+    description:
+      'Bu sayfa için özgün SERP özeti önerisidir. Arama niyetini ilk cümlede yanıtlayın ve tıklanınca bulunacak içeriği doğru anlatın.',
+    example: 'Kişi, eğitim, çalışma alanları, yayınlar ve projeleri özetleyen 1–2 doğal cümle',
+  },
+  'Odak Sorgu': {
+    description:
+      'Sayfanın birincil arama niyetidir. Her indekslenebilir sayfaya tek, farklı ve gerçekten karşılanan bir sorgu atayın.',
+    example: 'Muhammed Akan kimdir',
+  },
+  'Konu Kümesi': {
+    description:
+      'İçeriğin bağlandığı üst konu grubudur. Benzer sayfaları editoryal olarak sınıflandırır; doğrudan bir Google sıralama alanı değildir.',
+    example: 'Muhammed Akan biyografisi',
+  },
+  'İlişkili Sorgular (virgülle)': {
+    description:
+      'Ana sorgunun yakın ve doğal varyasyonlarıdır. Aynı niyeti farklı sayfalara kopyalayarak sorgu çakışması oluşturmayın.',
+    example: 'Muhammed Akan biyografi, Muhammed Akan akademik kariyeri',
+  },
+  'OG başlık override': {
+    description:
+      'Yalnız sosyal paylaşım kartı için SEO başlığından farklı bir başlık gerekiyorsa kullanın. Boşsa SEO başlığı devralınır.',
+    example: 'Muhammed Akan Kimdir?',
+  },
+  'OG açıklama override': {
+    description:
+      'Yalnız sosyal paylaşım kartına özel kısa açıklamadır. Boşsa sayfanın meta açıklaması kullanılır.',
+    example: 'Biyografi, eğitim, yayınlar ve araştırma projeleri.',
+  },
+  'OG görsel override URL': {
+    description:
+      'Bu sayfaya özel, herkese açık HTTPS sosyal kart görselidir. Tercihen 1200×630 piksel kullanın; boşsa global görsel devralınır.',
+    example: 'https://www.muhammedakan.com/og.png',
+  },
+  'Gelişmiş Canonical Override': {
+    description:
+      'Yalnız aynı içeriğin asıl sürümü başka geçerli URL’deyse kullanın. Dolu olduğunda bu sayfa sitemap dışında kalır; normal durumda boş bırakın.',
+    example: 'Çoğu sayfa için boş bırakın',
+  },
+  'Varsayılan OG Görsel URL': {
+    description:
+      'Sayfaya özel görsel yoksa Open Graph ve X kartlarında kullanılan herkese açık HTTPS görseldir. En az 1200×630 olmalıdır.',
+    example: 'https://www.muhammedakan.com/og.png',
+  },
+  'X / Twitter Kullanıcı Adı': {
+    description:
+      'Twitter/X kartındaki creator hesabıdır. Size ait hesap varsa @ ile kullanıcı adını girin; yoksa boş bırakın.',
+    example: '@kullaniciadi',
+  },
+  'Google Doğrulama Kodu': {
+    description:
+      'Search Console HTML meta etiketi doğrulamasındaki content değeridir. Tüm <meta> etiketini değil yalnız kodu yapıştırın.',
+    example: 'abc123...',
+  },
+  'Bing Doğrulama Kodu': {
+    description:
+      'Bing Webmaster Tools msvalidate.01 meta etiketinin content değeridir. Tüm etiketi değil yalnız kodu girin.',
+    example: 'ABCDEF123...',
+  },
+  'GSC Property': {
+    description:
+      'Search Console API’de service account erişimi verilen property değeridir. Domain property için sc-domain: biçimini kullanın.',
+    example: 'sc-domain:muhammedakan.com',
+  },
+  'GA4 Property ID': {
+    description:
+      'Analytics Data API raporları için sayısal GA4 property kimliğidir; G- ile başlayan Measurement ID değildir.',
+    example: '123456789',
+  },
+  'GA4 Measurement ID': {
+    description:
+      'Ziyaretçi izni sonrasında tarayıcıda ölçüm başlatan G- ile başlayan web data stream kimliğidir.',
+    example: 'G-XXXXXXXXXX',
+  },
+  'Kural Adı': {
+    description:
+      'Panelde tarayıcı grubunu tanımanızı sağlayan yönetim adıdır; robots.txt içine yorum olarak yazılmaz.',
+    example: 'OpenAI arama ve kullanıcı istekleri',
+  },
+  'User-Agent değerleri (virgülle)': {
+    description:
+      'Aynı erişim politikasını kullanacak bot tokenlarını virgülle ayırın. * tüm REP uyumlu botları temsil eder.',
+    example: 'OAI-SearchBot, ChatGPT-User',
+  },
+  'İzin verilen yollar (satır başına bir yol)': {
+    description:
+      'Bu bot grubunun tarayabileceği site içi yolları satır satır yazın. Ana sayfa ve yayınlanan içerikler için / kullanın.',
+    example: '/',
+  },
+  'Engellenen yollar (satır başına bir yol)': {
+    description:
+      'Tarama gerektirmeyen teknik yolları satır satır yazın. İndeksten kaldırmak için robots engeli değil noindex kullanılması gerektiğini unutmayın.',
+    example: '/api/',
+  },
+  'Ek canonical yollar (satır başına)': {
+    description:
+      'Otomatik route listelerine girmeyen, 200 dönen, indekslenebilir ve canonical site içi URL’leri ekleyin. Admin, API, redirect veya noindex URL eklemeyin.',
+    example: '/ozel-sayfa',
+  },
+  'Eski Yol': {
+    description:
+      'Artık kullanılmayan eski site içi URL yoludur. / ile başlayın ve hâlen 200 dönen aktif sayfayı yönlendirmeyin.',
+    example: '/eski-biyografi',
+  },
+  'Yeni Yol': {
+    description:
+      'Eski URL’nin kalıcı olarak taşındığı canonical site içi hedeftir. Redirect zinciri yerine doğrudan son URL’yi yazın.',
+    example: '/',
+  },
+  Neden: {
+    description:
+      'Redirectin neden oluşturulduğunu revizyon ve bakım sırasında anlaşılır kılan kısa iç nottur.',
+    example: 'Eski biyografi yolu ana sayfada birleştirildi',
+  },
+};
+
 function withDefaults(settings: SeoSettings): Required<SeoSettings> {
   return {
     ...settings,
@@ -91,6 +279,8 @@ function withDefaults(settings: SeoSettings): Required<SeoSettings> {
     alternateName: settings.alternateName || '',
     orcidUrl: settings.orcidUrl || '',
     scholarUrl: settings.scholarUrl || '',
+    robotsRules: normalizeRobotsRules(settings.robotsRules),
+    sitemapConfig: normalizeSitemapConfig(settings.sitemapConfig),
   };
 }
 
@@ -222,6 +412,40 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
         page.routeKey === selectedRouteKey ? { ...page, ...patch } : page
       )
     );
+  };
+
+  const updateRobotsRule = (id: string, patch: Partial<SeoRobotsRule>) => {
+    setSettings((current) => ({
+      ...current,
+      robotsRules: current.robotsRules.map((rule) =>
+        rule.id === id ? { ...rule, ...patch } : rule
+      ),
+    }));
+  };
+
+  const addRobotsRule = () => {
+    const id = `crawler-${Date.now()}`;
+    setSettings((current) => ({
+      ...current,
+      robotsRules: [
+        ...current.robotsRules,
+        {
+          id,
+          name: 'Yeni tarayıcı grubu',
+          enabled: true,
+          userAgents: ['Bot-Name'],
+          allow: ['/'],
+          disallow: ['/api/'],
+        },
+      ],
+    }));
+  };
+
+  const deleteRobotsRule = (id: string) => {
+    setSettings((current) => ({
+      ...current,
+      robotsRules: current.robotsRules.filter((rule) => rule.id !== id),
+    }));
   };
 
   const runAudit = async () => {
@@ -357,6 +581,28 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
     if ((tab === 'integrations' || tab === 'keywords') && !insights) loadInsights();
     if (tab === 'history' && !revisions.length) loadHistory();
   }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const robotsPreview = useMemo(
+    () => buildRobotsTxt(settings, { siteUrl: SITE_URL, production: true }),
+    [settings]
+  );
+  const sitemapPreviewPaths = useMemo(
+    () =>
+      Array.from(
+        new Set([
+          ...pages
+            .filter(
+              (page) =>
+                page.index &&
+                page.includeInSitemap &&
+                !page.canonicalOverride
+            )
+            .map((page) => page.path),
+          ...settings.sitemapConfig.additionalPaths,
+        ])
+      ),
+    [pages, settings.sitemapConfig.additionalPaths]
+  );
 
   const schemaPreview = useMemo(
     () => ({
@@ -511,10 +757,14 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
               <Field label="ORCID Profil URL" value={settings.orcidUrl} onChange={(orcidUrl) => setSettings({ ...settings, orcidUrl })} />
               <Field label="Google Scholar URL" value={settings.scholarUrl} onChange={(scholarUrl) => setSettings({ ...settings, scholarUrl })} />
             </div>
-            <label className="flex items-center gap-3 rounded-xl border border-stone-200 p-4 text-sm font-bold dark:border-stone-700">
-              <input type="checkbox" checked={settings.allowIndexing} onChange={(event) => setSettings({ ...settings, allowIndexing: event.target.checked })} />
-              Production sayfalarının indekslenmesine izin ver
-            </label>
+            <div className="rounded-xl border border-stone-200 p-4 dark:border-stone-700">
+              <Check
+                label="Production sayfalarının indekslenmesine izin ver"
+                help="Açıkken sayfa bazlı Index/Follow kuralları uygulanır. Kapalıyken production sayfaları noindex olur. Bakım dışında açık tutun; noindex etiketinin okunabilmesi için robots.txt ile sayfayı ayrıca engellemeyin."
+                checked={settings.allowIndexing}
+                onChange={(allowIndexing) => setSettings({ ...settings, allowIndexing })}
+              />
+            </div>
             <div className="flex justify-end">
               <button onClick={saveSettings} disabled={busy === 'settings'} className="seo-primary-button">
                 <Save className="h-4 w-4" /> Site ayarlarını kaydet
@@ -563,7 +813,14 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
                 <Field label="Konu Kümesi" value={selectedPage.topicCluster || ''} onChange={(topicCluster) => updateSelectedPage({ topicCluster })} />
               </div>
               <label className="block">
-                <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400">Arama niyeti</span>
+                <span className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400">
+                  Arama niyeti
+                  <InfoTip
+                    label="Arama niyeti"
+                    description="Kullanıcının sorguyla ne yapmak istediğini sınıflandırır. ‘Muhammed Akan kimdir?’ için Bilgilendirici, yayın listesi için Akademik seçin."
+                    example="Ana biyografi sayfası: Bilgilendirici"
+                  />
+                </span>
                 <select
                   value={selectedPage.searchIntent || 'informational'}
                   onChange={(event) => updateSelectedPage({ searchIntent: event.target.value as SeoPage['searchIntent'] })}
@@ -583,9 +840,9 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
               <TextArea label="OG açıklama override" value={selectedPage.ogDescription || ''} onChange={(ogDescription) => updateSelectedPage({ ogDescription })} />
               <Field label="Gelişmiş Canonical Override" value={selectedPage.canonicalOverride || ''} onChange={(canonicalOverride) => updateSelectedPage({ canonicalOverride })} />
               <div className="flex flex-wrap gap-5 text-xs font-bold">
-                <Check label="Index" checked={selectedPage.index} onChange={(index) => updateSelectedPage({ index })} />
-                <Check label="Follow" checked={selectedPage.follow} onChange={(follow) => updateSelectedPage({ follow })} />
-                <Check label="Sitemap’e dahil et" checked={selectedPage.includeInSitemap} onChange={(includeInSitemap) => updateSelectedPage({ includeInSitemap })} />
+                <Check label="Index" help="Bu canonical sayfanın arama dizinine alınmasına izin verir. Yayınlanmış, özgün ve kullanıcıya açık sayfalarda açın; taslak, gizlilik ve yardımcı sayfalarda kapatın." checked={selectedPage.index} onChange={(index) => updateSelectedPage({ index })} />
+                <Check label="Follow" help="Arama botlarının bu sayfadaki bağlantıları izlemesine izin verir. Güvenilir dahili bağlantıları keşfetmek için normalde açık tutun." checked={selectedPage.follow} onChange={(follow) => updateSelectedPage({ follow })} />
+                <Check label="Sitemap’e dahil et" help="Sayfayı XML sitemap’e ekler. Yalnız index=true, 200 dönen, canonical ve yayınlanmış URL’lerde açın; canonical override varsa sistem otomatik kapatır." checked={selectedPage.includeInSitemap} onChange={(includeInSitemap) => updateSelectedPage({ includeInSitemap })} />
               </div>
               <div className="flex justify-end">
                 <button onClick={savePage} disabled={busy === 'page'} className="seo-primary-button">
@@ -660,25 +917,142 @@ export const SeoEditor: React.FC<SeoEditorProps> = ({
 
         {tab === 'indexing' && (
           <div className="space-y-6">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-xs leading-5 text-sky-900 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-200">
+              <Bot className="mr-2 inline h-4 w-4" />
+              Google AI Overviews ve AI Mode erişimini Googlebot belirler. OAI-SearchBot ve PerplexityBot ise ilgili AI arama ürünleri için ayrı yönetilir. GPTBot ve Google-Extended erişimi model kullanımıyla ilgilidir; Google Search sıralaması için özel bir sinyal değildir.
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
               <ExternalCard href={`${SITE_URL}/robots.txt`} label="robots.txt dosyasını aç" />
               <ExternalCard href={`${SITE_URL}/sitemap.xml`} label="sitemap.xml dosyasını aç" />
+              <ExternalCard href={`${SITE_URL}/llms.txt`} label="AI keşif özetini aç" />
             </div>
+
+            <section className="space-y-4 rounded-2xl border border-stone-200 p-5 dark:border-stone-700">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                <div>
+                  <h3 className="text-base font-bold">Gelişmiş robots.txt politikaları</h3>
+                  <p className="mt-1 text-xs text-stone-500">
+                    Özel bot grupları genel * grubunu devralmaz; gerekli Allow/Disallow yollarını her özel grupta açıkça koruyun.
+                  </p>
+                </div>
+                <button type="button" onClick={addRobotsRule} className="seo-secondary-button">
+                  <Plus className="h-4 w-4" /> Tarayıcı grubu ekle
+                </button>
+              </div>
+              <div className="space-y-4">
+                {settings.robotsRules.map((rule) => (
+                  <div key={rule.id} className="rounded-xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/60">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <Check
+                        label="Tarayıcı grubu etkin"
+                        help="Kapalı bir grup robots.txt çıktısına yazılmaz. Ana * grubunu veya AI arama gruplarını kapatmadan önce canlı önizlemede ana sayfanın engellenmediğini doğrulayın."
+                        checked={rule.enabled}
+                        onChange={(enabled) => updateRobotsRule(rule.id, { enabled })}
+                      />
+                      <button
+                        type="button"
+                        aria-label={`${rule.name} kuralını sil`}
+                        title="Tarayıcı grubunu sil"
+                        disabled={settings.robotsRules.length === 1}
+                        onClick={() => deleteRobotsRule(rule.id)}
+                        className="rounded-lg p-2 text-rose-600 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-rose-950"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field label="Kural Adı" value={rule.name} onChange={(name) => updateRobotsRule(rule.id, { name })} />
+                      <Field
+                        label="User-Agent değerleri (virgülle)"
+                        value={rule.userAgents.join(', ')}
+                        onChange={(value) =>
+                          updateRobotsRule(rule.id, {
+                            userAgents: value
+                              .split(',')
+                              .map((item) => item.trim())
+                              .filter(Boolean),
+                          })
+                        }
+                      />
+                      <TextArea
+                        label="İzin verilen yollar (satır başına bir yol)"
+                        rows={3}
+                        value={rule.allow.join('\n')}
+                        onChange={(value) =>
+                          updateRobotsRule(rule.id, {
+                            allow: value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
+                          })
+                        }
+                      />
+                      <TextArea
+                        label="Engellenen yollar (satır başına bir yol)"
+                        rows={3}
+                        value={rule.disallow.join('\n')}
+                        onChange={(value) =>
+                          updateRobotsRule(rule.id, {
+                            disallow: value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <div className="grid gap-4 lg:grid-cols-2">
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-500">robots.txt önizlemesi</p>
-                <pre className="overflow-auto rounded-xl bg-stone-950 p-4 text-xs leading-6 text-emerald-300">{`User-Agent: *
-Allow: /
-Disallow: /api/
-
-Host: ${SITE_URL}
-Sitemap: ${SITE_URL}/sitemap.xml`}</pre>
+                <pre className="max-h-96 overflow-auto rounded-xl bg-stone-950 p-4 text-xs leading-6 text-emerald-300">{robotsPreview}</pre>
               </div>
               <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-500">Sitemap’e girecek sistem yolları</p>
-                <pre className="max-h-48 overflow-auto rounded-xl bg-stone-950 p-4 text-xs leading-6 text-sky-300">{pages.filter((page) => page.index && page.includeInSitemap && !page.canonicalOverride).map((page) => page.path).join('\n') || 'Yol bulunamadı'}</pre>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-stone-500">Sitemap’e girecek sabit yollar</p>
+                <pre className="max-h-96 overflow-auto rounded-xl bg-stone-950 p-4 text-xs leading-6 text-sky-300">{settings.sitemapConfig.enabled ? sitemapPreviewPaths.join('\n') || 'Yol bulunamadı' : 'Sitemap yayını kapalı'}</pre>
               </div>
             </div>
+
+            <section className="space-y-4 rounded-2xl border border-stone-200 p-5 dark:border-stone-700">
+              <div>
+                <h3 className="text-base font-bold">Gelişmiş XML sitemap yönetimi</h3>
+                <p className="mt-1 text-xs text-stone-500">
+                  Sistem sayfaları Sayfalar sekmesindeki index/canonical/sitemap kurallarından; detay URL’leri ise yayın durumundan otomatik üretilir.
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Check label="XML sitemap yayınını etkinleştir" help="Açıkken /sitemap.xml canonical ve indekslenebilir URL’leri yayınlar ve robots.txt içine Sitemap satırı eklenir. Arama motoru keşfi için açık tutun." checked={settings.sitemapConfig.enabled} onChange={(enabled) => setSettings({ ...settings, sitemapConfig: { ...settings.sitemapConfig, enabled } })} />
+                <Check label="Yayın detaylarını ekle" help="Yalnız Türkçe ve yayınlanmış akademik yayın detay sayfalarını sitemap’e ekler. Taslak ve zamanı gelmemiş içerikler dışarıda kalır." checked={settings.sitemapConfig.includePublications} onChange={(includePublications) => setSettings({ ...settings, sitemapConfig: { ...settings.sitemapConfig, includePublications } })} />
+                <Check label="Proje detaylarını ekle" help="Yalnız Türkçe ve yayınlanmış araştırma projesi detay sayfalarını sitemap’e ekler." checked={settings.sitemapConfig.includeProjects} onChange={(includeProjects) => setSettings({ ...settings, sitemapConfig: { ...settings.sitemapConfig, includeProjects } })} />
+                <Check label="Yazı detaylarını ekle" help="Yalnız Türkçe ve yayınlanmış akademik yazı detay sayfalarını sitemap’e ekler." checked={settings.sitemapConfig.includeArticles} onChange={(includeArticles) => setSettings({ ...settings, sitemapConfig: { ...settings.sitemapConfig, includeArticles } })} />
+              </div>
+              <TextArea
+                label="Ek canonical yollar (satır başına)"
+                rows={5}
+                value={settings.sitemapConfig.additionalPaths.join('\n')}
+                onChange={(value) =>
+                  setSettings({
+                    ...settings,
+                    sitemapConfig: {
+                      ...settings.sitemapConfig,
+                      additionalPaths: value
+                        .split(/\r?\n/)
+                        .map((item) => item.trim())
+                        .filter(Boolean),
+                    },
+                  })
+                }
+              />
+              <div className="flex justify-end">
+                <button onClick={saveSettings} disabled={busy === 'settings'} className="seo-primary-button">
+                  <Save className="h-4 w-4" /> Robots ve sitemap ayarlarını kaydet
+                </button>
+              </div>
+            </section>
+
+            <section className="space-y-4 border-t border-stone-200 pt-6 dark:border-stone-700">
+              <div>
+                <h3 className="text-base font-bold">Kalıcı URL yönlendirmeleri</h3>
+                <p className="mt-1 text-xs text-stone-500">Taşınan URL’leri doğrudan son canonical hedefe 308 ile yönlendirin.</p>
+              </div>
             <div className="grid gap-3 md:grid-cols-3">
               <Field label="Eski Yol" value={redirectDraft.fromPath} onChange={(fromPath) => setRedirectDraft({ ...redirectDraft, fromPath })} />
               <Field label="Yeni Yol" value={redirectDraft.toPath} onChange={(toPath) => setRedirectDraft({ ...redirectDraft, toPath })} />
@@ -703,6 +1077,7 @@ Sitemap: ${SITE_URL}/sitemap.xml`}</pre>
                 </div>
               ))}
             </div>
+            </section>
           </div>
         )}
 
@@ -765,10 +1140,12 @@ Sitemap: ${SITE_URL}/sitemap.xml`}</pre>
               </div>
             )}
             <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Google Doğrulama Kodu" value={settings.googleSiteVerification} onChange={(googleSiteVerification) => setSettings({ ...settings, googleSiteVerification })} />
+              <Field label="Bing Doğrulama Kodu" value={settings.bingSiteVerification} onChange={(bingSiteVerification) => setSettings({ ...settings, bingSiteVerification })} />
               <Field label="GSC Property" value={settings.gscProperty} onChange={(gscProperty) => setSettings({ ...settings, gscProperty })} />
               <Field label="GA4 Property ID" value={settings.ga4PropertyId} onChange={(ga4PropertyId) => setSettings({ ...settings, ga4PropertyId })} />
               <Field label="GA4 Measurement ID" value={settings.ga4MeasurementId} onChange={(ga4MeasurementId) => setSettings({ ...settings, ga4MeasurementId })} />
-              <Check label="Consent sonrasında analitiği etkinleştir" checked={settings.enableAnalytics} onChange={(enableAnalytics) => setSettings({ ...settings, enableAnalytics })} />
+              <Check label="Consent sonrasında analitiği etkinleştir" help="Geçerli GA4 Measurement ID olsa bile analitik yalnız bu ayar açıkken ve ziyaretçinin bölgesel izin koşulları karşılandığında yüklenir. SEO sıralaması için zorunlu değildir." checked={settings.enableAnalytics} onChange={(enableAnalytics) => setSettings({ ...settings, enableAnalytics })} />
             </div>
             <div className="flex flex-wrap gap-3">
               <button onClick={() => loadInsights(28)} className="seo-primary-button"><RefreshCw className={`h-4 w-4 ${busy === 'insights' ? 'animate-spin' : ''}`} /> Raporları yenile</button>
@@ -794,16 +1171,137 @@ Sitemap: ${SITE_URL}/sitemap.xml`}</pre>
   );
 };
 
-function Field({ label, value, onChange, readOnly = false, wide = false }: { label: string; value: string; onChange?: (value: string) => void; readOnly?: boolean; wide?: boolean }) {
-  return <label className={`block ${wide ? 'md:col-span-2' : ''}`}><span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400">{label}</span><input value={value} readOnly={readOnly} onChange={(event) => onChange?.(event.target.value)} className={`w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900 dark:border-stone-700 dark:bg-stone-800 ${readOnly ? 'bg-stone-100 text-stone-500' : 'bg-stone-50 dark:text-stone-100'}`} /></label>;
+function InfoTip({
+  label,
+  description,
+  example,
+}: {
+  label: string;
+  description: string;
+  example?: string;
+}) {
+  const tooltipId = React.useId();
+  return (
+    <span className="group relative inline-flex shrink-0 normal-case tracking-normal">
+      <button
+        type="button"
+        aria-label={`${label} alanı hakkında bilgi`}
+        aria-describedby={tooltipId}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-full text-stone-400 outline-none hover:bg-stone-200 hover:text-stone-800 focus-visible:ring-2 focus-visible:ring-amber-500 dark:hover:bg-stone-700 dark:hover:text-stone-100"
+      >
+        <Info className="h-3.5 w-3.5" />
+      </button>
+      <span
+        id={tooltipId}
+        role="tooltip"
+        className="pointer-events-none invisible absolute left-0 top-7 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-stone-700 bg-stone-950 p-3 text-left text-[11px] font-medium leading-5 text-stone-100 opacity-0 shadow-2xl transition group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100"
+      >
+        <span className="block">{description}</span>
+        {example && (
+          <span className="mt-2 block border-t border-stone-700 pt-2 text-amber-300">
+            Örnek: {example}
+          </span>
+        )}
+      </span>
+    </span>
+  );
 }
 
-function TextArea({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="block md:col-span-2"><span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400">{label}</span><textarea rows={4} value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-xl border border-stone-200 bg-stone-50 p-3.5 text-sm outline-none focus:border-stone-900 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100" /></label>;
+function FieldLabel({ label, htmlFor, help, example }: { label: string; htmlFor: string; help?: string; example?: string }) {
+  const guidance = FIELD_HELP[label];
+  return (
+    <span className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400">
+      <label htmlFor={htmlFor}>{label}</label>
+      <InfoTip
+        label={label}
+        description={help || guidance?.description || 'Bu alan ilgili SEO çıktısını yönetir. Yalnız sayfanın gerçek ve doğrulanabilir içeriğiyle uyumlu değer girin.'}
+        example={example || guidance?.example}
+      />
+    </span>
+  );
 }
 
-function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
-  return <label className="inline-flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />{label}</label>;
+function Field({
+  label,
+  value,
+  onChange,
+  readOnly = false,
+  wide = false,
+  help,
+  example,
+}: {
+  label: string;
+  value: string;
+  onChange?: (value: string) => void;
+  readOnly?: boolean;
+  wide?: boolean;
+  help?: string;
+  example?: string;
+}) {
+  const inputId = React.useId();
+  const guidance = FIELD_HELP[label];
+  return (
+    <div className={`block ${wide ? 'md:col-span-2' : ''}`}>
+      <FieldLabel label={label} htmlFor={inputId} help={help} example={example} />
+      <input
+        id={inputId}
+        value={value}
+        readOnly={readOnly}
+        placeholder={!readOnly ? guidance?.example : undefined}
+        onChange={(event) => onChange?.(event.target.value)}
+        className={`w-full rounded-xl border border-stone-200 px-3.5 py-2.5 text-sm outline-none focus:border-stone-900 dark:border-stone-700 dark:bg-stone-800 ${readOnly ? 'bg-stone-100 text-stone-500' : 'bg-stone-50 dark:text-stone-100'}`}
+      />
+    </div>
+  );
+}
+
+function TextArea({
+  label,
+  value,
+  onChange,
+  rows = 4,
+  wide = true,
+  help,
+  example,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  rows?: number;
+  wide?: boolean;
+  help?: string;
+  example?: string;
+}) {
+  const inputId = React.useId();
+  const guidance = FIELD_HELP[label];
+  return (
+    <div className={wide ? 'block md:col-span-2' : 'block'}>
+      <FieldLabel label={label} htmlFor={inputId} help={help} example={example} />
+      <textarea
+        id={inputId}
+        rows={rows}
+        value={value}
+        placeholder={guidance?.example}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full rounded-xl border border-stone-200 bg-stone-50 p-3.5 text-sm outline-none focus:border-stone-900 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
+      />
+    </div>
+  );
+}
+
+function Check({ label, checked, onChange, help }: { label: string; checked: boolean; onChange: (checked: boolean) => void; help?: string }) {
+  const inputId = React.useId();
+  return (
+    <span className="inline-flex items-center gap-2 text-xs font-bold">
+      <input id={inputId} type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <label htmlFor={inputId}>{label}</label>
+      <InfoTip
+        label={label}
+        description={help || FIELD_HELP[label]?.description || 'Bu seçenek ilgili SEO çıktısının etkin olup olmadığını belirler. Değişiklikten sonra canlı önizlemeyi ve SEO denetimini kontrol edin.'}
+        example={FIELD_HELP[label]?.example}
+      />
+    </span>
+  );
 }
 
 function ExternalCard({ href, label }: { href: string; label: string }) {

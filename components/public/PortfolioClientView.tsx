@@ -44,7 +44,11 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
           />
 
           {/* Stacked Academic Section Cards */}
-          <AboutSection profile={profile} socialLinks={socialLinks} />
+          <AboutSection
+            profile={profile}
+            socialLinks={socialLinks}
+            subjectName={data.seoSettings.authorName || profile.fullName}
+          />
           <EducationSection education={education} />
           <PublicationsSection publications={publications.filter((item) => (item.locale || 'tr') === 'tr')} />
           <ProjectsSection projects={projects.filter((item) => (item.locale || 'tr') === 'tr')} />
@@ -54,6 +58,26 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
           <ContactSection
             profile={{ email: profile.email, location: profile.location }}
           />
+
+          <nav
+            aria-label="Akademik içerik arşivleri"
+            className="mt-10 rounded-2xl border border-academic-border bg-academic-surface-muted p-5"
+          >
+            <h2 className="font-serif text-lg font-bold text-academic-ink">
+              Akademik içerik arşivleri
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold">
+              <Link href="/yayinlar" className="underline underline-offset-4">
+                Yayınlar
+              </Link>
+              <Link href="/projeler" className="underline underline-offset-4">
+                Araştırma projeleri
+              </Link>
+              <Link href="/yazilar" className="underline underline-offset-4">
+                Akademik yazılar
+              </Link>
+            </div>
+          </nav>
 
           {/* Minimalist Footer */}
           <footer className="mt-12 border-t border-academic-border py-6 text-center text-xs font-medium text-academic-slate">

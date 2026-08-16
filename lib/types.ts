@@ -94,6 +94,23 @@ export interface SocialLink {
   iconName: string;
 }
 
+export interface SeoRobotsRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  userAgents: string[];
+  allow: string[];
+  disallow: string[];
+}
+
+export interface SeoSitemapConfig {
+  enabled: boolean;
+  includePublications: boolean;
+  includeProjects: boolean;
+  includeArticles: boolean;
+  additionalPaths: string[];
+}
+
 export interface SeoSettings {
   metaTitle: string;
   metaDescription: string;
@@ -115,6 +132,8 @@ export interface SeoSettings {
   alternateName?: string;
   orcidUrl?: string;
   scholarUrl?: string;
+  robotsRules?: SeoRobotsRule[];
+  sitemapConfig?: SeoSitemapConfig;
 }
 
 export type SiteLocale = 'tr' | 'en';

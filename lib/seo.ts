@@ -7,11 +7,58 @@ import {
   SeoAuditIssue,
   SeoAuditResult,
   SeoPage,
+  SeoRobotsRule,
   SeoSettings,
+  SeoSitemapConfig,
   SiteLocale,
 } from './types';
 
 export const DEFAULT_SITE_URL = 'https://www.muhammedakan.com';
+export const TARGET_PERSON_NAME = 'Muhammed Akan';
+export const TARGET_QUERY = 'Muhammed Akan kimdir';
+
+export const DEFAULT_ROBOTS_RULES: SeoRobotsRule[] = [
+  {
+    id: 'search-engines',
+    name: 'Arama motorları',
+    enabled: true,
+    userAgents: ['*'],
+    allow: ['/'],
+    disallow: ['/api/'],
+  },
+  {
+    id: 'openai-search',
+    name: 'OpenAI arama ve kullanıcı istekleri',
+    enabled: true,
+    userAgents: ['OAI-SearchBot', 'ChatGPT-User'],
+    allow: ['/'],
+    disallow: ['/api/'],
+  },
+  {
+    id: 'perplexity-search',
+    name: 'Perplexity arama ve kullanıcı istekleri',
+    enabled: true,
+    userAgents: ['PerplexityBot', 'Perplexity-User'],
+    allow: ['/'],
+    disallow: ['/api/'],
+  },
+  {
+    id: 'ai-model-access',
+    name: 'İsteğe bağlı AI model erişimi',
+    enabled: true,
+    userAgents: ['GPTBot', 'Google-Extended'],
+    allow: ['/'],
+    disallow: ['/api/'],
+  },
+];
+
+export const DEFAULT_SITEMAP_CONFIG: SeoSitemapConfig = {
+  enabled: true,
+  includePublications: true,
+  includeProjects: true,
+  includeArticles: true,
+  additionalPaths: [],
+};
 
 export function isSeoCmsV2Enabled(): boolean {
   return process.env.SEO_CMS_V2 !== 'false';
@@ -56,6 +103,130 @@ export function normalizePath(path: string): string {
   const withSlash = raw.startsWith('/') ? raw : `/${raw}`;
   const clean = withSlash.replace(/\/{2,}/g, '/').replace(/\/+$/, '');
   return clean || '/';
+}
+
+function unique(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
+
+function normalizedRobotsPath(value: string): string | null {
+  const clean = value.trim();
+  if (!clean || !clean.startsWith('/') || /[\r\n]/.test(clean)) return null;
+  return clean.slice(0, 300);
+}
+
+export function normalizeRobotsRules(
+  rules?: unknown
+): SeoRobotsRule[] {
+  const source: SeoRobotsRule[] =
+    Array.isArray(rules) && rules.length
+      ? (rules as SeoRobotsRule[])
+      : DEFAULT_ROBOTS_RULES;
+  const normalized = source
+    .slice(0, 20)
+    .map((rule, index) => {
+      const userAgents = unique(
+        (Array.isArray(rule.userAgents) ? rule.userAgents : [])
+          .map((value) => value.trim())
+          .filter((value) => /^[A-Za-z0-9*._-]{1,120}$/.test(value))
+      ).slice(0, 20);
+      const allow = unique(
+        (Array.isArray(rule.allow) ? rule.allow : [])
+          .map(normalizedRobotsPath)
+          .filter((value): value is string => Boolean(value))
+      ).slice(0, 50);
+      const disallow = unique(
+        (Array.isArray(rule.disallow) ? rule.disallow : [])
+          .map(normalizedRobotsPath)
+          .filter((value): value is string => Boolean(value))
+      ).slice(0, 50);
+      return {
+        id:
+          typeof rule.id === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(rule.id)
+            ? rule.id
+            : `crawler-rule-${index + 1}`,
+        name:
+          typeof rule.name === 'string' && rule.name.trim()
+            ? rule.name.trim().slice(0, 120)
+            : `Tarayıcı kuralı ${index + 1}`,
+        enabled: rule.enabled !== false,
+        userAgents,
+        allow,
+        disallow,
+      };
+    })
+    .filter((rule) => rule.userAgents.length > 0);
+
+  return normalized.length
+    ? normalized
+    : DEFAULT_ROBOTS_RULES.map((rule) => ({
+        ...rule,
+        userAgents: [...rule.userAgents],
+        allow: [...rule.allow],
+        disallow: [...rule.disallow],
+      }));
+}
+
+export function normalizeSitemapConfig(
+  config?: unknown
+): SeoSitemapConfig {
+  const value =
+    config && typeof config === 'object'
+      ? (config as Partial<SeoSitemapConfig>)
+      : undefined;
+  const additionalPaths = unique(
+    (Array.isArray(value?.additionalPaths) ? value.additionalPaths : [])
+      .map((value) => normalizePath(value))
+      .filter(
+        (value) =>
+          value !== '/' &&
+          !value.startsWith('/admin') &&
+          !value.startsWith('/api/') &&
+          !['/robots.txt', '/sitemap.xml'].includes(value)
+      )
+  ).slice(0, 200);
+
+  return {
+    enabled: value?.enabled ?? DEFAULT_SITEMAP_CONFIG.enabled,
+    includePublications:
+      value?.includePublications ?? DEFAULT_SITEMAP_CONFIG.includePublications,
+    includeProjects:
+      value?.includeProjects ?? DEFAULT_SITEMAP_CONFIG.includeProjects,
+    includeArticles:
+      value?.includeArticles ?? DEFAULT_SITEMAP_CONFIG.includeArticles,
+    additionalPaths,
+  };
+}
+
+export function buildRobotsTxt(
+  settings: SeoSettings,
+  options: { siteUrl?: string; production?: boolean } = {}
+): string {
+  const siteUrl = normalizeSiteUrl(options.siteUrl || getSiteUrl());
+  if (options.production === false) {
+    return ['User-Agent: *', 'Disallow: /'].join('\n');
+  }
+
+  const normalized = normalizeSeoSettings(settings);
+  const blocks = normalized.robotsRules
+    .filter((rule) => rule.enabled)
+    .map((rule) =>
+      [
+        ...rule.userAgents.map((userAgent) => `User-Agent: ${userAgent}`),
+        ...rule.allow.map((path) => `Allow: ${path}`),
+        ...rule.disallow.map((path) => `Disallow: ${path}`),
+      ].join('\n')
+    )
+    .filter(Boolean);
+
+  if (!blocks.length) {
+    blocks.push('User-Agent: *\nAllow: /\nDisallow: /api/');
+  }
+  blocks.push(`Host: ${siteUrl}`);
+  if (normalized.sitemapConfig.enabled) {
+    blocks.push(`Sitemap: ${siteUrl}/sitemap.xml`);
+  }
+  return `${blocks.join('\n\n')}\n`;
 }
 
 const TURKISH_CHAR_MAP: Record<string, string> = {
@@ -127,7 +298,21 @@ export const DEFAULT_SEO_PAGES: SeoPage[] = [
     routeKey: 'home',
     path: '/',
     locale: 'tr',
-    relatedKeywords: [],
+    title: 'Muhammed Akan Kimdir? | Akademik Biyografi',
+    description:
+      'Muhammed Akan kimdir? İlahiyat öğrencisi, araştırmacı ve yazılımcı Muhammed Akan’ın biyografisi; eğitimi, akademik çalışmaları, yayınları ve projeleri.',
+    focusKeyword: TARGET_QUERY,
+    relatedKeywords: [
+      'Muhammed Akan biyografi',
+      'Muhammed Akan akademik kariyeri',
+      'Muhammed Akan araştırmacı',
+      'Muhammed Akan yazılımcı',
+    ],
+    searchIntent: 'informational',
+    topicCluster: 'Muhammed Akan biyografisi',
+    ogTitle: 'Muhammed Akan Kimdir?',
+    ogDescription:
+      'Muhammed Akan’ın biyografisi, eğitimi, akademik çalışma alanları, yayınları ve araştırma projeleri.',
     index: true,
     follow: true,
     includeInSitemap: true,
@@ -193,7 +378,7 @@ export const DEFAULT_SEO_PAGES: SeoPage[] = [
 
 export function normalizeSeoSettings(
   settings: SeoSettings,
-  profileName = 'Muhammed Akan'
+  profileName = TARGET_PERSON_NAME
 ): Required<SeoSettings> {
   return {
     metaTitle: settings.metaTitle || `${profileName} | Akademik Portfolyo`,
@@ -224,6 +409,8 @@ export function normalizeSeoSettings(
     alternateName: settings.alternateName || '',
     orcidUrl: settings.orcidUrl || '',
     scholarUrl: settings.scholarUrl || '',
+    robotsRules: normalizeRobotsRules(settings.robotsRules),
+    sitemapConfig: normalizeSitemapConfig(settings.sitemapConfig),
   };
 }
 
@@ -297,9 +484,40 @@ export function validSameAs(data: PortfolioData): string[] {
 
 export function buildHomeJsonLd(data: PortfolioData) {
   const settings = normalizeSeoSettings(data.seoSettings, data.profile.fullName);
+  const homePage = findSeoPage(data.seoPages, 'home');
   const pageUrl = absoluteUrl('/');
   const personId = `${pageUrl}#person`;
   const websiteId = `${pageUrl}#website`;
+  const personName = settings.authorName || data.profile.fullName;
+  const nameParts = personName.trim().split(/\s+/);
+  const modifiedAt = [homePage.updatedAt, data.profile.updatedAt]
+    .filter(Boolean)
+    .sort((left, right) =>
+      new Date(right as string).getTime() - new Date(left as string).getTime()
+    )[0];
+  const orcidIdentifier = settings.orcidUrl
+    ? {
+        '@type': 'PropertyValue',
+        propertyID: 'ORCID',
+        value: settings.orcidUrl.replace(/^https:\/\/orcid\.org\//i, ''),
+        url: settings.orcidUrl,
+      }
+    : undefined;
+  const educationOrganizations = Array.from(
+    new Set(data.education.map((item) => item.institution).filter(Boolean))
+  ).map((name) => ({
+    '@type': 'EducationalOrganization',
+    name,
+  }));
+  const alumniOrganizations = data.education
+    .filter(
+      (item) =>
+        item.isCurrent === false ||
+        (!item.isCurrent && !item.status.toLocaleLowerCase('tr-TR').includes('devam'))
+    )
+    .map((item) => item.institution)
+    .filter((name, index, values) => values.indexOf(name) === index)
+    .map((name) => ({ '@type': 'EducationalOrganization', name }));
 
   return {
     '@context': 'https://schema.org',
@@ -309,38 +527,52 @@ export function buildHomeJsonLd(data: PortfolioData) {
         '@id': websiteId,
         url: pageUrl,
         name: settings.siteName,
+        publisher: { '@id': personId },
         inLanguage: 'tr-TR',
       },
       {
         '@type': 'ProfilePage',
         '@id': `${pageUrl}#profile`,
         url: pageUrl,
-        name: settings.metaTitle,
-        description: settings.metaDescription,
-        dateModified: data.profile.updatedAt || undefined,
+        name: homePage.title || settings.metaTitle,
+        description: homePage.description || settings.metaDescription,
+        dateModified: modifiedAt || undefined,
+        primaryImageOfPage: data.profile.avatarUrl
+          ? {
+              '@type': 'ImageObject',
+              contentUrl: data.profile.avatarUrl,
+              caption: `${personName} profil fotoğrafı`,
+            }
+          : undefined,
         mainEntity: { '@id': personId },
+        about: { '@id': personId },
         isPartOf: { '@id': websiteId },
+        inLanguage: 'tr-TR',
       },
       {
         '@type': 'Person',
         '@id': personId,
-        name: data.profile.fullName,
+        name: personName,
+        givenName: nameParts.slice(0, -1).join(' ') || personName,
+        familyName: nameParts.length > 1 ? nameParts.at(-1) : undefined,
         alternateName: settings.alternateName || undefined,
         jobTitle: data.profile.title,
+        disambiguatingDescription:
+          data.profile.subtitle || `${data.profile.title}; ${data.profile.location}`,
         description: data.profile.bio,
         image: data.profile.avatarUrl || undefined,
         url: pageUrl,
+        mainEntityOfPage: { '@id': `${pageUrl}#profile` },
+        identifier: orcidIdentifier,
         email: data.profile.email ? `mailto:${data.profile.email}` : undefined,
-        address: data.profile.location
+        homeLocation: data.profile.location
           ? {
-              '@type': 'PostalAddress',
-              addressLocality: data.profile.location,
+              '@type': 'Place',
+              name: data.profile.location,
             }
           : undefined,
-        alumniOf: data.education.map((item) => ({
-          '@type': 'EducationalOrganization',
-          name: item.institution,
-        })),
+        affiliation: educationOrganizations,
+        alumniOf: alumniOrganizations.length ? alumniOrganizations : undefined,
         knowsAbout: settings.keywords
           .split(',')
           .map((item) => item.trim())
@@ -397,7 +629,8 @@ export function buildPublicationJsonLd(
     dateModified: item.updatedAt || item.publishedAt || undefined,
     author: {
       '@type': 'Person',
-      name: data.profile.fullName,
+      '@id': `${absoluteUrl('/')}#person`,
+      name: normalizeSeoSettings(data.seoSettings, data.profile.fullName).authorName,
       url: absoluteUrl('/'),
     },
     publisher: item.publisher
@@ -422,7 +655,10 @@ export function buildArticleJsonLd(item: ArticleItem, data: PortfolioData) {
     inLanguage: item.locale === 'en' ? 'en-US' : 'tr-TR',
     author: {
       '@type': 'Person',
-      name: item.authorName || data.profile.fullName,
+      '@id': `${absoluteUrl('/')}#person`,
+      name:
+        item.authorName ||
+        normalizeSeoSettings(data.seoSettings, data.profile.fullName).authorName,
       url: absoluteUrl('/'),
     },
     image: item.coverImageUrl || undefined,
@@ -444,7 +680,8 @@ export function buildProjectJsonLd(item: ProjectItem, data: PortfolioData) {
     dateModified: item.updatedAt || item.publishedAt || undefined,
     creator: {
       '@type': 'Person',
-      name: data.profile.fullName,
+      '@id': `${absoluteUrl('/')}#person`,
+      name: normalizeSeoSettings(data.seoSettings, data.profile.fullName).authorName,
       url: absoluteUrl('/'),
     },
     image: item.coverImageUrl || undefined,
@@ -493,8 +730,9 @@ export function createsRedirectLoop(
 export function runDataSeoAudit(data: PortfolioData): SeoAuditResult {
   const issues: SeoAuditIssue[] = [];
   const settings = normalizeSeoSettings(data.seoSettings, data.profile.fullName);
+  const homePage = findSeoPage(data.seoPages, 'home');
 
-  if (settings.canonicalUrl !== getSiteUrl()) {
+  if (normalizeSiteUrl(data.seoSettings.canonicalUrl) !== getSiteUrl()) {
     issues.push({
       code: 'canonical-origin',
       severity: 'critical',
@@ -502,6 +740,115 @@ export function runDataSeoAudit(data: PortfolioData): SeoAuditResult {
       title: 'Canonical alan adı uyuşmuyor',
       detail: `Canonical origin ${getSiteUrl()} olmalıdır.`,
       path: '/',
+    });
+  }
+  if (!settings.allowIndexing) {
+    issues.push({
+      code: 'global-noindex',
+      severity: 'critical',
+      category: 'indexing',
+      title: 'Global indeksleme kapalı',
+      detail:
+        'Production sayfaları noindex üretiyor. Yayına geçmeden önce global indeksleme iznini açın.',
+      path: '/',
+    });
+  }
+  if (!settings.titleTemplate.includes('%s')) {
+    issues.push({
+      code: 'title-template-placeholder',
+      severity: 'warning',
+      category: 'metadata',
+      title: 'Başlık şablonunda %s eksik',
+      detail: 'Detay sayfası başlığının yerleşmesi için şablonda tam olarak %s kullanın.',
+    });
+  }
+  const homeTargetText = [
+    homePage.title,
+    homePage.description,
+    homePage.focusKeyword,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLocaleLowerCase('tr-TR');
+  if (!homeTargetText.includes(TARGET_QUERY.toLocaleLowerCase('tr-TR'))) {
+    issues.push({
+      code: 'home-target-query',
+      severity: 'warning',
+      category: 'content',
+      title: 'Ana sayfa hedef sorguyu açıkça yanıtlamıyor',
+      detail: `Ana sayfa başlığı, açıklaması veya odak sorgusunda “${TARGET_QUERY}” ifadesini doğal biçimde kullanın.`,
+      path: '/',
+    });
+  }
+  if (plainText(data.profile.bio).length < 300) {
+    issues.push({
+      code: 'profile-biography-depth',
+      severity: 'warning',
+      category: 'content',
+      title: 'Biyografi metni kısa',
+      detail:
+        'Kimlik, eğitim, çalışma alanları ve doğrulanabilir kariyer ayrıntılarını özgün bir biyografi metninde açıklayın.',
+      path: '/',
+    });
+  }
+  if (!validSameAs(data).length) {
+    issues.push({
+      code: 'person-same-as',
+      severity: 'info',
+      category: 'schema',
+      title: 'Doğrulanmış kimlik bağlantısı eksik',
+      detail:
+        'ORCID, Google Scholar, kişisel GitHub veya LinkedIn profiliniz varsa gerçek profil URL’sini ekleyin; platform ana sayfası kullanmayın.',
+      path: '/',
+    });
+  }
+  const activeCrawlerRules = settings.robotsRules.filter((rule) => rule.enabled);
+  const crawlerCanReadHome = (userAgent: string) => {
+    const specific = activeCrawlerRules.filter((rule) =>
+      rule.userAgents.some(
+        (value) => value.toLocaleLowerCase('en-US') === userAgent.toLocaleLowerCase('en-US')
+      )
+    );
+    const applicable = specific.length
+      ? specific
+      : activeCrawlerRules.filter((rule) => rule.userAgents.includes('*'));
+    return (
+      applicable.some((rule) => rule.allow.includes('/')) &&
+      !applicable.some((rule) => rule.disallow.includes('/'))
+    );
+  };
+  if (!crawlerCanReadHome('Googlebot') || !crawlerCanReadHome('Bingbot')) {
+    issues.push({
+      code: 'search-crawler-home-blocked',
+      severity: 'critical',
+      category: 'indexing',
+      title: 'Arama motorlarının ana sayfa erişimi engelli',
+      detail: 'Googlebot ve Bingbot için / yolu taranabilir olmalıdır.',
+      path: '/',
+    });
+  }
+  if (
+    !crawlerCanReadHome('OAI-SearchBot') ||
+    !crawlerCanReadHome('PerplexityBot')
+  ) {
+    issues.push({
+      code: 'ai-search-crawler-home-blocked',
+      severity: 'warning',
+      category: 'indexing',
+      title: 'AI arama botlarından biri ana sayfaya erişemiyor',
+      detail:
+        'ChatGPT araması için OAI-SearchBot ve Perplexity araması için PerplexityBot erişimini açın.',
+      path: '/',
+    });
+  }
+  if (!settings.sitemapConfig.enabled) {
+    issues.push({
+      code: 'sitemap-disabled',
+      severity: 'critical',
+      category: 'indexing',
+      title: 'XML sitemap yayını kapalı',
+      detail: 'Canonical ve indekslenebilir URL’lerin keşfi için sitemap yayınını açın.',
+      path: '/sitemap.xml',
     });
   }
   if (!settings.metaTitle || settings.metaTitle.length < 20) {

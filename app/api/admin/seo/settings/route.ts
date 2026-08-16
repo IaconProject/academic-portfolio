@@ -8,9 +8,63 @@ import {
   revalidateSeoRoutes,
   zodFields,
 } from '@/lib/admin-api';
-import { getSiteUrl, normalizeSeoSettings } from '@/lib/seo';
+import {
+  getSiteUrl,
+  normalizeRobotsRules,
+  normalizeSeoSettings,
+  normalizeSitemapConfig,
+} from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
+
+const robotsPathSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(300)
+  .regex(/^\//, 'Robots yolu / ile başlamalıdır.')
+  .refine((value) => !/[\r\n]/.test(value), 'Robots yolu tek satır olmalıdır.');
+
+const robotsRuleSchema = z
+  .object({
+    id: z.string().trim().regex(/^[A-Za-z0-9_-]{1,80}$/),
+    name: z.string().trim().min(2).max(120),
+    enabled: z.boolean().default(true),
+    userAgents: z
+      .array(z.string().trim().regex(/^[A-Za-z0-9*._-]{1,120}$/))
+      .min(1)
+      .max(20),
+    allow: z.array(robotsPathSchema).max(50).default([]),
+    disallow: z.array(robotsPathSchema).max(50).default([]),
+  })
+  .refine((value) => value.allow.length > 0 || value.disallow.length > 0, {
+    message: 'Her tarayıcı kuralında en az bir Allow veya Disallow yolu olmalıdır.',
+  });
+
+const sitemapConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  includePublications: z.boolean().default(true),
+  includeProjects: z.boolean().default(true),
+  includeArticles: z.boolean().default(true),
+  additionalPaths: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1)
+        .max(300)
+        .regex(/^\//, 'Ek sitemap yolu / ile başlamalıdır.')
+        .refine(
+          (value) =>
+            !value.startsWith('/admin') &&
+            !value.startsWith('/api/') &&
+            !['/robots.txt', '/sitemap.xml'].includes(value),
+          'Admin, API, robots.txt ve sitemap.xml ek sitemap yolu olamaz.'
+        )
+    )
+    .max(200)
+    .default([]),
+});
 
 const settingsSchema = z.object({
   metaTitle: z.string().trim().min(10).max(180),
@@ -19,11 +73,24 @@ const settingsSchema = z.object({
   ogImageUrl: z.union([z.literal(''), z.string().url()]).default(''),
   authorName: z.string().trim().min(2).max(120),
   siteName: z.string().trim().min(2).max(160),
-  titleTemplate: z.string().trim().min(3).max(160),
+  titleTemplate: z
+    .string()
+    .trim()
+    .min(3)
+    .max(160)
+    .refine((value) => value.includes('%s'), 'Başlık şablonu %s içermelidir.'),
   defaultLocale: z.enum(['tr', 'en']).default('tr'),
   twitterHandle: z.string().max(80).default(''),
-  googleSiteVerification: z.string().max(255).default(''),
-  bingSiteVerification: z.string().max(255).default(''),
+  googleSiteVerification: z
+    .string()
+    .max(255)
+    .refine((value) => !/[<>]/.test(value), 'Yalnız doğrulama kodunu girin.')
+    .default(''),
+  bingSiteVerification: z
+    .string()
+    .max(255)
+    .refine((value) => !/[<>]/.test(value), 'Yalnız doğrulama kodunu girin.')
+    .default(''),
   ga4MeasurementId: z.string().max(40).default(''),
   gscProperty: z.string().max(255).default(''),
   ga4PropertyId: z.string().max(80).default(''),
@@ -32,6 +99,8 @@ const settingsSchema = z.object({
   alternateName: z.string().max(160).default(''),
   orcidUrl: z.union([z.literal(''), z.string().url()]).default(''),
   scholarUrl: z.union([z.literal(''), z.string().url()]).default(''),
+  robotsRules: z.array(robotsRuleSchema).min(1).max(20),
+  sitemapConfig: sitemapConfigSchema,
 });
 
 export async function GET(request: Request) {
@@ -75,7 +144,11 @@ export async function PATCH(request: Request) {
     created_at: now,
   });
 
-  const payload = parsed.data;
+  const payload = {
+    ...parsed.data,
+    robotsRules: normalizeRobotsRules(parsed.data.robotsRules),
+    sitemapConfig: normalizeSitemapConfig(parsed.data.sitemapConfig),
+  };
   const { data: currentRows } = await serverSupabase
     .from('seo_site_settings')
     .select('id')
@@ -104,6 +177,8 @@ export async function PATCH(request: Request) {
     alternate_name: payload.alternateName || null,
     orcid_url: payload.orcidUrl || null,
     scholar_url: payload.scholarUrl || null,
+    robots_rules: payload.robotsRules,
+    sitemap_config: payload.sitemapConfig,
     updated_at: now,
   });
 

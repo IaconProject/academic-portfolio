@@ -60,6 +60,7 @@ export function revalidateSeoRoutes(paths: string[] = []) {
     '/gizlilik',
     '/sitemap.xml',
     '/robots.txt',
+    '/llms.txt',
     '/feed.xml',
     ...paths,
   ]);

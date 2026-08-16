@@ -82,10 +82,22 @@ export function buildSeoMetadata({
     settings.allowIndexing &&
     page.index &&
     !forceNoIndex;
+  const keywords = Array.from(
+    new Set(
+      [
+        page.focusKeyword,
+        ...page.relatedKeywords,
+        ...settings.keywords.split(','),
+      ]
+        .map((value) => value?.trim())
+        .filter((value): value is string => Boolean(value))
+    )
+  );
 
   return {
     title: resolvedTitle,
     description: resolvedDescription,
+    keywords,
     authors: [{ name: settings.authorName, url: getSiteUrl() }],
     creator: settings.authorName,
     publisher: settings.siteName,

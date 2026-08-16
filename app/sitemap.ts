@@ -4,12 +4,17 @@ import {
   absoluteUrl,
   findSeoPage,
   isContentPublished,
+  normalizeSeoSettings,
   projectSlug,
   publicationSlug,
 } from '@/lib/seo';
 
+export const revalidate = 300;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const data = await getSeoExperienceData();
+  const settings = normalizeSeoSettings(data.seoSettings, data.profile.fullName);
+  if (!settings.allowIndexing || !settings.sitemapConfig.enabled) return [];
   const latestDate = (values: Array<string | undefined>) => {
     const timestamps = values
       .filter(Boolean)
@@ -45,7 +50,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
                   ...(data.articles || []).map((item) => item.updatedAt),
                 ]),
     }));
-  const publicationRoutes = data.publications
+  const publicationRoutes = settings.sitemapConfig.includePublications
+    ? data.publications
     .filter((item) =>
       (item.locale || 'tr') === 'tr' &&
       isContentPublished(item.detailStatus, item.publishedAt)
@@ -61,8 +67,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((item) => ({
       url: absoluteUrl(`/yayinlar/${publicationSlug(item)}`),
       lastModified: item.updatedAt ? new Date(item.updatedAt) : undefined,
-    }));
-  const projectRoutes = data.projects
+    }))
+    : [];
+  const projectRoutes = settings.sitemapConfig.includeProjects
+    ? data.projects
     .filter((item) =>
       (item.locale || 'tr') === 'tr' &&
       isContentPublished(item.detailStatus, item.publishedAt)
@@ -76,8 +84,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((item) => ({
       url: absoluteUrl(`/projeler/${projectSlug(item)}`),
       lastModified: item.updatedAt ? new Date(item.updatedAt) : undefined,
-    }));
-  const articleRoutes = (data.articles || [])
+    }))
+    : [];
+  const articleRoutes = settings.sitemapConfig.includeArticles
+    ? (data.articles || [])
     .filter((item) =>
       item.locale === 'tr' && isContentPublished(item.status, item.publishedAt)
     )
@@ -94,12 +104,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         : item.publishedAt
           ? new Date(item.publishedAt)
           : undefined,
-    }));
+    }))
+    : [];
+  const additionalRoutes = settings.sitemapConfig.additionalPaths.map((path) => ({
+    url: absoluteUrl(path),
+  }));
 
-  return [
+  const entries = [
     ...systemRoutes,
     ...publicationRoutes,
     ...projectRoutes,
     ...articleRoutes,
+    ...additionalRoutes,
   ];
+  return Array.from(new Map(entries.map((entry) => [entry.url, entry])).values());
 }

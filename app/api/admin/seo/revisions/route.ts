@@ -6,7 +6,11 @@ import {
   rejectUnauthorized,
   revalidateSeoRoutes,
 } from '@/lib/admin-api';
-import { normalizePath } from '@/lib/seo';
+import {
+  normalizePath,
+  normalizeRobotsRules,
+  normalizeSitemapConfig,
+} from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,6 +125,8 @@ export async function PATCH(request: Request) {
       alternate_name: snapshot.alternateName || null,
       orcid_url: snapshot.orcidUrl || null,
       scholar_url: snapshot.scholarUrl || null,
+      robots_rules: normalizeRobotsRules(snapshot.robotsRules),
+      sitemap_config: normalizeSitemapConfig(snapshot.sitemapConfig),
       updated_at: new Date().toISOString(),
     });
     error = result.error;

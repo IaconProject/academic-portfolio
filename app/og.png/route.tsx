@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og';
 
-export const runtime = 'edge';
 export const revalidate = 300;
 
 export async function GET(request: Request) {

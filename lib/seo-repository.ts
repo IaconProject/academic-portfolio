@@ -159,6 +159,12 @@ async function getSeoExperienceDataUncached(): Promise<PortfolioData> {
             alternateName: settingsResult.data.alternate_name || '',
             orcidUrl: settingsResult.data.orcid_url || '',
             scholarUrl: settingsResult.data.scholar_url || '',
+            robotsRules:
+              settingsResult.data.robots_rules ||
+              portfolio.seoSettings.robotsRules,
+            sitemapConfig:
+              settingsResult.data.sitemap_config ||
+              portfolio.seoSettings.sitemapConfig,
           }
         : portfolio.seoSettings,
       articles: articlesResult.data?.map(mapArticle) || [],
