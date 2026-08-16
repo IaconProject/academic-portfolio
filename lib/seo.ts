@@ -732,7 +732,10 @@ export function runDataSeoAudit(data: PortfolioData): SeoAuditResult {
   const settings = normalizeSeoSettings(data.seoSettings, data.profile.fullName);
   const homePage = findSeoPage(data.seoPages, 'home');
 
-  if (normalizeSiteUrl(data.seoSettings.canonicalUrl) !== getSiteUrl()) {
+  // Canonical origin is deployment-owned. Legacy CMS rows may still contain an
+  // older host, but normalizeSeoSettings deliberately resolves SITE_URL as the
+  // only public source of truth.
+  if (settings.canonicalUrl !== getSiteUrl()) {
     issues.push({
       code: 'canonical-origin',
       severity: 'critical',

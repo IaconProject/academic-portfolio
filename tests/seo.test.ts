@@ -166,6 +166,17 @@ describe('yayın durumu, sayfa ve redirect kuralları', () => {
 });
 
 describe('schema ve entity güvenliği', () => {
+  it('legacy canonical değerini değil deployment originini denetler', () => {
+    const data = structuredClone(initialPortfolioData);
+    data.seoSettings.canonicalUrl = 'https://legacy.example.com';
+
+    expect(
+      runDataSeoAudit(data).issues.some(
+        (issue) => issue.code === 'canonical-origin'
+      )
+    ).toBe(false);
+  });
+
   it('ana sayfayı hedef sorgu ve tekil Person kimliğiyle tanımlar', () => {
     const schema = buildHomeJsonLd(initialPortfolioData);
     const graph = schema['@graph'];
