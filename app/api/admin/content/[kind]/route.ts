@@ -23,6 +23,8 @@ const baseDetail = {
   coverImageUrl: optionalUrlSchema.default(''),
   coverImageAlt: z.string().max(300).default(''),
   publishedAt: z.string().datetime({ offset: true }).optional().or(z.literal('')),
+  isFeatured: z.boolean().default(false),
+  sortOrder: z.coerce.number().int().min(-10000).max(10000).default(0),
 };
 
 const publicationSchema = z.object({
@@ -144,6 +146,8 @@ function dbPayload(kind: ContentKind, value: Record<string, any>) {
         ? new Date().toISOString()
         : null),
     updated_at: new Date().toISOString(),
+    is_featured: value.isFeatured,
+    sort_order: value.sortOrder,
   };
   if (kind === 'articles') {
     return {
@@ -192,6 +196,8 @@ export async function GET(
   const { data, error } = await serverSupabase
     .from(kind)
     .select('*')
+    .order('is_featured', { ascending: false })
+    .order('sort_order', { ascending: true })
     .order(kind === 'articles' ? 'published_at' : 'created_at', {
       ascending: false,
       nullsFirst: false,

@@ -1,17 +1,17 @@
-import Link from 'next/link';
-import { BookOpen, Calendar, ExternalLink } from 'lucide-react';
-import { getSeoExperienceData } from '@/lib/seo-repository';
+import { ContentArchiveExplorer } from '@/components/public/ContentArchiveExplorer';
+import { SeoPageShell, StructuredData } from '@/components/public/SeoPageShell';
+import { sortArchiveContent } from '@/lib/content-presentation';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
+import { getSeoExperienceData } from '@/lib/seo-repository';
+import { safeHttpUrl } from '@/lib/url-security';
 import {
   absoluteUrl,
+  buildBreadcrumbJsonLd,
   findSeoPage,
   isContentPublished,
   publicationSlug,
+  truncateText,
 } from '@/lib/seo';
-import {
-  SeoPageShell,
-  StructuredData,
-} from '@/components/public/SeoPageShell';
 
 export const revalidate = 300;
 
@@ -28,104 +28,73 @@ export async function generateMetadata() {
 export default async function PublicationsArchivePage() {
   const data = await getSeoExperienceData();
   const pageSeo = findSeoPage(data.seoPages, 'publications:index');
-  const collectionSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
-    name: pageSeo.title || 'Akademik Yayınlar',
-    description: pageSeo.description,
-    url: absoluteUrl('/yayinlar'),
-    mainEntity: {
-      '@type': 'ItemList',
-      itemListElement: data.publications.filter((item) => (item.locale || 'tr') === 'tr').map((item, index) => ({
-        '@type': 'ListItem',
-        position: index + 1,
-        name: item.title,
-        url: isContentPublished(item.detailStatus, item.publishedAt)
-          ? absoluteUrl(`/yayinlar/${publicationSlug(item)}`)
-          : item.url || undefined,
-      })),
-    },
-  };
+  const publications = sortArchiveContent(
+    data.publications.filter((item) => (item.locale || 'tr') === 'tr')
+  );
+  const entries = publications.map((item) => {
+    const hasDetail = isContentPublished(item.detailStatus, item.publishedAt);
+    return {
+      id: item.id,
+      title: item.title,
+      excerpt:
+        (hasDetail && (item.excerpt || truncateText(item.content || ''))) ||
+        `${item.publisher || 'Akademik yayın'} tarafından ${item.year} yılında yayımlanan bibliyografik kayıt.`,
+      href: hasDetail ? `/yayinlar/${publicationSlug(item)}` : undefined,
+      externalUrl: safeHttpUrl(item.url),
+      category: item.type || 'Yayın',
+      dateLabel: item.year,
+      tags: item.publisher ? [item.publisher] : [],
+      imageUrl: hasDetail ? item.coverImageUrl : undefined,
+      imageAlt: hasDetail ? item.coverImageAlt : undefined,
+      featured: item.isFeatured,
+    };
+  });
 
   return (
     <SeoPageShell
       data={data}
-      title="Akademik Yayınlar"
+      title={pageSeo.presentation?.heading || 'Akademik Yayınlar'}
       description={
+        pageSeo.presentation?.intro ||
         pageSeo.description ||
         'İslam hukuku, yapay zekâ etiği ve dijital dönüşüm odağındaki akademik çalışmalar.'
       }
-      eyebrow="Yayın Arşivi"
+      eyebrow={pageSeo.presentation?.eyebrow || 'Yayın arşivi'}
     >
-      <StructuredData value={collectionSchema} />
-      <div className="grid gap-5">
-        {data.publications.filter((item) => (item.locale || 'tr') === 'tr').map((item) => {
-          const hasDetail = isContentPublished(
-            item.detailStatus,
-            item.publishedAt
-          );
-          return (
-            <article
-              key={item.id}
-              className="rounded-2xl border border-[#e2ddcf] bg-[#faf8f4] p-6 shadow-sm"
-            >
-              <div className="mb-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-[#78716c]">
-                <span className="rounded-md border border-[#ded9cb] bg-[#efece4] px-2.5 py-1 text-[#2c2825]">
-                  {item.type}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {item.year}
-                </span>
-              </div>
-              <h2 className="font-serif text-xl font-bold leading-snug">
-                {hasDetail ? (
-                  <Link
-                    href={`/yayinlar/${publicationSlug(item)}`}
-                    className="hover:underline"
-                  >
-                    {item.title}
-                  </Link>
-                ) : (
-                  item.title
-                )}
-              </h2>
-              {item.publisher && (
-                <p className="mt-2 text-sm italic text-[#57534e]">
-                  {item.publisher}
-                </p>
-              )}
-              {(item.excerpt || item.content) && (
-                <p className="mt-4 text-sm leading-7 text-[#57534e]">
-                  {item.excerpt || item.content?.slice(0, 220)}
-                </p>
-              )}
-              <div className="mt-4 flex flex-wrap gap-4 text-xs font-bold">
-                {hasDetail && (
-                  <Link
-                    href={`/yayinlar/${publicationSlug(item)}`}
-                    className="inline-flex items-center gap-1 hover:underline"
-                  >
-                    <BookOpen className="h-3.5 w-3.5" />
-                    Detayları oku
-                  </Link>
-                )}
-                {item.url && item.url !== '#' && (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 hover:underline"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Yayın kaynağı
-                  </a>
-                )}
-              </div>
-            </article>
-          );
-        })}
-      </div>
+      <StructuredData
+        value={{
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name: pageSeo.presentation?.heading || pageSeo.title || 'Akademik Yayınlar',
+          description: pageSeo.description,
+          url: absoluteUrl('/yayinlar'),
+          mainEntity: {
+            '@type': 'ItemList',
+            numberOfItems: publications.length,
+            itemListElement: publications.map((item, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              name: item.title,
+              url: isContentPublished(item.detailStatus, item.publishedAt)
+                ? absoluteUrl(`/yayinlar/${publicationSlug(item)}`)
+                : safeHttpUrl(item.url),
+            })),
+          },
+        }}
+      />
+      <StructuredData
+        value={buildBreadcrumbJsonLd([
+          { name: 'Ana Sayfa', path: '/' },
+          { name: 'Yayınlar', path: '/yayinlar' },
+        ])}
+      />
+      <ContentArchiveExplorer
+        items={entries}
+        searchPlaceholder="Başlık, yayın türü veya dergi içinde ara…"
+        itemLabel="yayın"
+        emptyTitle="Henüz yayın kaydı bulunmuyor"
+        emptyDescription="Akademik yayınlar eklendikçe bibliyografik kayıtları ve erişilebilir detayları burada yayımlanacak."
+      />
     </SeoPageShell>
   );
 }

@@ -36,6 +36,8 @@ export interface PublicationItem {
   coverImageUrl?: string;
   coverImageAlt?: string;
   detailStatus?: ContentStatus;
+  isFeatured?: boolean;
+  sortOrder?: number;
   publishedAt?: string;
   updatedAt?: string;
 }
@@ -56,6 +58,8 @@ export interface ProjectItem {
   coverImageAlt?: string;
   relatedPublicationIds?: string[];
   detailStatus?: ContentStatus;
+  isFeatured?: boolean;
+  sortOrder?: number;
   publishedAt?: string;
   updatedAt?: string;
 }
@@ -158,7 +162,14 @@ export interface SeoPage {
   index: boolean;
   follow: boolean;
   includeInSitemap: boolean;
+  presentation?: SeoPagePresentation;
   updatedAt?: string;
+}
+
+export interface SeoPagePresentation {
+  eyebrow?: string;
+  heading?: string;
+  intro?: string;
 }
 
 export interface SeoRedirect {
@@ -209,6 +220,8 @@ export interface ArticleItem {
   coverImageUrl?: string;
   coverImageAlt?: string;
   status: Exclude<ContentStatus, 'none'>;
+  isFeatured?: boolean;
+  sortOrder?: number;
   authorName?: string;
   publishedAt?: string;
   updatedAt?: string;

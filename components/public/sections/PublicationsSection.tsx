@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { BookOpen, Calendar, ExternalLink } from 'lucide-react';
 import { PublicationItem } from '@/lib/types';
 import { isContentPublished, publicationSlug } from '@/lib/seo';
+import { safeHttpUrl } from '@/lib/url-security';
 import { AcademicCard } from '../AcademicCard';
 
 interface PublicationsSectionProps {
@@ -13,7 +14,9 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
   return (
     <AcademicCard id="yayinlar" title="Yayınlar" icon={BookOpen}>
       <div className="space-y-4">
-        {publications.map((pub) => (
+        {publications.map((pub) => {
+          const sourceUrl = safeHttpUrl(pub.url);
+          return (
           <div
             key={pub.id}
             className="p-5 bg-academic-surface-muted rounded-xl border border-academic-border transition-all hover:bg-[#e3d9ca]"
@@ -47,9 +50,9 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
               </p>
             )}
 
-            {pub.url && pub.url !== '#' && (
+            {sourceUrl && (
               <a
-                href={pub.url}
+                href={sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 mt-3 text-xs font-semibold text-[#1c2128] hover:underline"
@@ -59,7 +62,8 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
               </a>
             )}
           </div>
-        ))}
+          );
+        })}
         <Link
           href="/yayinlar"
           className="inline-flex items-center gap-1 text-xs font-bold text-[#1c2128] hover:underline"

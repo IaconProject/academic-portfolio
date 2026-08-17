@@ -20,6 +20,8 @@ describe('admin content validation', () => {
       'https://example.com/project'
     );
     expect(() => optionalUrlSchema.parse('example.com/project')).toThrow();
+    expect(() => optionalUrlSchema.parse('javascript:alert(1)')).toThrow();
+    expect(() => optionalUrlSchema.parse('ftp://example.com/file')).toThrow();
   });
 
   it('turns API field errors into actionable Turkish admin feedback', () => {

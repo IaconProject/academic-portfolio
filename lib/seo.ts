@@ -12,6 +12,7 @@ import {
   SeoSitemapConfig,
   SiteLocale,
 } from './types';
+import { safeHttpUrl } from './url-security';
 
 export const DEFAULT_SITE_URL = 'https://www.muhammedakan.com';
 export const TARGET_PERSON_NAME = 'Muhammed Akan';
@@ -328,6 +329,12 @@ export const DEFAULT_SEO_PAGES: SeoPage[] = [
     relatedKeywords: ['İslam hukuku yayınları', 'yapay zekâ etiği'],
     searchIntent: 'academic',
     topicCluster: 'Akademik yayınlar',
+    presentation: {
+      eyebrow: 'Akademik üretim',
+      heading: 'Akademik Yayınlar',
+      intro:
+        'Hakemli çalışmalar, bildiriler, kitap bölümleri ve disiplinlerarası araştırma çıktıları.',
+    },
     index: true,
     follow: true,
     includeInSitemap: true,
@@ -343,6 +350,12 @@ export const DEFAULT_SEO_PAGES: SeoPage[] = [
     relatedKeywords: ['İslam hukuku projeleri', 'yapay zekâ araştırmaları'],
     searchIntent: 'academic',
     topicCluster: 'Araştırma projeleri',
+    presentation: {
+      eyebrow: 'Araştırma gündemi',
+      heading: 'Araştırma Projeleri',
+      intro:
+        'İslam hukuku, yapay zekâ etiği ve dijital teknolojiler kesişimindeki devam eden ve tamamlanan projeler.',
+    },
     index: true,
     follow: true,
     includeInSitemap: true,
@@ -358,6 +371,12 @@ export const DEFAULT_SEO_PAGES: SeoPage[] = [
     relatedKeywords: ['yapay zekâ etiği', 'dijital fıkıh', 'blokzincir'],
     searchIntent: 'informational',
     topicCluster: 'Akademik yazılar',
+    presentation: {
+      eyebrow: 'Notlar ve incelemeler',
+      heading: 'Akademik Yazılar ve Araştırma Notları',
+      intro:
+        'Kaynaklı değerlendirmeler, kavramsal incelemeler ve güncel araştırma notları.',
+    },
     index: true,
     follow: true,
     includeInSitemap: true,
@@ -614,9 +633,7 @@ export function buildPublicationJsonLd(
       ? /^https?:\/\//i.test(item.doi)
         ? item.doi
         : `https://doi.org/${item.doi.replace(/^doi:\s*/i, '')}`
-      : item.url && item.url !== '#'
-        ? item.url
-        : undefined;
+      : safeHttpUrl(item.url);
   return {
     '@context': 'https://schema.org',
     '@type': schemaType,
