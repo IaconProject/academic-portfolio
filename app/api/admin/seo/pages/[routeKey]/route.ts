@@ -30,13 +30,6 @@ const pageSchema = z.object({
   index: z.boolean().default(true),
   follow: z.boolean().default(true),
   includeInSitemap: z.boolean().default(true),
-  presentation: z
-    .object({
-      eyebrow: z.string().max(100).default(''),
-      heading: z.string().max(180).default(''),
-      intro: z.string().max(1000).default(''),
-    })
-    .default({ eyebrow: '', heading: '', intro: '' }),
 });
 
 export async function GET(
@@ -111,7 +104,6 @@ export async function PATCH(
     include_in_sitemap: value.canonicalOverride
       ? false
       : value.includeInSitemap,
-    presentation: value.presentation,
     updated_at: now,
   });
   if (error) {

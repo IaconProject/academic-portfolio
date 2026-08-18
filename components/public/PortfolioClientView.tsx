@@ -2,8 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { PortfolioData } from '@/lib/types';
 import { DesktopSidebar } from '@/components/public/DesktopSidebar';
-import { SiteHeader } from '@/components/public/SiteHeader';
-import { AcademicArchivesSection } from '@/components/public/AcademicArchivesSection';
+import { MobileHeader } from '@/components/public/MobileHeader';
 import { ProfileHero } from '@/components/public/ProfileHero';
 import { AboutSection } from '@/components/public/sections/AboutSection';
 import { EducationSection } from '@/components/public/sections/EducationSection';
@@ -14,7 +13,6 @@ import { ActivitiesSection } from '@/components/public/sections/ActivitiesSectio
 import { ReferencesSection } from '@/components/public/sections/ReferencesSection';
 import { ContactSection } from '@/components/public/sections/ContactSection';
 import { JsonLdSchema } from '@/components/public/JsonLdSchema';
-import { sortArchiveContent } from '@/lib/content-presentation';
 
 interface PortfolioClientViewProps {
   initialData: PortfolioData;
@@ -23,12 +21,6 @@ interface PortfolioClientViewProps {
 export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initialData }) => {
   const data = initialData;
   const { profile, education, publications, projects, conferences, activities, references, socialLinks } = data;
-  const orderedPublications = sortArchiveContent(
-    publications.filter((item) => (item.locale || 'tr') === 'tr')
-  );
-  const orderedProjects = sortArchiveContent(
-    projects.filter((item) => (item.locale || 'tr') === 'tr')
-  );
 
   return (
     <div className="min-h-screen bg-academic-bg text-academic-ink font-sans antialiased flex flex-col selection:bg-amber-200">
@@ -41,7 +33,7 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
       />
 
       {/* Mobile Sticky Navigation Header */}
-      <SiteHeader profile={profile} mobileOnly />
+      <MobileHeader />
 
       {/* Main Content Centering Wrapper */}
       <div className="flex-1 lg:pl-72 flex flex-col items-center w-full">
@@ -58,8 +50,8 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
             subjectName={data.seoSettings.authorName || profile.fullName}
           />
           <EducationSection education={education} />
-          <PublicationsSection publications={orderedPublications} />
-          <ProjectsSection projects={orderedProjects} />
+          <PublicationsSection publications={publications.filter((item) => (item.locale || 'tr') === 'tr')} />
+          <ProjectsSection projects={projects.filter((item) => (item.locale || 'tr') === 'tr')} />
           <ConferencesSection conferences={conferences} />
           <ActivitiesSection activities={activities} />
           <ReferencesSection references={references} />
@@ -67,7 +59,25 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
             profile={{ email: profile.email, location: profile.location }}
           />
 
-          <AcademicArchivesSection data={data} />
+          <nav
+            aria-label="Akademik içerik arşivleri"
+            className="mt-10 rounded-2xl border border-academic-border bg-academic-surface-muted p-5"
+          >
+            <h2 className="font-serif text-lg font-bold text-academic-ink">
+              Akademik içerik arşivleri
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold">
+              <Link href="/yayinlar" className="underline underline-offset-4">
+                Yayınlar
+              </Link>
+              <Link href="/projeler" className="underline underline-offset-4">
+                Araştırma projeleri
+              </Link>
+              <Link href="/yazilar" className="underline underline-offset-4">
+                Akademik yazılar
+              </Link>
+            </div>
+          </nav>
 
           {/* Minimalist Footer */}
           <footer className="mt-12 border-t border-academic-border py-6 text-center text-xs font-medium text-academic-slate">

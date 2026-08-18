@@ -4,7 +4,6 @@ import {
   isServerSupabaseConfigured as isSupabaseConfigured,
 } from '@/lib/supabase/server';
 import { validateAdminSession } from '@/lib/auth-helpers';
-import { randomUUID } from 'crypto';
 
 export async function POST(request: Request) {
   try {
@@ -14,7 +13,6 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const purpose = formData.get('purpose') === 'content' ? 'content' : 'avatar';
 
     if (!file) {
       return NextResponse.json({ error: 'Dosya seçilmedi.' }, { status: 400 });
@@ -27,15 +25,9 @@ export async function POST(request: Request) {
     }
 
     if (isSupabaseConfigured && supabase) {
-      const extensions: Record<string, string> = {
-        'image/jpeg': 'jpg',
-        'image/png': 'png',
-        'image/webp': 'webp',
-        'image/avif': 'avif',
-      };
-      const fileExt = extensions[file.type];
-      const fileName = `${purpose}-${Date.now()}-${randomUUID()}.${fileExt}`;
-      const filePath = `${purpose === 'content' ? 'content' : 'avatars'}/${fileName}`;
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avatar-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
 
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
@@ -58,7 +50,7 @@ export async function POST(request: Request) {
       }
     }
 
-    if (process.env.NODE_ENV === 'production' || purpose === 'content') {
+    if (process.env.NODE_ENV === 'production') {
       return NextResponse.json(
         { error: 'Kalıcı görsel depolama bağlantısı kullanılamıyor.' },
         { status: 503 }

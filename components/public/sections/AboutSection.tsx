@@ -2,7 +2,6 @@ import React from 'react';
 import { User, ExternalLink, Linkedin, Github, FileText, Instagram, Twitter, Youtube, Globe, BookOpen } from 'lucide-react';
 import { Profile, SocialLink } from '@/lib/types';
 import { AcademicCard } from '../AcademicCard';
-import { safeHttpUrl } from '@/lib/url-security';
 
 interface AboutSectionProps {
   profile: Profile;
@@ -40,13 +39,10 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
 
       {/* Social & Academic Buttons */}
       <div className="flex flex-wrap gap-3 mt-6 pt-5 border-t border-academic-border">
-        {socialLinks.map((link) => {
-          const href = safeHttpUrl(link.url);
-          if (!href) return null;
-          return (
+        {socialLinks.map((link) => (
           <a
             key={link.id}
-            href={href}
+            href={link.url}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-1 min-w-[130px] inline-flex items-center justify-center gap-2.5 py-3 px-4 bg-academic-surface-muted hover:bg-[#e3d9ca] border border-academic-border rounded-xl text-xs md:text-sm font-semibold text-academic-ink transition-all duration-150 active:scale-95 shadow-sm"
@@ -54,8 +50,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
             {getSocialIcon(link.platform, link.iconName)}
             <span>{link.platform}</span>
           </a>
-          );
-        })}
+        ))}
       </div>
     </AcademicCard>
   );

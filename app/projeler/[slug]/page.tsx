@@ -15,10 +15,6 @@ import {
   StructuredData,
 } from '@/components/public/SeoPageShell';
 import Link from 'next/link';
-import { ExternalLink } from 'lucide-react';
-import { AcademicContentDetail } from '@/components/public/AcademicContentDetail';
-import { estimateReadingMinutes } from '@/lib/content-presentation';
-import { safeHttpUrl } from '@/lib/url-security';
 
 export const revalidate = 300;
 
@@ -68,7 +64,6 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   }
   if (!isPreview && !isContentPublished(item.detailStatus, item.publishedAt)) notFound();
   const path = `/projeler/${params.slug}`;
-  const projectUrl = safeHttpUrl(item.url);
   return (
     <SeoPageShell
       data={data}
@@ -86,25 +81,13 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           { name: item.title, path },
         ])}
       />
-      <AcademicContentDetail
-        coverImageUrl={item.coverImageUrl}
-        coverImageAlt={item.coverImageAlt}
-        meta={[
-          item.years,
-          ...item.tags.slice(0, 4),
-          `${estimateReadingMinutes(item.content || item.description)} dk okuma`,
-        ]}
-        footer={
-          projectUrl ? (
-            <a href={projectUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#1c2128] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#2d333b]">
-              Proje bağlantısını aç <ExternalLink className="h-4 w-4" />
-            </a>
-          ) : undefined
-        }
-      >
+      <article className="rounded-2xl border border-[#e2ddcf] bg-[#faf8f4] p-6 shadow-sm md:p-9">
+        <p className="mb-7 border-b border-[#e2ddcf] pb-5 text-sm font-semibold text-[#57534e]">
+          {item.years}
+        </p>
         <RichText content={item.content || item.description} />
         {!!item.relatedPublicationIds?.length && (
-          <section className="mt-10 border-t border-academic-border pt-7">
+          <section className="mt-10 border-t border-[#e2ddcf] pt-7">
             <h2 className="font-serif text-xl font-bold">İlgili yayınlar ve çıktılar</h2>
             <ul className="mt-4 space-y-3">
               {data.publications
@@ -131,11 +114,11 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             </ul>
           </section>
         )}
-      </AcademicContentDetail>
+      </article>
     </SeoPageShell>
   );
 }
 
 function PreviewNotice() {
-  return <p className="mb-6 rounded-2xl border border-amber-300 bg-amber-100 p-4 text-xs font-bold text-amber-900">Admin önizlemesi · Bu sayfa indekslenmez.</p>;
+  return <p className="mb-6 rounded-xl border border-amber-300 bg-amber-100 p-3 text-xs font-bold text-amber-900">Admin önizlemesi · Bu sayfa indekslenmez.</p>;
 }
