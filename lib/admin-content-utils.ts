@@ -17,6 +17,8 @@ const FIELD_LABELS: Record<string, string> = {
   coverImageUrl: 'Kapak görseli URL’si',
   coverImageAlt: 'Kapak görseli alt metni',
   publishedAt: 'Yayın tarihi',
+  isFeatured: 'Öne çıkarma',
+  sortOrder: 'Editoryal sıra',
   url: 'Dış bağlantı',
   relatedPublicationIds: 'İlgili yayınlar',
   tags: 'Etiketler',

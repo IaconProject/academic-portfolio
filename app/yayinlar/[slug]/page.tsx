@@ -1,8 +1,11 @@
 import { notFound, permanentRedirect } from 'next/navigation';
 import { draftMode } from 'next/headers';
-import { Calendar, ExternalLink } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
+import { AcademicContentDetail } from '@/components/public/AcademicContentDetail';
+import { estimateReadingMinutes } from '@/lib/content-presentation';
 import { getSeoExperienceData } from '@/lib/seo-repository';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
+import { safeHttpUrl } from '@/lib/url-security';
 import {
   buildBreadcrumbJsonLd,
   buildPublicationJsonLd,
@@ -30,6 +33,9 @@ export async function generateMetadata({ params }: PageProps) {
       publicationSlug(entry) === params.slug
   );
   if (!item) return {};
+  if (!isPreview && !isContentPublished(item.detailStatus, item.publishedAt)) {
+    return { robots: { index: false, follow: false } };
+  }
   return buildSeoMetadata({
     data,
     routeKey: `publication:${item.id}`,
@@ -40,8 +46,7 @@ export async function generateMetadata({ params }: PageProps) {
     type: 'article',
     publishedAt: item.publishedAt || item.year,
     updatedAt: item.updatedAt,
-    forceNoIndex:
-      isPreview || !isContentPublished(item.detailStatus, item.publishedAt),
+    forceNoIndex: isPreview,
   });
 }
 
@@ -66,9 +71,11 @@ export default async function PublicationDetailPage({ params }: PageProps) {
   if (!isPreview && !isContentPublished(item.detailStatus, item.publishedAt)) notFound();
 
   const path = `/yayinlar/${params.slug}`;
+  const sourceUrl = safeHttpUrl(item.url);
   return (
     <SeoPageShell
       data={data}
+      currentArchive="/yayinlar"
       title={item.title}
       description={item.excerpt}
       eyebrow={item.type}
@@ -83,32 +90,36 @@ export default async function PublicationDetailPage({ params }: PageProps) {
           { name: item.title, path },
         ])}
       />
-      <article className="rounded-2xl border border-[#e2ddcf] bg-[#faf8f4] p-6 shadow-sm md:p-9">
-        <div className="mb-7 flex flex-wrap gap-3 border-b border-[#e2ddcf] pb-5 text-xs font-semibold text-[#57534e]">
-          <span className="inline-flex items-center gap-1.5">
-            <Calendar className="h-4 w-4" />
-            {item.year}
-          </span>
-          {item.publisher && <span>{item.publisher}</span>}
-          {item.doi && item.doi !== '#' && <span>DOI: {item.doi}</span>}
-        </div>
+      <AcademicContentDetail
+        coverImageUrl={item.coverImageUrl}
+        coverImageAlt={item.coverImageAlt}
+        meta={[
+          item.type,
+          item.year,
+          item.publisher || '',
+          item.doi && item.doi !== '#' ? `DOI: ${item.doi}` : '',
+          `${estimateReadingMinutes(item.content || item.excerpt)} dk okuma`,
+        ]}
+        footer={
+          sourceUrl ? (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#1c2128] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#2d333b]"
+            >
+              Yayın kaynağını aç
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          ) : undefined
+        }
+      >
         <RichText content={item.content || item.excerpt} />
-        {item.url && item.url !== '#' && (
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-8 inline-flex items-center gap-2 rounded-xl bg-[#1c2128] px-5 py-3 text-sm font-bold text-white"
-          >
-            Yayın kaynağını aç
-            <ExternalLink className="h-4 w-4" />
-          </a>
-        )}
-      </article>
+      </AcademicContentDetail>
     </SeoPageShell>
   );
 }
 
 function PreviewNotice() {
-  return <p className="mb-6 rounded-xl border border-amber-300 bg-amber-100 p-3 text-xs font-bold text-amber-900">Admin önizlemesi · Bu sayfa indekslenmez.</p>;
+  return <p className="mb-6 rounded-2xl border border-amber-300 bg-amber-100 p-4 text-xs font-bold text-amber-900">Admin önizlemesi · Bu sayfa indekslenmez.</p>;
 }

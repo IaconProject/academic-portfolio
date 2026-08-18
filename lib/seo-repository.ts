@@ -26,6 +26,8 @@ function mapArticle(row: Record<string, any>): ArticleItem {
     coverImageUrl: row.cover_image_url || '',
     coverImageAlt: row.cover_image_alt || '',
     status: row.status || 'draft',
+    isFeatured: row.is_featured ?? false,
+    sortOrder: row.sort_order ?? 0,
     authorName: row.author_name || '',
     publishedAt: row.published_at || undefined,
     updatedAt: row.updated_at || undefined,
@@ -54,6 +56,10 @@ function mapSeoPage(row: Record<string, any>): SeoPage {
     index: row.is_indexable ?? true,
     follow: row.follow_links ?? true,
     includeInSitemap: row.include_in_sitemap ?? true,
+    presentation:
+      row.presentation && typeof row.presentation === 'object'
+        ? row.presentation
+        : undefined,
     updatedAt: row.updated_at || undefined,
   };
 }
@@ -119,6 +125,12 @@ async function getSeoExperienceDataUncached(): Promise<PortfolioData> {
                 : defaultPage.relatedKeywords,
               searchIntent: saved.searchIntent || defaultPage.searchIntent,
               topicCluster: saved.topicCluster || defaultPage.topicCluster,
+              presentation: saved.presentation
+                ? {
+                    ...defaultPage.presentation,
+                    ...saved.presentation,
+                  }
+                : defaultPage.presentation,
             }
           : defaultPage;
       }),

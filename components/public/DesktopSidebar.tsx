@@ -1,13 +1,26 @@
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import {
+  BookOpen,
+  FileText,
+  GitBranch,
+  ListOrdered,
+  Mail,
+  Mic,
+  School,
+  User,
+  Users,
+} from 'lucide-react';
 import { Profile } from '@/lib/types';
-import { User, School, BookOpen, GitBranch, Mic, ListOrdered, Users, Mail } from 'lucide-react';
 
 interface DesktopSidebarProps {
   profile: Profile;
+  pageContext?: 'home' | 'subpage';
+  currentArchive?: '/yayinlar' | '/projeler' | '/yazilar';
 }
 
-const navItems = [
+const sectionItems = [
   { id: 'hakkinda', label: 'Hakkında', icon: User },
   { id: 'egitim', label: 'Eğitim', icon: School },
   { id: 'yayinlar', label: 'Yayınlar', icon: BookOpen },
@@ -18,51 +31,94 @@ const navItems = [
   { id: 'iletisim', label: 'İletişim', icon: Mail },
 ];
 
-export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({ profile }) => {
+const archiveItems = [
+  { href: '/yayinlar' as const, label: 'Tüm yayınlar', icon: BookOpen },
+  { href: '/projeler' as const, label: 'Tüm projeler', icon: GitBranch },
+  { href: '/yazilar' as const, label: 'Akademik yazılar', icon: FileText },
+];
+
+export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
+  profile,
+  pageContext = 'home',
+  currentArchive,
+}) => {
   return (
-    <aside className="hidden lg:flex fixed inset-y-0 left-0 w-72 bg-[#1c2128] text-[#e6e1d6] flex-col z-50 shadow-2xl border-r border-[#2d333b] overflow-hidden font-sans">
-      {/* Header Profile Section */}
-      <div className="p-8 flex flex-col items-center border-b border-[#2d333b] text-center">
-        <div className="relative mb-5 flex h-32 w-32 aspect-square items-center justify-center overflow-hidden rounded-full border-4 border-[#373e47] bg-[#2d333b] shadow-xl">
-          {profile.avatarUrl ? (
+    <aside className="fixed inset-y-0 left-0 z-50 hidden w-72 flex-col overflow-hidden border-r border-[#2d333b] bg-[#1c2128] font-sans text-[#e6e1d6] shadow-2xl lg:flex">
+      <div className="flex flex-col items-center border-b border-[#2d333b] p-8 text-center">
+        <Link
+          href="/"
+          aria-label={profile.fullName + ' ana sayfası'}
+          className="group flex flex-col items-center"
+        >
+          <span className="relative mb-5 flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded-full border-4 border-[#373e47] bg-[#2d333b] shadow-xl transition-transform duration-300 group-hover:scale-[1.02]">
+            {profile.avatarUrl ? (
               <Image
                 src={profile.avatarUrl}
                 alt={profile.fullName}
                 fill
                 sizes="128px"
-                className="object-cover rounded-full"
+                className="rounded-full object-cover"
                 priority
               />
-          ) : (
-            <div className="w-full h-full bg-[#2d333b] text-[#e6e1d6] flex items-center justify-center text-3xl font-serif rounded-full">
-              {profile.fullName.charAt(0)}
-            </div>
-          )}
-        </div>
-        <p className="text-xl font-serif font-bold tracking-tight text-[#f0ebe1] leading-tight">
-          {profile.fullName}
-        </p>
-        <p className="text-xs text-[#adbac7] mt-2 font-sans italic opacity-90 leading-snug">
-          {profile.title}
-        </p>
+            ) : (
+              <span className="flex h-full w-full items-center justify-center rounded-full bg-[#2d333b] font-serif text-3xl text-[#e6e1d6]">
+                {profile.fullName.charAt(0)}
+              </span>
+            )}
+          </span>
+          <span className="font-serif text-xl font-bold leading-tight tracking-tight text-[#f0ebe1]">
+            {profile.fullName}
+          </span>
+          <span className="mt-2 text-xs italic leading-snug text-[#adbac7] opacity-90">
+            {profile.title}
+          </span>
+        </Link>
       </div>
 
-      {/* Navigation List */}
-      <nav className="flex-1 overflow-y-auto py-6 px-4">
-        <ul className="space-y-1.5">
-          {navItems.map((item) => {
+      <nav aria-label="Akademik özgeçmiş menüsü" className="flex-1 overflow-y-auto px-4 py-5">
+        <ul className="space-y-1">
+          {sectionItems.map((item) => {
             const Icon = item.icon;
+            const href = pageContext === 'home' ? '#' + item.id : '/#' + item.id;
             return (
               <li key={item.id}>
-                <a
-                  href={`#${item.id}`}
-                  className="group flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-[#adbac7] transition-colors duration-200 hover:bg-[#232932] hover:text-white"
+                <Link
+                  href={href}
+                  className="group flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium text-[#adbac7] transition-colors duration-200 hover:bg-[#232932] hover:text-white"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <Icon className="h-4 w-4 shrink-0 text-[#768390] transition-colors duration-200 group-hover:text-[#adbac7]" />
+                  <span className="flex items-center gap-3.5">
+                    <Icon className="h-4 w-4 shrink-0 text-[#768390] transition-colors group-hover:text-[#adbac7]" />
                     <span>{item.label}</span>
-                  </div>
-                </a>
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        <div className="mx-4 my-5 border-t border-[#2d333b]" />
+        <p className="px-4 text-[10px] font-black uppercase tracking-[0.18em] text-[#768390]">
+          İçerik arşivleri
+        </p>
+        <ul className="mt-2 space-y-1">
+          {archiveItems.map((item) => {
+            const Icon = item.icon;
+            const active = currentArchive === item.href;
+            const className =
+              'group flex items-center gap-3.5 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors duration-200 ' +
+              (active
+                ? 'bg-[#303741] text-white'
+                : 'text-[#adbac7] hover:bg-[#232932] hover:text-white');
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  aria-current={active ? 'page' : undefined}
+                  className={className}
+                >
+                  <Icon className="h-4 w-4 shrink-0 text-[#768390] transition-colors group-hover:text-[#adbac7]" />
+                  <span>{item.label}</span>
+                </Link>
               </li>
             );
           })}
