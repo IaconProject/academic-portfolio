@@ -98,7 +98,7 @@ export default async function ArticleDetailPage({ params }: PageProps) {
         {!!item.references.length && (
           <section className="mt-10 border-t border-academic-border pt-7">
             <h2 className="font-serif text-xl font-bold">Kaynaklar</h2>
-            <ul className="mt-4 list-decimal space-y-2 pl-5 text-sm text-[#57534e]">
+            <ul className="mt-4 list-decimal space-y-2 pl-5 text-sm text-academic-slate">
               {item.references.map((reference) => (
                 <li key={reference}>
                   {/^https?:\/\//i.test(reference) ? (

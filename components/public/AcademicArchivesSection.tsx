@@ -43,7 +43,7 @@ export function AcademicArchivesSection({ data }: { data: PortfolioData }) {
         {archives.map((archive) => {
           const Icon = archive.icon;
           return (
-            <Link key={archive.href} href={archive.href} className="group flex min-h-52 flex-col items-center justify-between rounded-2xl border border-academic-border bg-academic-surface-muted p-5 text-center transition duration-200 hover:-translate-y-1 hover:border-[#b9aa92] hover:bg-[#efe8dc] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600">
+            <Link key={archive.href} href={archive.href} className="group flex min-h-52 flex-col items-center justify-between rounded-2xl border border-academic-border bg-academic-surface-muted p-5 text-center transition duration-200 hover:-translate-y-1 hover:border-academic-slate/50 hover:bg-academic-border/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600">
               <div>
                 <span className="mx-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-academic-border bg-academic-surface text-academic-ink shadow-sm">
                   <Icon className="h-5 w-5" />
@@ -51,7 +51,7 @@ export function AcademicArchivesSection({ data }: { data: PortfolioData }) {
                 <h3 className="mt-4 font-serif text-lg font-bold text-academic-ink">{archive.label}</h3>
                 <p className="mt-2 text-xs leading-6 text-academic-slate">{archive.description}</p>
               </div>
-              <span className="mt-5 inline-flex items-center gap-1.5 text-xs font-black text-[#1c2128]">
+              <span className="mt-5 inline-flex items-center gap-1.5 text-xs font-black text-academic-ink">
                 {archive.count} kayıt
                 <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </span>

@@ -35,9 +35,9 @@ export default async function PrivacyPage() {
       description="Bu sayfa, akademik portfolyoda kullanılan zorunlu ve isteğe bağlı ölçümleme teknolojilerini açıklar."
       eyebrow="Gizlilik"
     >
-      <div className="space-y-8 rounded-2xl border border-[#e2ddcf] bg-[#faf8f4] p-6 text-sm leading-7 text-[#57534e] shadow-sm md:p-9">
+      <div className="space-y-8 rounded-2xl border border-academic-border bg-academic-surface p-6 text-sm leading-7 text-academic-slate shadow-sm md:p-9">
         <section>
-          <h2 className="font-serif text-xl font-bold text-[#24211e]">
+          <h2 className="font-serif text-xl font-bold text-academic-ink">
             Temel çalışma verileri
           </h2>
           <p className="mt-3">
@@ -48,7 +48,7 @@ export default async function PrivacyPage() {
           </p>
         </section>
         <section>
-          <h2 className="font-serif text-xl font-bold text-[#24211e]">
+          <h2 className="font-serif text-xl font-bold text-academic-ink">
             Analitik ölçüm ve bölgesel uygulama
           </h2>
           <div className="mt-3 space-y-3">
@@ -156,7 +156,7 @@ export default async function PrivacyPage() {
           </div>
         </section>
         <section>
-          <h2 className="font-serif text-xl font-bold text-[#24211e]">
+          <h2 className="font-serif text-xl font-bold text-academic-ink">
             İletişim ve talepler
           </h2>
           <p className="mt-3">

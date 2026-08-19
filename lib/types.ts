@@ -250,6 +250,23 @@ export interface NotificationSettings {
   smtpPass?: string;
 }
 
+export type TabBarActionId = 'home' | 'theme' | 'email' | 'contact';
+export type TabBarLightPalette = 'ivory' | 'sand' | 'sage' | 'mist';
+export type TabBarDarkPalette = 'obsidian' | 'midnight' | 'forest' | 'plum';
+
+export interface TabBarButtonSetting {
+  id: TabBarActionId;
+  visible: boolean;
+}
+
+export interface TabBarSettings {
+  version: 1;
+  enabled: boolean;
+  buttons: TabBarButtonSetting[];
+  lightPalette: TabBarLightPalette;
+  darkPalette: TabBarDarkPalette;
+}
+
 export interface PortfolioData {
   profile: Profile;
   education: EducationItem[];
@@ -260,6 +277,7 @@ export interface PortfolioData {
   references: ReferenceItem[];
   socialLinks: SocialLink[];
   seoSettings: SeoSettings;
+  tabBarSettings: TabBarSettings;
   adminCredentials?: AdminCredentials;
   notificationSettings?: NotificationSettings;
   articles?: ArticleItem[];

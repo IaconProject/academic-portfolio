@@ -79,8 +79,8 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
         className={
           'fixed left-4 top-4 z-[80] flex h-11 w-11 items-center justify-center rounded-2xl border shadow-md backdrop-blur-md transition-[transform,background-color,color,border-color,box-shadow,border-radius] duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden ' +
           (isOpen
-            ? 'rounded-full border-[#1c2128] bg-[#1c2128] text-academic-bg shadow-xl ring-4 ring-academic-bg/80'
-            : 'border-stone-300/80 bg-academic-bg/95 text-stone-900 hover:bg-[#eee8dc]')
+            ? 'rounded-full border-[#39414b] bg-[#1c2128] text-[#f0ebe1] shadow-xl ring-4 ring-academic-bg/80'
+            : 'border-academic-border bg-academic-bg/95 text-academic-ink hover:bg-academic-surface-muted')
         }
         style={{
           transform: isOpen
@@ -127,7 +127,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
         aria-label="Mobil ana menü"
         aria-hidden={!isOpen}
         className={
-          'fixed left-0 top-0 z-[70] h-full w-[min(18rem,80vw)] overflow-y-auto border-r border-[#ddd7ca] bg-academic-bg p-6 pt-20 shadow-2xl transition-transform duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden ' +
+          'fixed left-0 top-0 z-[70] h-full w-[min(18rem,80vw)] overflow-y-auto border-r border-academic-border bg-academic-bg p-6 pt-20 shadow-2xl transition-transform duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden ' +
           (isOpen ? 'translate-x-0' : '-translate-x-full')
         }
       >
@@ -136,7 +136,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
             const Icon = item.icon;
             const href = pageContext === 'home' ? '#' + item.id : '/#' + item.id;
             const itemClass =
-              'flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium text-stone-700 transition-[transform,opacity,background-color,color] duration-500 ease-out hover:bg-[#e3dccf] hover:text-stone-950 motion-reduce:transition-none ' +
+              'flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-medium text-academic-slate transition-[transform,opacity,background-color,color] duration-500 ease-out hover:bg-academic-surface-muted hover:text-academic-ink motion-reduce:transition-none ' +
               (isOpen
                 ? 'translate-x-0 opacity-100'
                 : '-translate-x-3 opacity-0');
@@ -153,7 +153,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                       : '0ms',
                   }}
                 >
-                  <Icon className="h-5 w-5 text-stone-400" />
+                  <Icon className="h-5 w-5 text-academic-slate/70" />
                   <span>{item.label}</span>
                 </Link>
               </li>
@@ -162,7 +162,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
         </ul>
 
         <div className="my-5 border-t border-academic-border" />
-        <p className="px-4 text-[10px] font-black uppercase tracking-[0.18em] text-stone-500">
+        <p className="px-4 text-[10px] font-black uppercase tracking-[0.18em] text-academic-slate">
           İçerik arşivleri
         </p>
         <ul className="mt-2 space-y-2">
@@ -173,7 +173,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
               'flex items-center gap-3.5 rounded-xl px-4 py-3 text-sm font-semibold transition-[transform,opacity,background-color,color] duration-500 ease-out motion-reduce:transition-none ' +
               (active
                 ? 'bg-[#1c2128] text-[#f0ebe1]'
-                : 'text-stone-700 hover:bg-[#e3dccf] hover:text-stone-950') +
+                : 'text-academic-slate hover:bg-academic-surface-muted hover:text-academic-ink') +
               (isOpen
                 ? ' translate-x-0 opacity-100'
                 : ' -translate-x-3 opacity-0');
@@ -191,7 +191,7 @@ export const MobileHeader: React.FC<MobileHeaderProps> = ({
                       : '0ms',
                   }}
                 >
-                  <Icon className="h-5 w-5 text-stone-400" />
+                  <Icon className="h-5 w-5 text-academic-slate/70" />
                   <span>{item.label}</span>
                 </Link>
               </li>

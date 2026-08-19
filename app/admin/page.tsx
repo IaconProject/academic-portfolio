@@ -22,6 +22,7 @@ import { MessagesManager } from '@/components/admin/MessagesManager';
 import { VisitorLogsManager } from '@/components/admin/VisitorLogsManager';
 import { SocialLinksEditor } from '@/components/admin/SocialLinksEditor';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
+import { TabBarSettingsEditor } from '@/components/admin/TabBarSettingsEditor';
 import {
   User,
   School,
@@ -37,6 +38,7 @@ import {
   Users,
   Inbox,
   FileText,
+  Palette,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -52,6 +54,7 @@ type AdminTab =
   | 'references'
   | 'social'
   | 'seo'
+  | 'appearance'
   | 'security'
   | 'visitors';
 
@@ -67,6 +70,7 @@ const VALID_TABS: AdminTab[] = [
   'activities',
   'references',
   'seo',
+  'appearance',
   'visitors',
   'security',
 ];
@@ -226,6 +230,7 @@ function AdminDashboardContent() {
     { id: 'activities' as AdminTab, label: 'Faaliyetler', icon: ListOrdered },
     { id: 'references' as AdminTab, label: 'Referanslar', icon: Users },
     { id: 'seo' as AdminTab, label: 'SEO Ayarları', icon: Search },
+    { id: 'appearance' as AdminTab, label: 'Görünüm & Tab Bar', icon: Palette },
     { id: 'visitors' as AdminTab, label: 'Ziyaretçi Analizi', icon: Activity },
     { id: 'security' as AdminTab, label: 'Güvenlik & Giriş', icon: KeyRound },
   ];
@@ -350,6 +355,17 @@ function AdminDashboardContent() {
                   seoRedirects={data.seoRedirects}
                   profileName={data.profile.fullName}
                   onSave={(seoSettings) => setData({ ...data, seoSettings })}
+                />
+              )}
+
+              {activeTab === 'appearance' && (
+                <TabBarSettingsEditor
+                  settings={data.tabBarSettings}
+                  email={data.profile.email}
+                  isSaving={isSaving}
+                  onSave={(tabBarSettings) =>
+                    handleSaveData({ ...data, tabBarSettings })
+                  }
                 />
               )}
 

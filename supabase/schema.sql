@@ -100,6 +100,8 @@ CREATE TABLE IF NOT EXISTS public.seo_settings (
   og_image_url TEXT NOT NULL,
   canonical_url TEXT NOT NULL,
   author_name TEXT NOT NULL,
+  tab_bar_settings JSONB NOT NULL DEFAULT '{"version":1,"enabled":true,"buttons":[{"id":"home","visible":true},{"id":"theme","visible":true},{"id":"email","visible":true},{"id":"contact","visible":true}],"lightPalette":"ivory","darkPalette":"midnight"}'::JSONB
+    CHECK (jsonb_typeof(tab_bar_settings) = 'object'),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -292,4 +294,3 @@ CREATE TABLE IF NOT EXISTS public.notification_settings (
 ALTER TABLE public.notification_settings ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow write notification_settings" ON public.notification_settings;
 CREATE POLICY "Allow write notification_settings" ON public.notification_settings FOR ALL USING (true) WITH CHECK (true);
-

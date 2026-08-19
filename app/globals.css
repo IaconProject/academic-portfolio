@@ -3,18 +3,249 @@
 @import 'tailwindcss/utilities';
 
 @layer base {
+  :root {
+    color-scheme: light;
+    --academic-navy: 28 25 23;
+    --academic-blue: 41 37 36;
+    --academic-bg: 243 239 230;
+    --academic-surface: 248 244 236;
+    --academic-surface-muted: 246 241 232;
+    --academic-ink: 41 36 31;
+    --academic-slate: 75 69 63;
+    --academic-border: 221 211 196;
+  }
+
+  html.dark {
+    color-scheme: dark;
+    --academic-navy: 236 231 221;
+    --academic-blue: 214 207 196;
+    --academic-bg: 16 18 21;
+    --academic-surface: 24 27 31;
+    --academic-surface-muted: 30 34 39;
+    --academic-ink: 237 233 225;
+    --academic-slate: 183 180 173;
+    --academic-border: 57 62 69;
+  }
+
   html {
     scroll-behavior: smooth;
-    /* Keep the browser canvas/overscroll area aligned with the site shell on mobile. */
-    background-color: #f3efe6;
+    background-color: rgb(var(--academic-bg));
   }
   body {
-    @apply min-h-full bg-academic-bg text-academic-ink font-sans antialiased overflow-x-hidden;
+    @apply min-h-full bg-academic-bg text-academic-ink font-sans antialiased overflow-x-hidden transition-colors duration-300;
+  }
+
+  ::selection {
+    background: rgb(217 169 80 / 0.35);
   }
 }
 
 .academic-card {
   @apply bg-academic-surface rounded-2xl shadow-sm border border-academic-border p-6 md:p-8 mb-8 transition-all duration-200 hover:shadow-md;
+}
+
+.public-tab-bar {
+  --tab-bg: 249 246 239;
+  --tab-border: 190 174 149;
+  --tab-ink: 53 46 39;
+  --tab-muted: 112 101 89;
+  --tab-accent: 148 105 50;
+  --tab-accent-soft: 233 217 193;
+  --tab-shadow: 66 50 33;
+}
+
+.public-tab-bar[data-light-palette='sand'] {
+  --tab-bg: 250 243 234;
+  --tab-border: 211 166 132;
+  --tab-ink: 75 46 33;
+  --tab-muted: 127 88 68;
+  --tab-accent: 181 86 47;
+  --tab-accent-soft: 244 211 188;
+  --tab-shadow: 92 51 31;
+}
+
+.public-tab-bar[data-light-palette='sage'] {
+  --tab-bg: 241 245 237;
+  --tab-border: 156 177 147;
+  --tab-ink: 43 62 42;
+  --tab-muted: 91 112 87;
+  --tab-accent: 66 111 75;
+  --tab-accent-soft: 207 226 204;
+  --tab-shadow: 42 67 45;
+}
+
+.public-tab-bar[data-light-palette='mist'] {
+  --tab-bg: 241 246 249;
+  --tab-border: 150 177 193;
+  --tab-ink: 38 55 67;
+  --tab-muted: 83 107 121;
+  --tab-accent: 48 105 139;
+  --tab-accent-soft: 205 225 236;
+  --tab-shadow: 32 61 78;
+}
+
+html.dark .public-tab-bar[data-dark-palette='obsidian'] {
+  --tab-bg: 25 25 25;
+  --tab-border: 78 72 64;
+  --tab-ink: 245 241 232;
+  --tab-muted: 180 171 158;
+  --tab-accent: 232 177 82;
+  --tab-accent-soft: 74 56 31;
+  --tab-shadow: 0 0 0;
+}
+
+html.dark .public-tab-bar[data-dark-palette='midnight'] {
+  --tab-bg: 19 27 38;
+  --tab-border: 61 81 105;
+  --tab-ink: 237 244 251;
+  --tab-muted: 158 179 202;
+  --tab-accent: 102 178 255;
+  --tab-accent-soft: 33 69 105;
+  --tab-shadow: 0 5 15;
+}
+
+html.dark .public-tab-bar[data-dark-palette='forest'] {
+  --tab-bg: 19 32 28;
+  --tab-border: 52 89 75;
+  --tab-ink: 235 246 239;
+  --tab-muted: 155 190 174;
+  --tab-accent: 95 211 158;
+  --tab-accent-soft: 31 82 60;
+  --tab-shadow: 0 10 5;
+}
+
+html.dark .public-tab-bar[data-dark-palette='plum'] {
+  --tab-bg: 31 24 38;
+  --tab-border: 88 66 105;
+  --tab-ink: 246 238 250;
+  --tab-muted: 194 166 208;
+  --tab-accent: 207 137 244;
+  --tab-accent-soft: 78 42 96;
+  --tab-shadow: 14 4 20;
+}
+
+.public-tab-bar__surface {
+  position: relative;
+  min-height: 4.45rem;
+  overflow: hidden;
+  border: 1px solid rgb(var(--tab-border) / 0.72);
+  border-radius: 1.55rem;
+  background: linear-gradient(
+    145deg,
+    rgb(var(--tab-bg) / 0.96),
+    rgb(var(--tab-bg) / 0.82)
+  );
+  box-shadow:
+    0 1.1rem 3rem rgb(var(--tab-shadow) / 0.2),
+    inset 0 1px 0 rgb(255 255 255 / 0.28);
+  padding: 0.42rem;
+  backdrop-filter: blur(1.25rem) saturate(1.35);
+  -webkit-backdrop-filter: blur(1.25rem) saturate(1.35);
+}
+
+.public-tab-bar__surface::before {
+  position: absolute;
+  inset: 0.25rem 15% auto;
+  height: 1px;
+  content: '';
+  background: linear-gradient(90deg, transparent, rgb(var(--tab-ink) / 0.16), transparent);
+  pointer-events: none;
+}
+
+.public-tab-bar__item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 3.55rem;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 0.28rem;
+  border-radius: 1.12rem;
+  color: rgb(var(--tab-muted));
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  line-height: 1;
+  transition: color 180ms ease, background-color 180ms ease, transform 180ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.public-tab-bar__item::after {
+  position: absolute;
+  bottom: 0.25rem;
+  left: 50%;
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  content: '';
+  background: rgb(var(--tab-accent));
+  opacity: 0;
+  transform: translateX(-50%) scale(0.5);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.public-tab-bar__item:hover,
+.public-tab-bar__item:focus-visible,
+.public-tab-bar__item[data-active='true'] {
+  color: rgb(var(--tab-accent));
+  background: rgb(var(--tab-accent-soft) / 0.62);
+}
+
+.public-tab-bar__item:hover {
+  transform: translateY(-1px);
+}
+
+.public-tab-bar__item:focus-visible {
+  outline: 2px solid rgb(var(--tab-accent));
+  outline-offset: -2px;
+}
+
+.public-tab-bar__item[data-active='true']::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+.public-tab-bar__icon-stack {
+  position: relative;
+  display: block;
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.public-tab-bar__sun,
+.public-tab-bar__moon {
+  position: absolute;
+  inset: 0;
+  transition: opacity 180ms ease, transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.public-tab-bar__moon {
+  opacity: 0;
+  transform: rotate(-30deg) scale(0.7);
+}
+
+html.dark .public-tab-bar__sun {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.7);
+}
+
+html.dark .public-tab-bar__moon {
+  opacity: 1;
+  transform: rotate(0) scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .public-tab-bar__item,
+  .public-tab-bar__item::after,
+  .public-tab-bar__sun,
+  .public-tab-bar__moon {
+    transition: none;
+  }
 }
 
 @keyframes fadeIn {

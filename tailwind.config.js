@@ -8,17 +8,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        'academic-navy': '#1c1917',
-        'academic-blue': '#292524',
-        // Closest warm site background that Android Chrome accepts as a
-        // toolbar theme color (its bright-theme cutoff is 0.94 lightness).
-        'academic-bg': '#f3efe6',
-        // Warm card layers stay beige while remaining subtly lighter than the page.
-        'academic-surface': '#f8f4ec',
-        'academic-surface-muted': '#f6f1e8',
-        'academic-ink': '#29241f',
-        'academic-slate': '#4b453f',
-        'academic-border': '#ddd3c4',
+        'academic-navy': 'rgb(var(--academic-navy) / <alpha-value>)',
+        'academic-blue': 'rgb(var(--academic-blue) / <alpha-value>)',
+        'academic-bg': 'rgb(var(--academic-bg) / <alpha-value>)',
+        'academic-surface': 'rgb(var(--academic-surface) / <alpha-value>)',
+        'academic-surface-muted': 'rgb(var(--academic-surface-muted) / <alpha-value>)',
+        'academic-ink': 'rgb(var(--academic-ink) / <alpha-value>)',
+        'academic-slate': 'rgb(var(--academic-slate) / <alpha-value>)',
+        'academic-border': 'rgb(var(--academic-border) / <alpha-value>)',
       },
       fontFamily: {
         serif: ['Georgia', 'Cambria', '"Times New Roman"', 'serif'],

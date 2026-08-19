@@ -18,7 +18,7 @@ export const EducationSection: React.FC<EducationSectionProps> = ({ education })
               className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-academic-surface ring-4 ring-academic-surface-muted ${
                 item.isCurrent || item.status === 'Devam Ediyor'
                   ? 'bg-[#1c2128]'
-                  : 'bg-[#b0a999]'
+                  : 'bg-academic-slate/45'
               }`}
             />
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
@@ -26,7 +26,7 @@ export const EducationSection: React.FC<EducationSectionProps> = ({ education })
                 {item.degree}
               </h3>
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold tracking-wide px-2.5 py-1 bg-academic-surface-muted border border-academic-border rounded-lg text-academic-slate w-fit">
-                <Calendar className="w-3 h-3 text-[#78716c]" />
+                <Calendar className="w-3 h-3 text-academic-slate/70" />
                 {item.years}
               </span>
             </div>

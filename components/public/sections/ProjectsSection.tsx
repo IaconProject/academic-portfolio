@@ -31,7 +31,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
                   )}
                 </h3>
                 <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-academic-slate bg-academic-surface-muted px-2.5 py-1 rounded-lg border border-academic-border w-fit">
-                  <Calendar className="w-3 h-3 text-[#78716c]" />
+                  <Calendar className="w-3 h-3 text-academic-slate/70" />
                   {project.years}
                 </span>
               </div>
@@ -44,9 +44,9 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
                   {project.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold bg-academic-surface-muted text-academic-ink px-2.5 py-1 rounded-lg border border-academic-border hover:border-[#a99d89] transition-colors"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold bg-academic-surface-muted text-academic-ink px-2.5 py-1 rounded-lg border border-academic-border hover:border-academic-slate/60 transition-colors"
                     >
-                      <Tag className="w-3 h-3 text-[#78716c]" />
+                      <Tag className="w-3 h-3 text-academic-slate/70" />
                       {tag}
                     </span>
                   ))}
@@ -57,7 +57,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ projects }) =>
         ))}
         <Link
           href="/projeler"
-          className="inline-flex items-center gap-1 text-xs font-bold text-[#1c2128] hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-bold text-academic-ink hover:underline"
         >
           Tüm projeleri görüntüle
         </Link>

@@ -11,6 +11,7 @@ import { revalidateSeoRoutes } from '@/lib/admin-api';
 import { omitAdminCredentials } from '@/lib/admin-credentials-safety';
 import fs from 'fs';
 import path from 'path';
+import { normalizeTabBarSettings } from '@/lib/tab-bar';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -51,6 +52,7 @@ function writeTmpStore(data: PortfolioData): void {
 function sanitizePublicData(data: PortfolioData): PortfolioData {
   return {
     ...data,
+    tabBarSettings: normalizeTabBarSettings(data.tabBarSettings),
     adminCredentials: {
       email: data.adminCredentials?.email || 'bilgi@muhammedakan.com',
       password: '', // Never leak password in public GET requests
@@ -193,6 +195,9 @@ export async function GET(request: Request) {
             canonicalUrl: seoData.canonical_url,
             authorName: seoData.author_name,
           } : currentTmp.seoSettings,
+          tabBarSettings: normalizeTabBarSettings(
+            seoData?.tab_bar_settings ?? currentTmp.tabBarSettings
+          ),
           adminCredentials: credData ? {
             email: credData.email,
             password: '',
@@ -236,7 +241,68 @@ export async function POST(request: Request) {
     const body = omitAdminCredentials(receivedBody);
     const currentTmp = readTmpStore();
 
-    // 1. Notification Settings Sync
+    // 1. Public tab bar and theme settings sync. The payload is normalized on
+    // the server so arbitrary action IDs or CSS palette values cannot enter CMS.
+    if (Object.prototype.hasOwnProperty.call(body, 'tabBarSettings')) {
+      const tabBarSettings = normalizeTabBarSettings(body.tabBarSettings);
+      const currentTabBarSettings = normalizeTabBarSettings(currentTmp.tabBarSettings);
+      const settingsChanged =
+        JSON.stringify(tabBarSettings) !== JSON.stringify(currentTabBarSettings);
+
+      body.tabBarSettings = tabBarSettings;
+
+      // Other CMS editors submit the full portfolio object. Do not make their
+      // unrelated saves depend on a tab bar write when it is unchanged.
+      if (settingsChanged) {
+        if (!isSupabaseConfigured || !supabase || !hasSupabaseServiceRole) {
+          return NextResponse.json(
+            { success: false, error: { code: 'CMS_STORE_UNAVAILABLE', message: 'Kalıcı CMS veritabanı bağlantısı yapılandırılmamış.' } },
+            { status: 503 }
+          );
+        }
+
+        const { data: seoRows, error: lookupError } = await supabase
+          .from('seo_settings')
+          .select('id')
+          .limit(1);
+
+        if (lookupError) {
+          console.error('[cms] tab bar settings lookup failed', lookupError);
+          return NextResponse.json(
+            { success: false, error: { code: 'TAB_BAR_SETTINGS_READ_FAILED', message: 'Tab bar ayarları veritabanından okunamadı.' } },
+            { status: 503 }
+          );
+        }
+
+        const existingId = seoRows?.[0]?.id;
+        const legacySeo = body.seoSettings || currentTmp.seoSettings || initialPortfolioData.seoSettings;
+        const { error: upsertError } = await supabase.from('seo_settings').upsert({
+          ...(existingId ? { id: existingId } : {}),
+          ...(!existingId
+            ? {
+                meta_title: legacySeo.metaTitle,
+                meta_description: legacySeo.metaDescription,
+                keywords: legacySeo.keywords,
+                og_image_url: legacySeo.ogImageUrl,
+                canonical_url: legacySeo.canonicalUrl,
+                author_name: legacySeo.authorName,
+              }
+            : {}),
+          tab_bar_settings: tabBarSettings,
+          updated_at: new Date().toISOString(),
+        });
+
+        if (upsertError) {
+          console.error('[cms] tab bar settings upsert failed', upsertError);
+          return NextResponse.json(
+            { success: false, error: { code: 'TAB_BAR_SETTINGS_WRITE_FAILED', message: 'Tab bar ayarları kalıcı olarak kaydedilemedi.' } },
+            { status: 503 }
+          );
+        }
+      }
+    }
+
+    // 2. Notification Settings Sync
     if (body.notificationSettings) {
       const notif = body.notificationSettings;
       if (!isSupabaseConfigured || !supabase || !hasSupabaseServiceRole) {
@@ -281,7 +347,7 @@ export async function POST(request: Request) {
       writeTmpStore(sanitizePublicData(updatedFull));
     }
 
-    // 2. Full Portfolio Data Sync
+    // 3. Full Portfolio Data Sync
     if (body.profile) {
       const updatedData: PortfolioData = {
         ...currentTmp,

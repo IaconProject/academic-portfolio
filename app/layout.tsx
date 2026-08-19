@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'react-hot-toast';
 import { AnalyticsRuntime } from '@/components/public/AnalyticsRuntime';
+import {
+  PublicExperience,
+  publicThemeBootScript,
+} from '@/components/public/PublicExperience';
 import { getSeoExperienceData } from '@/lib/seo-repository';
 import { buildSeoMetadata } from '@/lib/seo-metadata';
 import './globals.css';
@@ -10,8 +14,11 @@ import './globals.css';
 const SITE_THEME_COLOR = '#f3efe6';
 
 export const viewport: Viewport = {
-  themeColor: SITE_THEME_COLOR,
-  colorScheme: 'light',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: SITE_THEME_COLOR },
+    { media: '(prefers-color-scheme: dark)', color: '#101215' },
+  ],
+  colorScheme: 'light dark',
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -51,13 +58,34 @@ export default async function RootLayout({
   const data = await getSeoExperienceData();
 
   return (
-    <html lang="tr" className="scroll-smooth">
-      <body className="bg-academic-bg text-slate-800 font-sans antialiased">
-        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+    <html lang="tr" className="scroll-smooth" suppressHydrationWarning>
+      <head>
+        <script
+          id="public-theme-boot"
+          dangerouslySetInnerHTML={{ __html: publicThemeBootScript }}
+        />
+      </head>
+      <body className="bg-academic-bg text-academic-ink font-sans antialiased">
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: 'rgb(var(--academic-surface))',
+              color: 'rgb(var(--academic-ink))',
+              border: '1px solid rgb(var(--academic-border))',
+            },
+          }}
+        />
         <AnalyticsRuntime
           measurementId={data.seoSettings.ga4MeasurementId}
         />
-        {children}
+        <PublicExperience
+          settings={data.tabBarSettings}
+          email={data.profile.email}
+        >
+          {children}
+        </PublicExperience>
       </body>
     </html>
   );

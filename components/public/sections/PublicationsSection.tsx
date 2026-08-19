@@ -19,14 +19,14 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
           return (
           <div
             key={pub.id}
-            className="p-5 bg-academic-surface-muted rounded-xl border border-academic-border transition-all hover:bg-[#e3d9ca]"
+            className="p-5 bg-academic-surface-muted rounded-xl border border-academic-border transition-all hover:bg-academic-border/40"
           >
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-[11px] font-semibold text-[#2c2825] bg-[#efece4] px-2.5 py-0.5 rounded-md border border-[#ded9cb]">
+              <span className="text-[11px] font-semibold text-academic-ink bg-academic-surface px-2.5 py-0.5 rounded-md border border-academic-border">
                 {pub.type}
               </span>
               <div className="flex items-center gap-1.5 text-xs text-academic-slate font-medium">
-                <Calendar className="w-3.5 h-3.5 text-[#a19b8f]" />
+                <Calendar className="w-3.5 h-3.5 text-academic-slate/60" />
                 <span>{pub.year}</span>
               </div>
             </div>
@@ -55,7 +55,7 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
                 href={sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-3 text-xs font-semibold text-[#1c2128] hover:underline"
+                className="inline-flex items-center gap-1 mt-3 text-xs font-semibold text-academic-ink hover:underline"
               >
                 <span>Yayını İncele</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -66,7 +66,7 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
         })}
         <Link
           href="/yayinlar"
-          className="inline-flex items-center gap-1 text-xs font-bold text-[#1c2128] hover:underline"
+          className="inline-flex items-center gap-1 text-xs font-bold text-academic-ink hover:underline"
         >
           Tüm yayınları görüntüle
           <ExternalLink className="h-3.5 w-3.5" />

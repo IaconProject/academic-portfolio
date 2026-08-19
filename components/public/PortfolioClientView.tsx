@@ -45,7 +45,7 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
 
       {/* Main Content Centering Wrapper */}
       <div className="flex-1 lg:pl-72 flex flex-col items-center w-full">
-        <main className="w-full max-w-4xl px-4 sm:px-6 md:px-8 lg:px-12 pt-20 lg:pt-16 pb-16">
+        <main className="w-full max-w-4xl px-4 sm:px-6 md:px-8 lg:px-12 pt-20 lg:pt-16 pb-32">
           {/* Top Profile Hero for Mobile */}
           <ProfileHero
             profile={profile}

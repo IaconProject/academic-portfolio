@@ -14,7 +14,7 @@ export const ConferencesSection: React.FC<ConferencesSectionProps> = ({ conferen
         {conferences.map((conf) => (
           <div key={conf.id} className="p-5 bg-academic-surface-muted rounded-xl border border-academic-border">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-              <span className="text-[11px] font-semibold text-[#2c2825] bg-[#efece4] px-2.5 py-0.5 rounded-md border border-[#ded9cb] w-fit">
+              <span className="text-[11px] font-semibold text-academic-ink bg-academic-surface px-2.5 py-0.5 rounded-md border border-academic-border w-fit">
                 {conf.role || 'Bildiri Sunumu'}
               </span>
               <span className="text-xs text-academic-slate font-medium inline-flex items-center gap-1">
@@ -33,7 +33,7 @@ export const ConferencesSection: React.FC<ConferencesSectionProps> = ({ conferen
 
             {conf.location && (
               <div className="inline-flex items-center gap-1 text-xs text-academic-slate mt-2">
-                <MapPin className="w-3.5 h-3.5 text-[#a19b8f]" />
+                <MapPin className="w-3.5 h-3.5 text-academic-slate/60" />
                 <span>{conf.location}</span>
               </div>
             )}

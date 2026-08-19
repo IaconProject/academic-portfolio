@@ -6,6 +6,7 @@ import {
 } from './supabase/server';
 import fs from 'fs';
 import path from 'path';
+import { normalizeTabBarSettings } from './tab-bar';
 
 const TMP_FILE_PATH = path.join('/tmp', 'academic_portfolio_data_v2.json');
 
@@ -133,6 +134,7 @@ export async function getPortfolioDataServer(): Promise<PortfolioData> {
             canonicalUrl: seoData.canonical_url,
             authorName: seoData.author_name,
           } : initialPortfolioData.seoSettings,
+          tabBarSettings: normalizeTabBarSettings(seoData?.tab_bar_settings),
         };
       }
     } catch (e) {
@@ -144,7 +146,11 @@ export async function getPortfolioDataServer(): Promise<PortfolioData> {
     if (fs.existsSync(TMP_FILE_PATH)) {
       const content = fs.readFileSync(TMP_FILE_PATH, 'utf-8');
       if (content) {
-        return JSON.parse(content);
+        const parsed = JSON.parse(content) as PortfolioData;
+        return {
+          ...parsed,
+          tabBarSettings: normalizeTabBarSettings(parsed.tabBarSettings),
+        };
       }
     }
   } catch (e) {}

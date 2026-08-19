@@ -50,7 +50,7 @@ export function SeoPageShell({
       />
 
       <div className="flex w-full flex-1 flex-col items-center lg:pl-72">
-        <main className="w-full max-w-4xl px-4 pb-16 pt-20 sm:px-6 md:px-8 lg:px-12 lg:pt-16">
+        <main className="w-full max-w-4xl px-4 pb-32 pt-20 sm:px-6 md:px-8 lg:px-12 lg:pt-16">
           <nav
             aria-label="İçerik yolu"
             className="mb-6 flex flex-wrap items-center gap-2 text-xs font-semibold text-academic-slate"
@@ -126,7 +126,7 @@ export function RichText({ content }: { content?: string }) {
   if (!blocks.length) return null;
 
   return (
-    <div className="space-y-5 text-[15px] leading-8 text-[#45403b] md:text-base">
+    <div className="space-y-5 text-[15px] leading-8 text-academic-slate md:text-base">
       {blocks.map((block, index) => {
         if (block.startsWith('```') && block.endsWith('```')) {
           const code = block.replace(/^```[^\n]*\n?/, '').replace(/```$/, '').trim();
@@ -138,14 +138,14 @@ export function RichText({ content }: { content?: string }) {
         }
         if (block.startsWith('### ')) {
           return (
-            <h3 key={index} className="pt-3 font-serif text-xl font-bold text-[#24211e]">
+            <h3 key={index} className="pt-3 font-serif text-xl font-bold text-academic-ink">
               {renderInline(block.slice(4), `h3-${index}`)}
             </h3>
           );
         }
         if (block.startsWith('## ')) {
           return (
-            <h2 key={index} className="pt-4 font-serif text-2xl font-bold text-[#24211e]">
+            <h2 key={index} className="pt-4 font-serif text-2xl font-bold text-academic-ink">
               {renderInline(block.slice(3), `h2-${index}`)}
             </h2>
           );
@@ -209,7 +209,7 @@ function renderInline(value: string, keyPrefix: string): ReactNode[] {
     } else if (match[5]) {
       nodes.push(<em key={`${keyPrefix}-em-${part++}`}>{match[5]}</em>);
     } else if (match[6]) {
-      nodes.push(<code key={`${keyPrefix}-code-${part++}`} className="rounded bg-[#e9e2d6] px-1.5 py-0.5 font-mono text-[0.9em] text-[#3b342e]">{match[6]}</code>);
+      nodes.push(<code key={`${keyPrefix}-code-${part++}`} className="rounded bg-academic-surface-muted px-1.5 py-0.5 font-mono text-[0.9em] text-academic-ink">{match[6]}</code>);
     }
     cursor = match.index + match[0].length;
   }

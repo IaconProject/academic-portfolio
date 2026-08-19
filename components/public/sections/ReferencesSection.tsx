@@ -19,7 +19,7 @@ export const ReferencesSection: React.FC<ReferencesSectionProps> = ({ references
               className={`p-5 rounded-xl transition-all duration-150 ${
                 isFeatured
                   ? 'bg-[#1c2128] text-stone-100 shadow-md border border-[#2d333b]'
-                  : 'bg-academic-surface-muted border border-academic-border text-academic-ink shadow-sm hover:bg-[#e3d9ca]'
+                  : 'bg-academic-surface-muted border border-academic-border text-academic-ink shadow-sm hover:bg-academic-border/40'
               }`}
             >
               <h3 className={`font-serif font-bold text-base md:text-lg ${isFeatured ? 'text-[#f0ebe1]' : 'text-academic-ink'}`}>
@@ -28,7 +28,7 @@ export const ReferencesSection: React.FC<ReferencesSectionProps> = ({ references
               <p className={`text-xs mt-1 font-medium ${isFeatured ? 'text-[#adbac7]' : 'text-academic-slate'}`}>
                 {ref.title}
               </p>
-              <div className={`flex items-center gap-1.5 text-xs mt-3 pt-3 border-t ${isFeatured ? 'border-[#2d333b] text-[#adbac7]' : 'border-academic-border text-[#5e554d]'}`}>
+              <div className={`flex items-center gap-1.5 text-xs mt-3 pt-3 border-t ${isFeatured ? 'border-[#2d333b] text-[#adbac7]' : 'border-academic-border text-academic-slate'}`}>
                 <Building2 className="w-3.5 h-3.5 shrink-0" />
                 <span>{ref.institution}</span>
               </div>

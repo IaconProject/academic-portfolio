@@ -1,4 +1,5 @@
 import { PortfolioData } from './types';
+import { DEFAULT_TAB_BAR_SETTINGS } from './tab-bar';
 
 export const initialPortfolioData: PortfolioData = {
   profile: {
@@ -191,6 +192,7 @@ export const initialPortfolioData: PortfolioData = {
       additionalPaths: [],
     },
   },
+  tabBarSettings: DEFAULT_TAB_BAR_SETTINGS,
   notificationSettings: {
     emailNotificationsEnabled: true,
     notifyOnNewMessage: true,
