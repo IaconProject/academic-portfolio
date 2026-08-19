@@ -195,6 +195,46 @@ function AdminDashboardContent() {
     }
   };
 
+  const handleSaveTabBarSettings = async (
+    tabBarSettings: PortfolioData['tabBarSettings']
+  ) => {
+    if (!data) return;
+
+    const updated = { ...data, tabBarSettings };
+    setIsSaving(true);
+    setData(updated);
+    savePortfolioDataLocally(updated);
+
+    try {
+      const token = typeof window !== 'undefined' ? readSessionItem('admin_token') || '' : '';
+      const response = await fetch('/api/cms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-Admin-Token': token } : {}),
+        },
+        body: JSON.stringify({ tabBarSettings }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.success !== true) {
+        throw new Error(
+          typeof result?.error === 'string'
+            ? result.error
+            : result?.error?.message || 'Tab bar ayarları kaydedilemedi.'
+        );
+      }
+      toast.success('Tab bar ve tema ayarları kaydedildi!');
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Tab bar ayarları kalıcı olarak kaydedilemedi.'
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleLogout = () => {
     if (typeof window !== 'undefined') {
       removeSessionItem('academic_admin_auth');
@@ -363,9 +403,7 @@ function AdminDashboardContent() {
                   settings={data.tabBarSettings}
                   email={data.profile.email}
                   isSaving={isSaving}
-                  onSave={(tabBarSettings) =>
-                    handleSaveData({ ...data, tabBarSettings })
-                  }
+                  onSave={handleSaveTabBarSettings}
                 />
               )}
 

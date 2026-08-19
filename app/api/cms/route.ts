@@ -248,12 +248,15 @@ export async function POST(request: Request) {
       const currentTabBarSettings = normalizeTabBarSettings(currentTmp.tabBarSettings);
       const settingsChanged =
         JSON.stringify(tabBarSettings) !== JSON.stringify(currentTabBarSettings);
+      const isTabBarOnlyRequest = Object.keys(body).every(
+        (key) => key === 'tabBarSettings'
+      );
 
       body.tabBarSettings = tabBarSettings;
 
       // Other CMS editors submit the full portfolio object. Do not make their
       // unrelated saves depend on a tab bar write when it is unchanged.
-      if (settingsChanged) {
+      if (settingsChanged || isTabBarOnlyRequest) {
         if (!isSupabaseConfigured || !supabase || !hasSupabaseServiceRole) {
           return NextResponse.json(
             { success: false, error: { code: 'CMS_STORE_UNAVAILABLE', message: 'Kalıcı CMS veritabanı bağlantısı yapılandırılmamış.' } },
@@ -276,30 +279,42 @@ export async function POST(request: Request) {
 
         const existingId = seoRows?.[0]?.id;
         const legacySeo = body.seoSettings || currentTmp.seoSettings || initialPortfolioData.seoSettings;
-        const { error: upsertError } = await supabase.from('seo_settings').upsert({
-          ...(existingId ? { id: existingId } : {}),
-          ...(!existingId
-            ? {
+        const updatedAt = new Date().toISOString();
+        const writeResult = existingId
+          ? await supabase
+              .from('seo_settings')
+              .update({
+                tab_bar_settings: tabBarSettings,
+                updated_at: updatedAt,
+              })
+              .eq('id', existingId)
+              .select('id')
+              .single()
+          : await supabase
+              .from('seo_settings')
+              .insert({
                 meta_title: legacySeo.metaTitle,
                 meta_description: legacySeo.metaDescription,
                 keywords: legacySeo.keywords,
                 og_image_url: legacySeo.ogImageUrl,
                 canonical_url: legacySeo.canonicalUrl,
                 author_name: legacySeo.authorName,
-              }
-            : {}),
-          tab_bar_settings: tabBarSettings,
-          updated_at: new Date().toISOString(),
-        });
+                tab_bar_settings: tabBarSettings,
+                updated_at: updatedAt,
+              })
+              .select('id')
+              .single();
 
-        if (upsertError) {
-          console.error('[cms] tab bar settings upsert failed', upsertError);
+        if (writeResult.error) {
+          console.error('[cms] tab bar settings write failed', writeResult.error);
           return NextResponse.json(
             { success: false, error: { code: 'TAB_BAR_SETTINGS_WRITE_FAILED', message: 'Tab bar ayarları kalıcı olarak kaydedilemedi.' } },
             { status: 503 }
           );
         }
       }
+
+      writeTmpStore({ ...currentTmp, tabBarSettings });
     }
 
     // 2. Notification Settings Sync

@@ -13,7 +13,7 @@ describe('public tab bar settings contract', () => {
     expect(settings.buttons).not.toBe(DEFAULT_TAB_BAR_SETTINGS.buttons);
   });
 
-  it('preserves registry order while applying saved visibility', () => {
+  it('preserves the saved action order while appending missing actions', () => {
     const settings = normalizeTabBarSettings({
       version: 99,
       enabled: false,
@@ -27,7 +27,12 @@ describe('public tab bar settings contract', () => {
 
     expect(settings.version).toBe(1);
     expect(settings.enabled).toBe(false);
-    expect(settings.buttons.map((button) => button.id)).toEqual(TAB_BAR_ACTION_IDS);
+    expect(settings.buttons.map((button) => button.id)).toEqual([
+      'contact',
+      'home',
+      'theme',
+      'email',
+    ]);
     expect(settings.buttons.find((button) => button.id === 'contact')?.visible).toBe(false);
     expect(settings.buttons.find((button) => button.id === 'theme')?.visible).toBe(true);
     expect(settings.lightPalette).toBe('sage');
@@ -46,5 +51,26 @@ describe('public tab bar settings contract', () => {
     });
 
     expect(settings).toEqual(DEFAULT_TAB_BAR_SETTINGS);
+  });
+
+  it('drops duplicate and unknown actions without losing the first saved position', () => {
+    const settings = normalizeTabBarSettings({
+      buttons: [
+        { id: 'email', visible: false },
+        { id: 'email', visible: true },
+        { id: 'unknown', visible: true },
+        { id: 'contact', visible: true },
+      ],
+    });
+
+    expect(settings.buttons).toEqual([
+      { id: 'email', visible: false },
+      { id: 'contact', visible: true },
+      { id: 'home', visible: true },
+      { id: 'theme', visible: true },
+    ]);
+    expect(settings.buttons.map((button) => button.id).sort()).toEqual(
+      [...TAB_BAR_ACTION_IDS].sort()
+    );
   });
 });

@@ -55,25 +55,31 @@ export function normalizeTabBarSettings(value: unknown): TabBarSettings {
   }
 
   const savedButtons = Array.isArray(value.buttons) ? value.buttons : [];
-  const visibility = new Map<TabBarActionId, boolean>();
+  const orderedButtons: TabBarSettings['buttons'] = [];
+  const seen = new Set<TabBarActionId>();
 
   for (const button of savedButtons) {
     if (
       isRecord(button) &&
       includesValue(TAB_BAR_ACTION_IDS, button.id) &&
-      typeof button.visible === 'boolean'
+      typeof button.visible === 'boolean' &&
+      !seen.has(button.id)
     ) {
-      visibility.set(button.id, button.visible);
+      seen.add(button.id);
+      orderedButtons.push({ id: button.id, visible: button.visible });
     }
+  }
+
+  // Keep the administrator's saved order. Actions added in a future release
+  // are appended with their safe default without disturbing that order.
+  for (const id of TAB_BAR_ACTION_IDS) {
+    if (!seen.has(id)) orderedButtons.push({ id, visible: true });
   }
 
   return {
     version: 1,
     enabled: typeof value.enabled === 'boolean' ? value.enabled : true,
-    buttons: TAB_BAR_ACTION_IDS.map((id) => ({
-      id,
-      visible: visibility.get(id) ?? true,
-    })),
+    buttons: orderedButtons,
     lightPalette: includesValue(TAB_BAR_LIGHT_PALETTES, value.lightPalette)
       ? value.lightPalette
       : DEFAULT_TAB_BAR_SETTINGS.lightPalette,

@@ -1,8 +1,12 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import { useEffect, useState } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
   Check,
+  GripVertical,
   Home,
   Mail,
   MessageSquareText,
@@ -35,6 +39,10 @@ const ACTIONS: Array<{
   { id: 'contact', label: 'İletişim Formu', description: 'Ana sayfadaki “İletişim & Mesaj Gönderin” alanına kaydırır.', icon: MessageSquareText },
 ];
 
+const ACTIONS_BY_ID = Object.fromEntries(
+  ACTIONS.map((action) => [action.id, action])
+) as Record<TabBarActionId, (typeof ACTIONS)[number]>;
+
 const LIGHT_PALETTES: Record<TabBarLightPalette, { label: string; description: string; colors: [string, string, string] }> = {
   ivory: { label: 'Fildişi & Bronz', description: 'Akademik ve zamansız sıcak nötrler', colors: ['#f9f6ef', '#946932', '#352e27'] },
   sand: { label: 'Kum & Terakota', description: 'Sıcak ve modern toprak tonları', colors: ['#faf3ea', '#b5562f', '#4b2e21'] },
@@ -51,16 +59,27 @@ const DARK_PALETTES: Record<TabBarDarkPalette, { label: string; description: str
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 dark:focus:ring-offset-stone-900 ${checked ? 'border-stone-900 bg-stone-900 dark:border-amber-500 dark:bg-amber-500' : 'border-stone-300 bg-stone-200 dark:border-stone-600 dark:bg-stone-700'}`}
+    <label
+      className="relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center"
+      title={label}
     >
-      <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform dark:bg-stone-950 ${checked ? 'translate-x-5' : 'translate-x-0.5'}`} />
-    </button>
+      <input
+        type="checkbox"
+        role="switch"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        aria-label={label}
+        className="peer sr-only"
+      />
+      <span
+        aria-hidden="true"
+        className={`absolute inset-0 rounded-full border transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-amber-500 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-white dark:peer-focus-visible:ring-offset-stone-900 ${checked ? 'border-stone-900 bg-stone-900 dark:border-amber-500 dark:bg-amber-500' : 'border-stone-300 bg-stone-200 dark:border-stone-600 dark:bg-stone-700'}`}
+      />
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform dark:bg-stone-950 ${checked ? 'translate-x-5' : 'translate-x-0'}`}
+      />
+    </label>
   );
 }
 
@@ -80,19 +99,23 @@ function PaletteSelector<T extends TabBarLightPalette | TabBarDarkPalette>({
   return (
     <fieldset>
       <legend className="mb-3 text-sm font-black text-stone-900 dark:text-stone-100">{title}</legend>
-      <div role="radiogroup" aria-label={title} className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {options.map((option) => {
           const palette = palettes[option];
           const selected = value === option;
           return (
-            <button
+            <label
               key={option}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => onChange(option)}
-              className={`relative flex min-h-24 items-center gap-4 rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 ${selected ? 'border-stone-900 bg-stone-50 ring-1 ring-stone-900 dark:border-amber-500 dark:bg-stone-800 dark:ring-amber-500' : 'border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900'}`}
+              className={`relative flex min-h-24 cursor-pointer items-center gap-4 rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-md focus-within:ring-2 focus-within:ring-amber-500 ${selected ? 'border-stone-900 bg-stone-50 ring-1 ring-stone-900 dark:border-amber-500 dark:bg-stone-800 dark:ring-amber-500' : 'border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900'}`}
             >
+              <input
+                type="radio"
+                name={title}
+                value={option}
+                checked={selected}
+                onChange={() => onChange(option)}
+                className="sr-only"
+              />
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border shadow-inner" style={{ background: palette.colors[0], borderColor: palette.colors[1], color: palette.colors[2] }}>
                 <span className="h-4 w-4 rounded-full" style={{ backgroundColor: palette.colors[1] }} />
               </span>
@@ -105,7 +128,7 @@ function PaletteSelector<T extends TabBarLightPalette | TabBarDarkPalette>({
                   <Check className="h-3 w-3" />
                 </span>
               )}
-            </button>
+            </label>
           );
         })}
       </div>
@@ -128,9 +151,11 @@ export function TabBarSettingsEditor({
 
   useEffect(() => setDraft(normalizeTabBarSettings(settings)), [settings]);
 
-  const visibleActions = ACTIONS.filter((action) =>
-    draft.buttons.find((button) => button.id === action.id)?.visible
-  );
+  const orderedActions = draft.buttons.map((button) => ({
+    ...ACTIONS_BY_ID[button.id],
+    visible: button.visible,
+  }));
+  const visibleActions = orderedActions.filter((action) => action.visible);
 
   const setActionVisibility = (id: TabBarActionId, visible: boolean) => {
     setDraft((current) => ({
@@ -138,6 +163,22 @@ export function TabBarSettingsEditor({
       buttons: current.buttons.map((button) => button.id === id ? { ...button, visible } : button),
     }));
   };
+
+  const moveAction = (id: TabBarActionId, direction: -1 | 1) => {
+    setDraft((current) => {
+      const index = current.buttons.findIndex((button) => button.id === id);
+      const targetIndex = index + direction;
+      if (index < 0 || targetIndex < 0 || targetIndex >= current.buttons.length) {
+        return current;
+      }
+
+      const buttons = [...current.buttons];
+      [buttons[index], buttons[targetIndex]] = [buttons[targetIndex], buttons[index]];
+      return { ...current, buttons };
+    });
+  };
+
+  const previewHasRaisedCenter = visibleActions.length % 2 === 1;
 
   return (
     <section className="admin-panel-card space-y-7">
@@ -152,7 +193,12 @@ export function TabBarSettingsEditor({
             Ana sayfa ve tüm içerik sayfalarında görünen alt menüyü, butonlarını ve açık/koyu renklerini yönetin. Görünür butonlar her zaman eşit genişlikte ve simetrik yerleşir.
           </p>
         </div>
-        <Toggle checked={draft.enabled} onChange={(enabled) => setDraft((current) => ({ ...current, enabled }))} label="Tab bar menüsünü aç veya kapat" />
+        <div className="flex items-center gap-3 self-start rounded-full border border-stone-200 bg-stone-50 px-3 py-2 dark:border-stone-700 dark:bg-stone-950">
+          <span className="text-[10px] font-black uppercase tracking-wider text-stone-600 dark:text-stone-300">
+            {draft.enabled ? 'Menü açık' : 'Menü kapalı'}
+          </span>
+          <Toggle checked={draft.enabled} onChange={(enabled) => setDraft((current) => ({ ...current, enabled }))} label="Tab bar menüsünü aç veya kapat" />
+        </div>
       </div>
 
       <div className={`rounded-3xl border p-5 transition-opacity dark:border-stone-700 ${draft.enabled ? 'border-stone-200 bg-stone-50/80 dark:bg-stone-950/50' : 'border-stone-200 bg-stone-100 opacity-55 dark:bg-stone-950'}`}>
@@ -165,33 +211,84 @@ export function TabBarSettingsEditor({
           </div>
           <div className="flex items-center gap-1.5 text-stone-400"><Sun className="h-4 w-4" /><span className="text-[10px] font-black">/</span><Moon className="h-4 w-4" /></div>
         </div>
-        <div className="mx-auto flex w-fit max-w-full items-center justify-center gap-1 rounded-[1.35rem] border border-stone-300 bg-white/90 p-1.5 shadow-xl dark:border-stone-600 dark:bg-stone-900/90">
-          {visibleActions.length ? visibleActions.map((action) => {
-            const Icon = action.id === 'theme' ? Moon : action.icon;
-            return (
-              <span key={action.id} className="flex h-14 w-14 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl text-[9px] font-bold text-stone-600 dark:text-stone-300 sm:w-16">
-                <Icon className="h-4 w-4" /><span className="max-w-full truncate px-1">{action.label}</span>
-              </span>
-            );
-          }) : <span className="px-5 py-3 text-xs font-semibold text-stone-500">Görünür buton yok</span>}
+        <div className="flex min-h-20 items-end justify-center overflow-visible pt-4">
+          {visibleActions.length ? (
+            <nav
+              aria-label="Tab bar yerleşim önizlemesi"
+              data-light-palette={draft.lightPalette}
+              data-dark-palette={draft.darkPalette}
+              data-odd={previewHasRaisedCenter || undefined}
+              className="public-tab-bar public-tab-bar__surface grid"
+              style={
+                {
+                  gridTemplateColumns: `repeat(${visibleActions.length}, minmax(0, 1fr))`,
+                  width: `min(100%, ${visibleActions.length * 72 + 18}px)`,
+                } as CSSProperties
+              }
+            >
+              {visibleActions.map((action, index) => {
+                const Icon = action.id === 'theme' ? Moon : action.icon;
+                const isCenter =
+                  previewHasRaisedCenter && index === Math.floor(visibleActions.length / 2);
+                return (
+                  <span
+                    key={action.id}
+                    className="public-tab-bar__item"
+                    data-active={action.id === 'home' || undefined}
+                    data-center={isCenter || undefined}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    <span className="max-w-full truncate px-1">{action.label}</span>
+                  </span>
+                );
+              })}
+            </nav>
+          ) : (
+            <span className="px-5 py-3 text-xs font-semibold text-stone-500">Görünür buton yok</span>
+          )}
         </div>
       </div>
 
       <div>
-        <h2 className="text-sm font-black text-stone-900 dark:text-stone-100">Buton Görünürlüğü</h2>
-        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">“Ana Sayfa” butonu, ziyaretçilerin alt sayfalardan hızlı dönüşü için eklenmiş önerilen kısayoldur.</p>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          {ACTIONS.map((action) => {
+        <h2 className="text-sm font-black text-stone-900 dark:text-stone-100">Buton Sırası ve Görünürlüğü</h2>
+        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">Oklarla butonların sırasını değiştirin. Gizlenen butonlar sıralamadaki yerini korur; görünür butonlar menüde otomatik olarak simetrik yerleşir.</p>
+        <div className="mt-4 grid gap-3">
+          {orderedActions.map((action, index) => {
             const Icon = action.icon;
-            const visible = draft.buttons.find((button) => button.id === action.id)?.visible ?? true;
             return (
-              <div key={action.id} className="flex min-h-28 items-center gap-4 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+              <div key={action.id} className="flex min-h-24 items-center gap-3 rounded-2xl border border-stone-200 bg-white p-3.5 dark:border-stone-700 dark:bg-stone-900 sm:gap-4 sm:p-4">
+                <span className="flex shrink-0 items-center text-stone-400" aria-hidden="true">
+                  <GripVertical className="h-4 w-4" />
+                  <span className="w-5 text-center text-[10px] font-black">{index + 1}</span>
+                </span>
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-700 dark:bg-stone-800 dark:text-amber-500"><Icon className="h-5 w-5" /></span>
                 <div className="min-w-0 flex-1">
                   <h3 className="text-xs font-black text-stone-900 dark:text-stone-100">{action.label}</h3>
                   <p className="mt-1 text-[11px] leading-4 text-stone-500 dark:text-stone-400">{action.description}</p>
                 </div>
-                <Toggle checked={visible} onChange={(checked) => setActionVisibility(action.id, checked)} label={`${action.label} butonunu göster veya gizle`} />
+                <div className="flex shrink-0 flex-col items-center gap-1 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={() => moveAction(action.id, -1)}
+                    disabled={index === 0}
+                    aria-label={`${action.label} butonunu yukarı taşı`}
+                    title="Yukarı taşı"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-600 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-30 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveAction(action.id, 1)}
+                    disabled={index === orderedActions.length - 1}
+                    aria-label={`${action.label} butonunu aşağı taşı`}
+                    title="Aşağı taşı"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-stone-600 transition hover:bg-stone-100 disabled:cursor-not-allowed disabled:opacity-30 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <Toggle checked={action.visible} onChange={(checked) => setActionVisibility(action.id, checked)} label={`${action.label} butonunu göster veya gizle`} />
               </div>
             );
           })}

@@ -39,31 +39,46 @@ export function PublicExperience({
     [rawSettings]
   );
   const [theme, setTheme] = useState<PublicTheme>('light');
+  const [activeAction, setActiveAction] = useState<TabBarActionId | null>(
+    pathname === '/' ? 'home' : null
+  );
 
   useEffect(() => {
     if (pathname.startsWith('/admin')) return;
 
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
     const saved = window.localStorage.getItem(PUBLIC_THEME_STORAGE_KEY);
     const initialTheme: PublicTheme =
-      saved === 'light' || saved === 'dark'
-        ? saved
-        : media.matches
-          ? 'dark'
-          : 'light';
+      saved === 'light' || saved === 'dark' ? saved : 'light';
 
     setTheme(initialTheme);
     applyTheme(initialTheme);
+  }, [pathname]);
 
-    const followSystemTheme = (event: MediaQueryListEvent) => {
-      if (window.localStorage.getItem(PUBLIC_THEME_STORAGE_KEY)) return;
-      const nextTheme = event.matches ? 'dark' : 'light';
-      setTheme(nextTheme);
-      applyTheme(nextTheme);
+  useEffect(() => {
+    if (pathname.startsWith('/admin')) return;
+
+    let frame = 0;
+    const syncLocationState = () => {
+      const isContactTarget =
+        pathname === '/' && window.location.hash === '#iletisim';
+      setActiveAction(isContactTarget ? 'contact' : pathname === '/' ? 'home' : null);
+
+      if (isContactTarget) {
+        frame = window.requestAnimationFrame(() => {
+          document.getElementById('iletisim')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+          });
+        });
+      }
     };
 
-    media.addEventListener('change', followSystemTheme);
-    return () => media.removeEventListener('change', followSystemTheme);
+    syncLocationState();
+    window.addEventListener('hashchange', syncLocationState);
+    return () => {
+      window.removeEventListener('hashchange', syncLocationState);
+      window.cancelAnimationFrame(frame);
+    };
   }, [pathname]);
 
   const visibleActions = settings.buttons.filter((button) => button.visible);
@@ -72,10 +87,37 @@ export function PublicExperience({
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setActiveAction('theme');
     setTheme(nextTheme);
     window.localStorage.setItem(PUBLIC_THEME_STORAGE_KEY, nextTheme);
     applyTheme(nextTheme);
   };
+
+  const openContactSection = () => {
+    setActiveAction('contact');
+
+    if (pathname !== '/') {
+      window.location.assign('/#iletisim');
+      return;
+    }
+
+    const target = document.getElementById('iletisim');
+    if (!target) {
+      window.location.assign('/#iletisim');
+      return;
+    }
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.hash = 'iletisim';
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
+    );
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const hasRaisedCenter = visibleActions.length % 2 === 1;
 
   return (
     <>
@@ -89,6 +131,7 @@ export function PublicExperience({
             aria-label="Hızlı erişim menüsü"
             data-light-palette={settings.lightPalette}
             data-dark-palette={settings.darkPalette}
+            data-odd={hasRaisedCenter || undefined}
             className="public-tab-bar public-tab-bar__surface pointer-events-auto grid"
             style={
               {
@@ -97,7 +140,11 @@ export function PublicExperience({
               } as CSSProperties
             }
           >
-            {visibleActions.map(({ id }) => {
+            {visibleActions.map(({ id }, index) => {
+              const isCenter =
+                hasRaisedCenter && index === Math.floor(visibleActions.length / 2);
+              const isActive = activeAction === id;
+
               if (id === 'theme') {
                 return (
                   <button
@@ -105,8 +152,11 @@ export function PublicExperience({
                     type="button"
                     onClick={toggleTheme}
                     aria-label={`${theme === 'dark' ? 'Açık' : 'Koyu'} temaya geç`}
+                    aria-pressed={theme === 'dark'}
                     title={`${theme === 'dark' ? 'Açık' : 'Koyu'} temaya geç`}
                     className="public-tab-bar__item"
+                    data-active={isActive || undefined}
+                    data-center={isCenter || undefined}
                   >
                     <span className="public-tab-bar__icon-stack" aria-hidden="true">
                       <Sun className="public-tab-bar__sun h-[19px] w-[19px]" />
@@ -117,24 +167,20 @@ export function PublicExperience({
                 );
               }
 
-              const href =
-                id === 'home'
-                  ? '/'
-                  : id === 'email'
-                    ? `mailto:${email}`
-                    : '/#iletisim';
               const Icon =
                 id === 'home' ? Home : id === 'email' ? Mail : MessageSquareText;
-              const isCurrent = id === 'home' && pathname === '/';
 
               if (id === 'email') {
                 return (
                   <a
                     key={id}
-                    href={href}
+                    href={`mailto:${email}`}
+                    onClick={() => setActiveAction('email')}
                     aria-label={`${email} adresine e-posta gönder`}
                     title="E-posta gönder"
                     className="public-tab-bar__item"
+                    data-active={isActive || undefined}
+                    data-center={isCenter || undefined}
                   >
                     <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
                     <span>{ACTION_LABELS[id]}</span>
@@ -142,14 +188,34 @@ export function PublicExperience({
                 );
               }
 
+              if (id === 'contact') {
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={openContactSection}
+                    aria-label="İletişim ve mesaj formuna git"
+                    title={ACTION_LABELS[id]}
+                    className="public-tab-bar__item"
+                    data-active={isActive || undefined}
+                    data-center={isCenter || undefined}
+                  >
+                    <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
+                    <span>{ACTION_LABELS[id]}</span>
+                  </button>
+                );
+              }
+
               return (
                 <Link
                   key={id}
-                  href={href}
-                  aria-current={isCurrent ? 'page' : undefined}
+                  href="/"
+                  onClick={() => setActiveAction('home')}
+                  aria-current={isActive ? 'page' : undefined}
                   title={ACTION_LABELS[id]}
                   className="public-tab-bar__item"
-                  data-active={isCurrent || undefined}
+                  data-active={isActive || undefined}
+                  data-center={isCenter || undefined}
                 >
                   <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
                   <span>{ACTION_LABELS[id]}</span>
@@ -170,7 +236,7 @@ export const publicThemeBootScript = `
     var saved = window.localStorage.getItem('${PUBLIC_THEME_STORAGE_KEY}');
     var theme = saved === 'light' || saved === 'dark'
       ? saved
-      : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      : 'light';
     document.documentElement.classList.toggle('dark', theme === 'dark');
     document.documentElement.dataset.publicTheme = theme;
   } catch (_) {}
