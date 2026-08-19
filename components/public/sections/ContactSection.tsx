@@ -258,11 +258,11 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="inline-flex items-center gap-2 py-3.5 px-7 bg-[#1c2128] hover:bg-[#2d333b] text-stone-50 font-bold rounded-xl transition-all shadow-md active:scale-95 text-xs md:text-sm disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-xl bg-academic-accent px-7 py-3.5 text-xs font-bold text-academic-on-accent shadow-md transition-all hover:bg-academic-accent-strong active:scale-95 disabled:opacity-50 md:text-sm"
                 >
                   {loading ? (
                     <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <RefreshCw className="h-4 w-4 animate-spin text-academic-on-accent" />
                       <span>İletiliyor...</span>
                     </>
                   ) : (
@@ -286,7 +286,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a
               href={`mailto:${profile.email}`}
-              className="inline-flex items-center justify-center gap-2.5 py-3 px-6 bg-[#1c2128] text-stone-50 rounded-xl font-bold shadow-md hover:bg-[#2d333b] transition-all active:scale-95 text-xs md:text-sm w-full sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl bg-academic-accent px-6 py-3 text-xs font-bold text-academic-on-accent shadow-md transition-all hover:bg-academic-accent-strong active:scale-95 sm:w-auto md:text-sm"
             >
               <Send className="w-4 h-4" />
               <span>{profile.email}</span>
@@ -299,8 +299,8 @@ export const ContactSection: React.FC<ContactSectionProps> = ({ profile }) => {
             >
               {copied ? (
                 <>
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span className="text-emerald-700 font-bold">Kopyalandı!</span>
+                  <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
+                  <span className="font-bold text-emerald-700 dark:text-emerald-300">Kopyalandı!</span>
                 </>
               ) : (
                 <>

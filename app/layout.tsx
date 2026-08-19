@@ -58,7 +58,13 @@ export default async function RootLayout({
   const data = await getSeoExperienceData();
 
   return (
-    <html lang="tr" className="scroll-smooth" suppressHydrationWarning>
+    <html
+      lang="tr"
+      className="scroll-smooth"
+      data-public-light-palette={data.tabBarSettings.lightPalette}
+      data-public-dark-palette={data.tabBarSettings.darkPalette}
+      suppressHydrationWarning
+    >
       <head>
         <script
           id="public-theme-boot"

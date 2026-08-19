@@ -18,10 +18,23 @@ const ACTION_LABELS: Record<TabBarActionId, string> = {
   contact: 'İletişim',
 };
 
-function applyTheme(theme: PublicTheme) {
+function applyTheme(theme: PublicTheme, settings: TabBarSettings) {
   const root = document.documentElement;
+  root.dataset.publicLightPalette = settings.lightPalette;
+  root.dataset.publicDarkPalette = settings.darkPalette;
   root.classList.toggle('dark', theme === 'dark');
   root.dataset.publicTheme = theme;
+
+  window.requestAnimationFrame(() => {
+    const background = window
+      .getComputedStyle(root)
+      .getPropertyValue('--academic-bg')
+      .trim();
+    if (!background) return;
+    document
+      .querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
+      .forEach((meta) => meta.setAttribute('content', `rgb(${background})`));
+  });
 }
 
 export function PublicExperience({
@@ -51,8 +64,8 @@ export function PublicExperience({
       saved === 'light' || saved === 'dark' ? saved : 'light';
 
     setTheme(initialTheme);
-    applyTheme(initialTheme);
-  }, [pathname]);
+    applyTheme(initialTheme, settings);
+  }, [pathname, settings]);
 
   useEffect(() => {
     if (pathname.startsWith('/admin')) return;
@@ -90,7 +103,7 @@ export function PublicExperience({
     setActiveAction('theme');
     setTheme(nextTheme);
     window.localStorage.setItem(PUBLIC_THEME_STORAGE_KEY, nextTheme);
-    applyTheme(nextTheme);
+    applyTheme(nextTheme, settings);
   };
 
   const openContactSection = () => {

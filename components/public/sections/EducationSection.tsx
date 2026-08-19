@@ -17,7 +17,7 @@ export const EducationSection: React.FC<EducationSectionProps> = ({ education })
             <div
               className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-academic-surface ring-4 ring-academic-surface-muted ${
                 item.isCurrent || item.status === 'Devam Ediyor'
-                  ? 'bg-[#1c2128]'
+                  ? 'bg-academic-accent'
                   : 'bg-academic-slate/45'
               }`}
             />

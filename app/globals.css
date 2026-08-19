@@ -13,18 +13,181 @@
     --academic-ink: 41 36 31;
     --academic-slate: 75 69 63;
     --academic-border: 221 211 196;
+    --academic-accent: 148 105 50;
+    --academic-accent-strong: 115 76 31;
+    --academic-accent-soft: 233 217 193;
+    --academic-on-accent: 255 252 246;
+    --academic-sidebar-bg: 235 228 215;
+    --academic-sidebar-surface: 248 244 236;
+    --academic-sidebar-ink: 41 36 31;
+    --academic-sidebar-muted: 100 91 80;
+    --academic-sidebar-border: 207 196 179;
+    --academic-sidebar-hover: 225 216 202;
+    --academic-sidebar-active: 216 204 185;
+    --academic-overlay: 28 33 40;
   }
 
-  html.dark {
+  html[data-public-light-palette='sand'] {
+    --academic-navy: 72 43 32;
+    --academic-blue: 91 54 39;
+    --academic-bg: 249 242 232;
+    --academic-surface: 255 249 242;
+    --academic-surface-muted: 248 235 222;
+    --academic-ink: 72 43 32;
+    --academic-slate: 112 76 59;
+    --academic-border: 225 194 166;
+    --academic-accent: 181 86 47;
+    --academic-accent-strong: 139 59 27;
+    --academic-accent-soft: 244 211 188;
+    --academic-on-accent: 255 250 246;
+    --academic-sidebar-bg: 240 222 205;
+    --academic-sidebar-surface: 252 239 227;
+    --academic-sidebar-ink: 72 43 32;
+    --academic-sidebar-muted: 112 76 59;
+    --academic-sidebar-border: 211 177 150;
+    --academic-sidebar-hover: 232 209 190;
+    --academic-sidebar-active: 223 194 171;
+    --academic-overlay: 47 31 25;
+  }
+
+  html[data-public-light-palette='sage'] {
+    --academic-navy: 38 55 37;
+    --academic-blue: 49 73 48;
+    --academic-bg: 238 243 235;
+    --academic-surface: 247 250 244;
+    --academic-surface-muted: 230 239 226;
+    --academic-ink: 38 55 37;
+    --academic-slate: 77 101 74;
+    --academic-border: 181 203 175;
+    --academic-accent: 66 111 75;
+    --academic-accent-strong: 45 85 54;
+    --academic-accent-soft: 207 226 204;
+    --academic-on-accent: 249 253 248;
+    --academic-sidebar-bg: 222 233 217;
+    --academic-sidebar-surface: 239 245 236;
+    --academic-sidebar-ink: 38 55 37;
+    --academic-sidebar-muted: 77 101 74;
+    --academic-sidebar-border: 165 191 158;
+    --academic-sidebar-hover: 210 225 205;
+    --academic-sidebar-active: 197 216 191;
+    --academic-overlay: 22 37 28;
+  }
+
+  html[data-public-light-palette='mist'] {
+    --academic-navy: 34 52 64;
+    --academic-blue: 42 70 87;
+    --academic-bg: 236 243 247;
+    --academic-surface: 247 251 253;
+    --academic-surface-muted: 227 237 243;
+    --academic-ink: 34 52 64;
+    --academic-slate: 75 99 113;
+    --academic-border: 184 205 216;
+    --academic-accent: 48 105 139;
+    --academic-accent-strong: 35 78 105;
+    --academic-accent-soft: 205 225 236;
+    --academic-on-accent: 247 252 255;
+    --academic-sidebar-bg: 218 231 238;
+    --academic-sidebar-surface: 239 247 250;
+    --academic-sidebar-ink: 34 52 64;
+    --academic-sidebar-muted: 75 99 113;
+    --academic-sidebar-border: 164 190 203;
+    --academic-sidebar-hover: 205 222 231;
+    --academic-sidebar-active: 190 213 224;
+    --academic-overlay: 22 35 45;
+  }
+
+  html.dark,
+  html.dark[data-public-dark-palette='obsidian'] {
     color-scheme: dark;
-    --academic-navy: 236 231 221;
-    --academic-blue: 214 207 196;
-    --academic-bg: 16 18 21;
-    --academic-surface: 24 27 31;
-    --academic-surface-muted: 30 34 39;
-    --academic-ink: 237 233 225;
-    --academic-slate: 183 180 173;
-    --academic-border: 57 62 69;
+    --academic-navy: 245 241 232;
+    --academic-blue: 219 211 198;
+    --academic-bg: 16 17 18;
+    --academic-surface: 25 25 25;
+    --academic-surface-muted: 31 30 28;
+    --academic-ink: 245 241 232;
+    --academic-slate: 180 171 158;
+    --academic-border: 78 72 64;
+    --academic-accent: 232 177 82;
+    --academic-accent-strong: 249 199 111;
+    --academic-accent-soft: 74 56 31;
+    --academic-on-accent: 35 25 13;
+    --academic-sidebar-bg: 10 10 11;
+    --academic-sidebar-surface: 28 27 25;
+    --academic-sidebar-ink: 246 241 232;
+    --academic-sidebar-muted: 184 174 159;
+    --academic-sidebar-border: 56 52 47;
+    --academic-sidebar-hover: 24 23 22;
+    --academic-sidebar-active: 37 34 30;
+    --academic-overlay: 4 4 5;
+  }
+
+  html.dark[data-public-dark-palette='midnight'] {
+    --academic-navy: 237 244 251;
+    --academic-blue: 190 215 239;
+    --academic-bg: 13 20 29;
+    --academic-surface: 19 27 38;
+    --academic-surface-muted: 25 37 52;
+    --academic-ink: 237 244 251;
+    --academic-slate: 158 179 202;
+    --academic-border: 61 81 105;
+    --academic-accent: 102 178 255;
+    --academic-accent-strong: 139 199 255;
+    --academic-accent-soft: 33 69 105;
+    --academic-on-accent: 10 30 48;
+    --academic-sidebar-bg: 8 14 23;
+    --academic-sidebar-surface: 18 29 43;
+    --academic-sidebar-ink: 239 247 255;
+    --academic-sidebar-muted: 151 178 205;
+    --academic-sidebar-border: 39 57 77;
+    --academic-sidebar-hover: 15 25 37;
+    --academic-sidebar-active: 24 39 57;
+    --academic-overlay: 5 10 17;
+  }
+
+  html.dark[data-public-dark-palette='forest'] {
+    --academic-navy: 235 246 239;
+    --academic-blue: 190 224 207;
+    --academic-bg: 12 23 19;
+    --academic-surface: 19 32 28;
+    --academic-surface-muted: 25 43 36;
+    --academic-ink: 235 246 239;
+    --academic-slate: 155 190 174;
+    --academic-border: 52 89 75;
+    --academic-accent: 95 211 158;
+    --academic-accent-strong: 132 231 184;
+    --academic-accent-soft: 31 82 60;
+    --academic-on-accent: 8 38 26;
+    --academic-sidebar-bg: 8 18 15;
+    --academic-sidebar-surface: 17 35 28;
+    --academic-sidebar-ink: 237 249 242;
+    --academic-sidebar-muted: 145 187 168;
+    --academic-sidebar-border: 34 66 54;
+    --academic-sidebar-hover: 14 29 24;
+    --academic-sidebar-active: 22 48 38;
+    --academic-overlay: 5 13 10;
+  }
+
+  html.dark[data-public-dark-palette='plum'] {
+    --academic-navy: 246 238 250;
+    --academic-blue: 224 199 236;
+    --academic-bg: 23 17 29;
+    --academic-surface: 31 24 38;
+    --academic-surface-muted: 43 31 52;
+    --academic-ink: 246 238 250;
+    --academic-slate: 194 166 208;
+    --academic-border: 88 66 105;
+    --academic-accent: 207 137 244;
+    --academic-accent-strong: 225 177 250;
+    --academic-accent-soft: 78 42 96;
+    --academic-on-accent: 39 15 48;
+    --academic-sidebar-bg: 15 10 20;
+    --academic-sidebar-surface: 31 20 39;
+    --academic-sidebar-ink: 249 241 252;
+    --academic-sidebar-muted: 194 163 209;
+    --academic-sidebar-border: 63 43 76;
+    --academic-sidebar-hover: 26 17 33;
+    --academic-sidebar-active: 42 27 52;
+    --academic-overlay: 11 7 15;
   }
 
   html {
@@ -36,7 +199,7 @@
   }
 
   ::selection {
-    background: rgb(217 169 80 / 0.35);
+    background: rgb(var(--academic-accent) / 0.28);
   }
 }
 

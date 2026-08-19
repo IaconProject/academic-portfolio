@@ -99,7 +99,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
         ]}
         footer={
           projectUrl ? (
-            <a href={projectUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#1c2128] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#2d333b]">
+            <a href={projectUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-academic-accent px-5 py-3 text-sm font-bold text-academic-on-accent transition hover:bg-academic-accent-strong">
               Proje bağlantısını aç <ExternalLink className="h-4 w-4" />
             </a>
           ) : undefined
@@ -145,5 +145,5 @@ export default async function ProjectDetailPage({ params }: PageProps) {
 }
 
 function PreviewNotice() {
-  return <p className="mb-6 rounded-2xl border border-amber-300 bg-amber-100 p-4 text-xs font-bold text-amber-900">Admin önizlemesi · Bu sayfa indekslenmez.</p>;
+  return <p className="mb-6 rounded-2xl border border-amber-300 bg-amber-100 p-4 text-xs font-bold text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/35 dark:text-amber-200">Admin önizlemesi · Bu sayfa indekslenmez.</p>;
 }

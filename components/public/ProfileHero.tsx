@@ -25,7 +25,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({ profile }) => {
                 priority
               />
           ) : (
-            <div className="w-full h-full bg-[#1c2128] text-white flex items-center justify-center text-3xl font-serif rounded-full">
+            <div className="flex h-full w-full items-center justify-center rounded-full bg-academic-accent font-serif text-3xl text-academic-on-accent">
               {profile.fullName.charAt(0)}
             </div>
           )}

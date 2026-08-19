@@ -124,5 +124,5 @@ export default async function ArticleDetailPage({ params }: PageProps) {
 }
 
 function PreviewNotice() {
-  return <p className="mb-6 rounded-2xl border border-amber-300 bg-amber-100 p-4 text-xs font-bold text-amber-900">Admin önizlemesi · Bu sayfa indekslenmez.</p>;
+  return <p className="mb-6 rounded-2xl border border-amber-300 bg-amber-100 p-4 text-xs font-bold text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/35 dark:text-amber-200">Admin önizlemesi · Bu sayfa indekslenmez.</p>;
 }

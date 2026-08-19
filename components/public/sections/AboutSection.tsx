@@ -17,14 +17,14 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
 }) => {
   const getSocialIcon = (platform: string, iconName?: string) => {
     const name = (iconName || platform).toLowerCase();
-    if (name.includes('instagram')) return <Instagram className="w-4 h-4 text-pink-700" />;
-    if (name.includes('linkedin')) return <Linkedin className="w-4 h-4 text-blue-700" />;
+    if (name.includes('instagram')) return <Instagram className="h-4 w-4 text-pink-700 dark:text-pink-400" />;
+    if (name.includes('linkedin')) return <Linkedin className="h-4 w-4 text-blue-700 dark:text-blue-400" />;
     if (name.includes('github')) return <Github className="w-4 h-4 text-academic-ink" />;
-    if (name.includes('twitter') || name.includes('x')) return <Twitter className="w-4 h-4 text-sky-700" />;
-    if (name.includes('youtube')) return <Youtube className="w-4 h-4 text-rose-700" />;
-    if (name.includes('orcid') || name.includes('file')) return <FileText className="w-4 h-4 text-emerald-800" />;
-    if (name.includes('scholar') || name.includes('book')) return <BookOpen className="w-4 h-4 text-amber-800" />;
-    if (name.includes('globe') || name.includes('site') || name.includes('web')) return <Globe className="w-4 h-4 text-blue-700" />;
+    if (name.includes('twitter') || name.includes('x')) return <Twitter className="h-4 w-4 text-sky-700 dark:text-sky-400" />;
+    if (name.includes('youtube')) return <Youtube className="h-4 w-4 text-rose-700 dark:text-rose-400" />;
+    if (name.includes('orcid') || name.includes('file')) return <FileText className="h-4 w-4 text-emerald-800 dark:text-emerald-400" />;
+    if (name.includes('scholar') || name.includes('book')) return <BookOpen className="h-4 w-4 text-academic-accent" />;
+    if (name.includes('globe') || name.includes('site') || name.includes('web')) return <Globe className="h-4 w-4 text-blue-700 dark:text-blue-400" />;
     return <ExternalLink className="w-4 h-4 text-academic-slate" />;
   };
 

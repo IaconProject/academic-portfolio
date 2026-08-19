@@ -12,7 +12,7 @@ export function AnalyticsPreferencesControl() {
           new Event(ANALYTICS_PREFERENCES_OPEN_EVENT)
         )
       }
-      className="inline-flex items-center gap-2 rounded-xl border border-academic-border bg-academic-surface px-4 py-2.5 text-xs font-bold text-academic-ink transition-colors hover:bg-academic-surface-muted focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 dark:focus:ring-offset-academic-bg"
+      className="inline-flex items-center gap-2 rounded-xl border border-academic-border bg-academic-surface px-4 py-2.5 text-xs font-bold text-academic-ink transition-colors hover:bg-academic-surface-muted focus:outline-none focus:ring-2 focus:ring-academic-accent focus:ring-offset-2 dark:focus:ring-offset-academic-bg"
     >
       <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
       Analitik tercihini değiştir

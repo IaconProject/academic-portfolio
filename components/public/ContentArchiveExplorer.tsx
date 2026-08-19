@@ -66,7 +66,7 @@ export function ContentArchiveExplorer({
           <label className="relative min-w-0 flex-1">
             <span className="sr-only">Arşivde ara</span>
             <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-academic-slate/70" />
-            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={searchPlaceholder} className="h-12 w-full rounded-xl border border-academic-border bg-academic-surface-muted pl-10 pr-10 text-sm text-academic-ink outline-none transition placeholder:text-academic-slate/60 focus:border-amber-700 focus:ring-2 focus:ring-amber-700/10" />
+            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={searchPlaceholder} className="h-12 w-full rounded-xl border border-academic-border bg-academic-surface-muted pl-10 pr-10 text-sm text-academic-ink outline-none transition placeholder:text-academic-slate/60 focus:border-academic-accent focus:ring-2 focus:ring-academic-accent/10" />
             {query && (
               <button type="button" onClick={() => setQuery('')} aria-label="Aramayı temizle" className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-academic-slate hover:bg-academic-border/40">
                 <X className="h-4 w-4" />
@@ -76,7 +76,7 @@ export function ContentArchiveExplorer({
           {categories.length > 1 && (
             <label className="md:w-56">
               <span className="sr-only">Kategori seç</span>
-              <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-12 w-full rounded-xl border border-academic-border bg-academic-surface-muted px-3.5 text-sm font-semibold text-academic-ink outline-none focus:border-amber-700 focus:ring-2 focus:ring-amber-700/10">
+              <select value={category} onChange={(event) => setCategory(event.target.value)} className="h-12 w-full rounded-xl border border-academic-border bg-academic-surface-muted px-3.5 text-sm font-semibold text-academic-ink outline-none focus:border-academic-accent focus:ring-2 focus:ring-academic-accent/10">
                 <option value="all">Tüm kategoriler</option>
                 {categories.map((value) => <option key={value} value={value}>{value}</option>)}
               </select>
@@ -91,7 +91,7 @@ export function ContentArchiveExplorer({
           {filtered.map((item) => {
             const externalUrl = safeHttpUrl(item.externalUrl);
             return (
-            <article key={item.id} className={`${item.featured ? 'border-amber-400/70 bg-amber-50/60 dark:border-amber-700/60 dark:bg-amber-950/20' : 'border-academic-border bg-academic-surface'} group flex min-w-0 flex-col overflow-hidden rounded-3xl border shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md`}>
+            <article key={item.id} className={`${item.featured ? 'border-academic-accent/45 bg-academic-accent-soft/40' : 'border-academic-border bg-academic-surface'} group flex min-w-0 flex-col overflow-hidden rounded-3xl border shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md`}>
               {isOptimizableContentImage(item.imageUrl) && (
                 <div className="relative aspect-[16/8.5] overflow-hidden border-b border-academic-border bg-academic-surface-muted">
                   <Image src={item.imageUrl!} alt={item.imageAlt || ''} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover transition duration-500 group-hover:scale-[1.025]" />
@@ -101,7 +101,7 @@ export function ContentArchiveExplorer({
                 <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-academic-slate">
                   <span className="rounded-full border border-academic-border bg-academic-surface-muted px-2.5 py-1">{item.category}</span>
                   <span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" />{item.dateLabel}</span>
-                  {item.featured && <span className="inline-flex items-center gap-1 rounded-full bg-amber-200/70 px-2.5 py-1 text-amber-900"><Sparkles className="h-3 w-3" />Öne çıkan</span>}
+                  {item.featured && <span className="inline-flex items-center gap-1 rounded-full bg-academic-accent-soft px-2.5 py-1 text-academic-ink"><Sparkles className="h-3 w-3 text-academic-accent" />Öne çıkan</span>}
                 </div>
                 <h2 className="mt-4 font-serif text-xl font-bold leading-snug tracking-tight text-academic-ink sm:text-2xl">
                   {item.href ? <Link href={item.href} className="decoration-2 underline-offset-4 hover:underline">{item.title}</Link> : item.title}

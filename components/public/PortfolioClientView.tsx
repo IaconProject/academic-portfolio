@@ -31,7 +31,7 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
   );
 
   return (
-    <div className="min-h-screen bg-academic-bg text-academic-ink font-sans antialiased flex flex-col selection:bg-amber-200">
+    <div className="min-h-screen bg-academic-bg text-academic-ink font-sans antialiased flex flex-col transition-colors duration-300 selection:bg-academic-accent-soft">
       {/* JSON-LD Structured Data for SEO */}
       <JsonLdSchema data={data} />
 

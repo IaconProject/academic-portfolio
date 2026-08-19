@@ -38,7 +38,7 @@ export function SeoPageShell({
   const isArchiveIndex = breadcrumbs.length === 0;
 
   return (
-    <div className="flex min-h-screen flex-col bg-academic-bg font-sans text-academic-ink antialiased selection:bg-amber-200">
+    <div className="flex min-h-screen flex-col bg-academic-bg font-sans text-academic-ink antialiased transition-colors duration-300 selection:bg-academic-accent-soft">
       <DesktopSidebar
         profile={data.profile}
         pageContext="subpage"
@@ -77,7 +77,7 @@ export function SeoPageShell({
           >
             <div className={isArchiveIndex ? 'mx-auto max-w-2xl' : 'max-w-3xl'}>
               {eyebrow && (
-                <p className="mb-3 text-[11px] font-black uppercase tracking-[0.22em] text-amber-700">
+                <p className="mb-3 text-[11px] font-black uppercase tracking-[0.22em] text-academic-accent">
                   {eyebrow}
                 </p>
               )}
@@ -152,7 +152,7 @@ export function RichText({ content }: { content?: string }) {
         }
         if (block.split('\n').every((line) => /^\d+\.\s+/.test(line))) {
           return (
-            <ol key={index} className="list-decimal space-y-2 pl-6 marker:font-bold marker:text-amber-800">
+            <ol key={index} className="list-decimal space-y-2 pl-6 marker:font-bold marker:text-academic-accent">
               {block.split('\n').map((line, lineIndex) => (
                 <li key={`${line}-${lineIndex}`}>{renderInline(line.replace(/^\d+\.\s+/, ''), `ol-${index}-${lineIndex}`)}</li>
               ))}
@@ -170,7 +170,7 @@ export function RichText({ content }: { content?: string }) {
         }
         if (block.split('\n').every((line) => line.startsWith('> '))) {
           return (
-            <blockquote key={index} className="rounded-r-2xl border-l-4 border-amber-600 bg-academic-surface-muted px-5 py-4 font-serif text-[1.05em] italic text-academic-ink">
+            <blockquote key={index} className="rounded-r-2xl border-l-4 border-academic-accent bg-academic-surface-muted px-5 py-4 font-serif text-[1.05em] italic text-academic-ink">
               {renderInline(block.replace(/^> /gm, ''), `quote-${index}`)}
             </blockquote>
           );
@@ -199,9 +199,9 @@ function renderInline(value: string, keyPrefix: string): ReactNode[] {
       const external = /^https?:\/\//i.test(match[3]);
       nodes.push(
         external ? (
-          <a key={`${keyPrefix}-link-${part++}`} href={match[3]} target="_blank" rel="noopener noreferrer" className="font-semibold underline decoration-amber-700/50 underline-offset-4 hover:decoration-amber-700">{match[2]}</a>
+          <a key={`${keyPrefix}-link-${part++}`} href={match[3]} target="_blank" rel="noopener noreferrer" className="font-semibold underline decoration-academic-accent/50 underline-offset-4 hover:decoration-academic-accent">{match[2]}</a>
         ) : (
-          <Link key={`${keyPrefix}-link-${part++}`} href={match[3]} className="font-semibold underline decoration-amber-700/50 underline-offset-4 hover:decoration-amber-700">{match[2]}</Link>
+          <Link key={`${keyPrefix}-link-${part++}`} href={match[3]} className="font-semibold underline decoration-academic-accent/50 underline-offset-4 hover:decoration-academic-accent">{match[2]}</Link>
         )
       );
     } else if (match[4]) {

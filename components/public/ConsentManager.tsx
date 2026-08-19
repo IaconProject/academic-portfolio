@@ -475,12 +475,12 @@ export function ConsentManager({
       {open && analyticsActive ? (
         <aside
           aria-label="Analitik tercihleri"
-          className="fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-3xl rounded-2xl border border-stone-300 bg-white/95 p-5 shadow-2xl backdrop-blur-md dark:border-stone-700 dark:bg-stone-900/95"
+          className="fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-3xl rounded-2xl border border-academic-border bg-academic-surface/95 p-5 text-academic-ink shadow-2xl backdrop-blur-md"
         >
-          <p className="text-sm font-black text-stone-900 dark:text-stone-100">
+          <p className="text-sm font-black text-academic-ink">
             Gizlilik tercihiniz
           </p>
-          <p className="mt-2 text-xs leading-5 text-stone-600 dark:text-stone-300">
+          <p className="mt-2 text-xs leading-5 text-academic-slate">
             {isRegionalFirstPartyMode
               ? 'Türkiye için site içi, birinci taraf ve siteler arası takip yapmayan performans ölçümü etkindir. İsterseniz bu ölçümü kapatabilir veya Google Analytics için ayrıca izin verebilirsiniz. Reklam depolaması kullanılmaz.'
               : 'Site içi ölçüm ve Google Analytics yalnız izninizle çalışır. Reklam depolaması kullanılmaz.'}{' '}
@@ -497,7 +497,7 @@ export function ConsentManager({
             <button
               type="button"
               onClick={() => choose('denied')}
-              className="rounded-xl border border-stone-300 px-4 py-2 text-xs font-bold text-stone-700 hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
+              className="rounded-xl border border-academic-border px-4 py-2 text-xs font-bold text-academic-slate transition-colors hover:bg-academic-surface-muted hover:text-academic-ink"
             >
               {isRegionalFirstPartyMode
                 ? 'Site içi analitiği kapat'
@@ -506,7 +506,7 @@ export function ConsentManager({
             <button
               type="button"
               onClick={() => choose('granted')}
-              className="rounded-xl bg-stone-900 px-4 py-2 text-xs font-bold text-white hover:bg-stone-800 dark:bg-amber-600 dark:text-stone-950"
+              className="rounded-xl bg-academic-accent px-4 py-2 text-xs font-bold text-academic-on-accent transition-colors hover:bg-academic-accent-strong"
             >
               Analitiğe izin ver
             </button>
