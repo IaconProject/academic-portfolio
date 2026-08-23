@@ -272,7 +272,7 @@ export async function POST(request: Request) {
         if (lookupError) {
           console.error('[cms] tab bar settings lookup failed', lookupError);
           return NextResponse.json(
-            { success: false, error: { code: 'TAB_BAR_SETTINGS_READ_FAILED', message: 'Tab bar ayarları veritabanından okunamadı.' } },
+            { success: false, error: { code: 'TAB_BAR_SETTINGS_READ_FAILED', message: 'Hızlı erişim menüsü ayarları veritabanından okunamadı.' } },
             { status: 503 }
           );
         }
@@ -308,7 +308,7 @@ export async function POST(request: Request) {
         if (writeResult.error) {
           console.error('[cms] tab bar settings write failed', writeResult.error);
           return NextResponse.json(
-            { success: false, error: { code: 'TAB_BAR_SETTINGS_WRITE_FAILED', message: 'Tab bar ayarları kalıcı olarak kaydedilemedi.' } },
+            { success: false, error: { code: 'TAB_BAR_SETTINGS_WRITE_FAILED', message: 'Hızlı erişim menüsü ayarları kalıcı olarak kaydedilemedi.' } },
             { status: 503 }
           );
         }

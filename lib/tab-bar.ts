@@ -14,6 +14,8 @@ export const TAB_BAR_ACTION_IDS = [
 
 export const TAB_BAR_LIGHT_PALETTES = [
   'ivory',
+  // Backward-compatible storage key; the UI presents this as the classic
+  // pre-theme palette so existing CMS records migrate without a data write.
   'sand',
   'sage',
   'mist',

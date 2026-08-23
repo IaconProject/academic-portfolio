@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Mail, MessageSquareText, Moon, Sun } from 'lucide-react';
+import { Home, Mail, MessageSquareText, Moon, Plus, Sun } from 'lucide-react';
 import type { TabBarActionId, TabBarSettings } from '@/lib/types';
 import { normalizeTabBarSettings } from '@/lib/tab-bar';
 
@@ -55,6 +55,7 @@ export function PublicExperience({
   const [activeAction, setActiveAction] = useState<TabBarActionId | null>(
     pathname === '/' ? 'home' : null
   );
+  const [isFabOpen, setIsFabOpen] = useState(false);
 
   useEffect(() => {
     if (pathname.startsWith('/admin')) return;
@@ -94,6 +95,20 @@ export function PublicExperience({
     };
   }, [pathname]);
 
+  useEffect(() => {
+    setIsFabOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isFabOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsFabOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isFabOpen]);
+
   const visibleActions = settings.buttons.filter((button) => button.visible);
   const shouldShow =
     !pathname.startsWith('/admin') && settings.enabled && visibleActions.length > 0;
@@ -131,112 +146,196 @@ export function PublicExperience({
   };
 
   const hasRaisedCenter = visibleActions.length % 2 === 1;
+  const renderAction = (
+    id: TabBarActionId,
+    mode: 'desktop' | 'fab',
+    index: number,
+    isCenter = false
+  ) => {
+    const isFab = mode === 'fab';
+    const isActive = activeAction === id;
+    const className = isFab
+      ? 'public-fab-bar__action'
+      : 'public-tab-bar__item';
+    const iconClassName = isFab ? 'h-[18px] w-[18px]' : 'h-[19px] w-[19px]';
+    const sharedProps = {
+      className,
+      'data-active': isActive || undefined,
+      'data-center': !isFab && isCenter ? true : undefined,
+      style: isFab ? ({ '--fab-delay': `${index * 42}ms` } as CSSProperties) : undefined,
+      tabIndex: isFab && !isFabOpen ? -1 : undefined,
+    };
+    const closeFab = () => {
+      if (isFab) setIsFabOpen(false);
+    };
+    const label = (
+      <span className={isFab ? 'public-fab-bar__label' : undefined}>
+        {ACTION_LABELS[id]}
+      </span>
+    );
+
+    if (id === 'theme') {
+      return (
+        <button
+          key={`${mode}-${id}`}
+          type="button"
+          onClick={() => {
+            toggleTheme();
+            closeFab();
+          }}
+          aria-label={`${theme === 'dark' ? 'Açık' : 'Koyu'} temaya geç`}
+          aria-pressed={theme === 'dark'}
+          title={`${theme === 'dark' ? 'Açık' : 'Koyu'} temaya geç`}
+          {...sharedProps}
+        >
+          {isFab ? label : null}
+          <span className={isFab ? 'public-fab-bar__action-icon' : undefined}>
+            <span className="public-tab-bar__icon-stack" aria-hidden="true">
+              <Sun className={`public-tab-bar__sun ${iconClassName}`} />
+              <Moon className={`public-tab-bar__moon ${iconClassName}`} />
+            </span>
+          </span>
+          {isFab ? null : label}
+        </button>
+      );
+    }
+
+    const Icon =
+      id === 'home' ? Home : id === 'email' ? Mail : MessageSquareText;
+    const icon = (
+      <span className={isFab ? 'public-fab-bar__action-icon' : undefined}>
+        <Icon className={iconClassName} aria-hidden="true" />
+      </span>
+    );
+
+    if (id === 'email') {
+      return (
+        <a
+          key={`${mode}-${id}`}
+          href={`mailto:${email}`}
+          onClick={() => {
+            setActiveAction('email');
+            closeFab();
+          }}
+          aria-label={`${email} adresine e-posta gönder`}
+          title="E-posta gönder"
+          {...sharedProps}
+        >
+          {isFab ? label : icon}
+          {isFab ? icon : label}
+        </a>
+      );
+    }
+
+    if (id === 'contact') {
+      return (
+        <button
+          key={`${mode}-${id}`}
+          type="button"
+          onClick={() => {
+            closeFab();
+            openContactSection();
+          }}
+          aria-label="İletişim ve mesaj formuna git"
+          title={ACTION_LABELS[id]}
+          {...sharedProps}
+        >
+          {isFab ? label : icon}
+          {isFab ? icon : label}
+        </button>
+      );
+    }
+
+    return (
+      <Link
+        key={`${mode}-${id}`}
+        href="/"
+        onClick={() => {
+          setActiveAction('home');
+          closeFab();
+        }}
+        aria-current={isActive ? 'page' : undefined}
+        title={ACTION_LABELS[id]}
+        {...sharedProps}
+      >
+        {isFab ? label : icon}
+        {isFab ? icon : label}
+      </Link>
+    );
+  };
 
   return (
     <>
       {children}
       {shouldShow && (
-        <div
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] flex justify-center px-2 pb-[max(0.65rem,env(safe-area-inset-bottom))] lg:left-72"
-          data-public-tab-bar
-        >
+        <>
+          <div
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] hidden justify-center px-2 pb-[max(0.65rem,env(safe-area-inset-bottom))] lg:left-72 lg:flex"
+            data-public-tab-bar
+          >
+            <nav
+              aria-label="Masaüstü hızlı erişim menüsü"
+              data-light-palette={settings.lightPalette}
+              data-dark-palette={settings.darkPalette}
+              data-odd={hasRaisedCenter || undefined}
+              className="public-tab-bar public-tab-bar__surface pointer-events-auto grid"
+              style={
+                {
+                  gridTemplateColumns: `repeat(${visibleActions.length}, minmax(0, 1fr))`,
+                  width: `${visibleActions.length * 76 + 16}px`,
+                } as CSSProperties
+              }
+            >
+              {visibleActions.map(({ id }, index) =>
+                renderAction(
+                  id,
+                  'desktop',
+                  index,
+                  hasRaisedCenter && index === Math.floor(visibleActions.length / 2)
+                )
+              )}
+            </nav>
+          </div>
+
+          {isFabOpen && (
+            <button
+              type="button"
+              aria-label="Mobil hızlı menüyü kapat"
+              className="fixed inset-0 z-[53] bg-academic-overlay/10 backdrop-blur-[1px] lg:hidden"
+              onClick={() => setIsFabOpen(false)}
+            />
+          )}
           <nav
-            aria-label="Hızlı erişim menüsü"
+            aria-label="Mobil FAB hızlı erişim menüsü"
             data-light-palette={settings.lightPalette}
             data-dark-palette={settings.darkPalette}
-            data-odd={hasRaisedCenter || undefined}
-            className="public-tab-bar public-tab-bar__surface pointer-events-auto grid"
-            style={
-              {
-                gridTemplateColumns: `repeat(${visibleActions.length}, minmax(0, 1fr))`,
-                width: `min(calc(100vw - 1rem), ${visibleActions.length * 76 + 16}px)`,
-              } as CSSProperties
-            }
+            data-open={isFabOpen || undefined}
+            className="public-fab-bar fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[55] flex flex-col items-end lg:hidden"
+            data-public-fab-bar
           >
-            {visibleActions.map(({ id }, index) => {
-              const isCenter =
-                hasRaisedCenter && index === Math.floor(visibleActions.length / 2);
-              const isActive = activeAction === id;
-
-              if (id === 'theme') {
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={toggleTheme}
-                    aria-label={`${theme === 'dark' ? 'Açık' : 'Koyu'} temaya geç`}
-                    aria-pressed={theme === 'dark'}
-                    title={`${theme === 'dark' ? 'Açık' : 'Koyu'} temaya geç`}
-                    className="public-tab-bar__item"
-                    data-active={isActive || undefined}
-                    data-center={isCenter || undefined}
-                  >
-                    <span className="public-tab-bar__icon-stack" aria-hidden="true">
-                      <Sun className="public-tab-bar__sun h-[19px] w-[19px]" />
-                      <Moon className="public-tab-bar__moon h-[19px] w-[19px]" />
-                    </span>
-                    <span>{ACTION_LABELS[id]}</span>
-                  </button>
-                );
-              }
-
-              const Icon =
-                id === 'home' ? Home : id === 'email' ? Mail : MessageSquareText;
-
-              if (id === 'email') {
-                return (
-                  <a
-                    key={id}
-                    href={`mailto:${email}`}
-                    onClick={() => setActiveAction('email')}
-                    aria-label={`${email} adresine e-posta gönder`}
-                    title="E-posta gönder"
-                    className="public-tab-bar__item"
-                    data-active={isActive || undefined}
-                    data-center={isCenter || undefined}
-                  >
-                    <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
-                    <span>{ACTION_LABELS[id]}</span>
-                  </a>
-                );
-              }
-
-              if (id === 'contact') {
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={openContactSection}
-                    aria-label="İletişim ve mesaj formuna git"
-                    title={ACTION_LABELS[id]}
-                    className="public-tab-bar__item"
-                    data-active={isActive || undefined}
-                    data-center={isCenter || undefined}
-                  >
-                    <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
-                    <span>{ACTION_LABELS[id]}</span>
-                  </button>
-                );
-              }
-
-              return (
-                <Link
-                  key={id}
-                  href="/"
-                  onClick={() => setActiveAction('home')}
-                  aria-current={isActive ? 'page' : undefined}
-                  title={ACTION_LABELS[id]}
-                  className="public-tab-bar__item"
-                  data-active={isActive || undefined}
-                  data-center={isCenter || undefined}
-                >
-                  <Icon className="h-[19px] w-[19px]" aria-hidden="true" />
-                  <span>{ACTION_LABELS[id]}</span>
-                </Link>
-              );
-            })}
+            <div
+              id="public-fab-actions"
+              aria-hidden={!isFabOpen}
+              className="public-fab-bar__actions"
+            >
+              {visibleActions.map(({ id }, index) =>
+                renderAction(id, 'fab', index)
+              )}
+            </div>
+            <button
+              type="button"
+              aria-label={isFabOpen ? 'Hızlı menüyü kapat' : 'Hızlı menüyü aç'}
+              aria-controls="public-fab-actions"
+              aria-expanded={isFabOpen}
+              title={isFabOpen ? 'Menüyü kapat' : 'Hızlı menü'}
+              className="public-fab-bar__launcher"
+              onClick={() => setIsFabOpen((open) => !open)}
+            >
+              <Plus className="public-fab-bar__launcher-icon h-6 w-6" aria-hidden="true" />
+              <span className="sr-only">Hızlı menü</span>
+            </button>
           </nav>
-        </div>
+        </>
       )}
     </>
   );

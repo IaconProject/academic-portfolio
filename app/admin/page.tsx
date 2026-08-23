@@ -220,15 +220,15 @@ function AdminDashboardContent() {
         throw new Error(
           typeof result?.error === 'string'
             ? result.error
-            : result?.error?.message || 'Tab bar ayarları kaydedilemedi.'
+            : result?.error?.message || 'Hızlı erişim menüsü ayarları kaydedilemedi.'
         );
       }
-      toast.success('Tab bar ve tema ayarları kaydedildi!');
+      toast.success('Tab Bar, FAB Bar ve tema ayarları kaydedildi!');
     } catch (error) {
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Tab bar ayarları kalıcı olarak kaydedilemedi.'
+          : 'Hızlı erişim menüsü ayarları kalıcı olarak kaydedilemedi.'
       );
     } finally {
       setIsSaving(false);
@@ -270,7 +270,7 @@ function AdminDashboardContent() {
     { id: 'activities' as AdminTab, label: 'Faaliyetler', icon: ListOrdered },
     { id: 'references' as AdminTab, label: 'Referanslar', icon: Users },
     { id: 'seo' as AdminTab, label: 'SEO Ayarları', icon: Search },
-    { id: 'appearance' as AdminTab, label: 'Görünüm & Tab Bar', icon: Palette },
+    { id: 'appearance' as AdminTab, label: 'Görünüm & FAB Bar', icon: Palette },
     { id: 'visitors' as AdminTab, label: 'Ziyaretçi Analizi', icon: Activity },
     { id: 'security' as AdminTab, label: 'Güvenlik & Giriş', icon: KeyRound },
   ];
