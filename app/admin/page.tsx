@@ -223,7 +223,7 @@ function AdminDashboardContent() {
             : result?.error?.message || 'Hızlı erişim menüsü ayarları kaydedilemedi.'
         );
       }
-      toast.success('Tab Bar, FAB Bar ve tema ayarları kaydedildi!');
+      toast.success('FAB Bar ve tema ayarları kaydedildi!');
     } catch (error) {
       toast.error(
         error instanceof Error

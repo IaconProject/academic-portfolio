@@ -9,12 +9,13 @@ import {
   GripVertical,
   Home,
   Mail,
+  Menu,
   MessageSquareText,
   Moon,
   PanelBottom,
-  Plus,
   Save,
   Sun,
+  X,
 } from 'lucide-react';
 import type {
   TabBarActionId,
@@ -179,8 +180,6 @@ export function TabBarSettingsEditor({
     });
   };
 
-  const previewHasRaisedCenter = visibleActions.length % 2 === 1;
-
   return (
     <section className="admin-panel-card space-y-7">
       <div className="flex flex-col gap-4 border-b border-stone-200 pb-6 dark:border-stone-800 sm:flex-row sm:items-start sm:justify-between">
@@ -189,70 +188,30 @@ export function TabBarSettingsEditor({
             <PanelBottom className="h-5 w-5" />
             <span className="text-[11px] font-black uppercase tracking-[0.18em]">Görünüm & Hızlı Erişim</span>
           </div>
-          <h1 className="font-serif text-2xl font-bold text-stone-950 dark:text-stone-50">Hızlı Erişim, FAB Bar ve Tema Ayarları</h1>
+          <h1 className="font-serif text-2xl font-bold text-stone-950 dark:text-stone-50">Mobil FAB Bar ve Tema Ayarları</h1>
           <p className="mt-2 max-w-2xl text-xs leading-5 text-stone-600 dark:text-stone-400">
-            Masaüstündeki alt Tab Bar ile mobildeki açılır FAB Bar menüsünü, ortak buton sırasını ve sitenin açık/koyu renklerini yönetin.
+            Mobil cihazlardaki açılır hızlı erişim menüsünü, buton sırasını ve sitenin açık/koyu renklerini yönetin. Masaüstünde hızlı erişim menüsü gösterilmez.
           </p>
         </div>
         <div className="flex items-center gap-3 self-start rounded-full border border-stone-200 bg-stone-50 px-3 py-2 dark:border-stone-700 dark:bg-stone-950">
           <span className="text-[10px] font-black uppercase tracking-wider text-stone-600 dark:text-stone-300">
             {draft.enabled ? 'Menü açık' : 'Menü kapalı'}
           </span>
-          <Toggle checked={draft.enabled} onChange={(enabled) => setDraft((current) => ({ ...current, enabled }))} label="Hızlı erişim menülerini aç veya kapat" />
+          <Toggle checked={draft.enabled} onChange={(enabled) => setDraft((current) => ({ ...current, enabled }))} label="Mobil FAB Bar menüsünü aç veya kapat" />
         </div>
       </div>
 
       <div className={`rounded-3xl border p-5 transition-opacity dark:border-stone-700 ${draft.enabled ? 'border-stone-200 bg-stone-50/80 dark:bg-stone-950/50' : 'border-stone-200 bg-stone-100 opacity-55 dark:bg-stone-950'}`}>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-black text-stone-900 dark:text-stone-100">Uyarlanabilir Menü Önizlemesi</h2>
+            <h2 className="text-sm font-black text-stone-900 dark:text-stone-100">Mobil FAB Bar Önizlemesi</h2>
             <p className="mt-1 text-[11px] text-stone-500 dark:text-stone-400">
               {visibleActions.length ? `${visibleActions.length} buton görünür · Profil e-postası: ${email}` : 'Tüm butonlar gizli; menü sitede gösterilmez.'}
             </p>
           </div>
           <div className="flex items-center gap-1.5 text-stone-400"><Sun className="h-4 w-4" /><span className="text-[10px] font-black">/</span><Moon className="h-4 w-4" /></div>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
-            <p className="mb-5 text-[10px] font-black uppercase tracking-[0.16em] text-stone-500 dark:text-stone-400">Masaüstü · Tab Bar</p>
-            <div className="flex min-h-24 items-end justify-center overflow-visible pt-4">
-              {visibleActions.length ? (
-                <nav
-                  aria-label="Masaüstü Tab Bar yerleşim önizlemesi"
-                  data-light-palette={draft.lightPalette}
-                  data-dark-palette={draft.darkPalette}
-                  data-odd={previewHasRaisedCenter || undefined}
-                  className="public-tab-bar public-tab-bar__surface grid"
-                  style={
-                    {
-                      gridTemplateColumns: `repeat(${visibleActions.length}, minmax(0, 1fr))`,
-                      width: `min(100%, ${visibleActions.length * 72 + 18}px)`,
-                    } as CSSProperties
-                  }
-                >
-                  {visibleActions.map((action, index) => {
-                    const Icon = action.id === 'theme' ? Moon : action.icon;
-                    const isCenter =
-                      previewHasRaisedCenter && index === Math.floor(visibleActions.length / 2);
-                    return (
-                      <span
-                        key={action.id}
-                        className="public-tab-bar__item"
-                        data-active={action.id === 'home' || undefined}
-                        data-center={isCenter || undefined}
-                      >
-                        <Icon className="h-4 w-4" aria-hidden="true" />
-                        <span className="max-w-full truncate px-1">{action.label}</span>
-                      </span>
-                    );
-                  })}
-                </nav>
-              ) : (
-                <span className="px-5 py-3 text-xs font-semibold text-stone-500">Görünür buton yok</span>
-              )}
-            </div>
-          </div>
-
+        <div className="mx-auto max-w-xl">
           <div className="rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
             <p className="mb-3 text-[10px] font-black uppercase tracking-[0.16em] text-stone-500 dark:text-stone-400">Mobil · Açık FAB Bar</p>
             <div className="relative mx-auto h-72 max-w-xs overflow-hidden rounded-[2rem] border border-stone-300 bg-gradient-to-b from-stone-100 to-stone-200 shadow-inner dark:border-stone-700 dark:from-stone-800 dark:to-stone-950">
@@ -284,7 +243,8 @@ export function TabBarSettingsEditor({
                     })}
                   </div>
                   <span className="public-fab-bar__launcher" aria-hidden="true">
-                    <Plus className="h-6 w-6 rotate-[135deg]" />
+                    <Menu className="public-fab-bar__launcher-menu h-5 w-5" />
+                    <X className="public-fab-bar__launcher-close h-5 w-5" />
                   </span>
                 </nav>
               ) : (
@@ -297,7 +257,7 @@ export function TabBarSettingsEditor({
 
       <div>
         <h2 className="text-sm font-black text-stone-900 dark:text-stone-100">Buton Sırası ve Görünürlüğü</h2>
-        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">Oklarla ortak buton sırasını değiştirin. Gizlenen butonlar sıralamadaki yerini korur; masaüstü Tab Bar ve mobil FAB Bar aynı sırayı kullanır.</p>
+        <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">Oklarla mobil FAB Bar buton sırasını değiştirin. Gizlenen butonlar sıralamadaki yerini korur ve menü düzenini bozmaz.</p>
         <div className="mt-4 grid gap-3">
           {orderedActions.map((action, index) => {
             const Icon = action.icon;

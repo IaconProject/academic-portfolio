@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Mail, MessageSquareText, Moon, Plus, Sun } from 'lucide-react';
+import { Home, Mail, Menu, MessageSquareText, Moon, Sun, X } from 'lucide-react';
 import type { TabBarActionId, TabBarSettings } from '@/lib/types';
 import { normalizeTabBarSettings } from '@/lib/tab-bar';
 
@@ -145,31 +145,17 @@ export function PublicExperience({
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const hasRaisedCenter = visibleActions.length % 2 === 1;
-  const renderAction = (
-    id: TabBarActionId,
-    mode: 'desktop' | 'fab',
-    index: number,
-    isCenter = false
-  ) => {
-    const isFab = mode === 'fab';
+  const renderAction = (id: TabBarActionId, index: number) => {
     const isActive = activeAction === id;
-    const className = isFab
-      ? 'public-fab-bar__action'
-      : 'public-tab-bar__item';
-    const iconClassName = isFab ? 'h-[18px] w-[18px]' : 'h-[19px] w-[19px]';
     const sharedProps = {
-      className,
+      className: 'public-fab-bar__action',
       'data-active': isActive || undefined,
-      'data-center': !isFab && isCenter ? true : undefined,
-      style: isFab ? ({ '--fab-delay': `${index * 42}ms` } as CSSProperties) : undefined,
-      tabIndex: isFab && !isFabOpen ? -1 : undefined,
+      style: ({ '--fab-delay': `${index * 38}ms` } as CSSProperties),
+      tabIndex: !isFabOpen ? -1 : undefined,
     };
-    const closeFab = () => {
-      if (isFab) setIsFabOpen(false);
-    };
+    const closeFab = () => setIsFabOpen(false);
     const label = (
-      <span className={isFab ? 'public-fab-bar__label' : undefined}>
+      <span className="public-fab-bar__label">
         {ACTION_LABELS[id]}
       </span>
     );
@@ -177,7 +163,7 @@ export function PublicExperience({
     if (id === 'theme') {
       return (
         <button
-          key={`${mode}-${id}`}
+          key={id}
           type="button"
           onClick={() => {
             toggleTheme();
@@ -188,14 +174,13 @@ export function PublicExperience({
           title={`${theme === 'dark' ? 'Açık' : 'Koyu'} temaya geç`}
           {...sharedProps}
         >
-          {isFab ? label : null}
-          <span className={isFab ? 'public-fab-bar__action-icon' : undefined}>
-            <span className="public-tab-bar__icon-stack" aria-hidden="true">
-              <Sun className={`public-tab-bar__sun ${iconClassName}`} />
-              <Moon className={`public-tab-bar__moon ${iconClassName}`} />
+          {label}
+          <span className="public-fab-bar__action-icon">
+            <span className="public-fab-bar__icon-stack" aria-hidden="true">
+              <Sun className="public-fab-bar__sun h-[17px] w-[17px]" />
+              <Moon className="public-fab-bar__moon h-[17px] w-[17px]" />
             </span>
           </span>
-          {isFab ? null : label}
         </button>
       );
     }
@@ -203,15 +188,15 @@ export function PublicExperience({
     const Icon =
       id === 'home' ? Home : id === 'email' ? Mail : MessageSquareText;
     const icon = (
-      <span className={isFab ? 'public-fab-bar__action-icon' : undefined}>
-        <Icon className={iconClassName} aria-hidden="true" />
+      <span className="public-fab-bar__action-icon">
+        <Icon className="h-[17px] w-[17px]" aria-hidden="true" />
       </span>
     );
 
     if (id === 'email') {
       return (
         <a
-          key={`${mode}-${id}`}
+          key={id}
           href={`mailto:${email}`}
           onClick={() => {
             setActiveAction('email');
@@ -221,8 +206,8 @@ export function PublicExperience({
           title="E-posta gönder"
           {...sharedProps}
         >
-          {isFab ? label : icon}
-          {isFab ? icon : label}
+          {label}
+          {icon}
         </a>
       );
     }
@@ -230,7 +215,7 @@ export function PublicExperience({
     if (id === 'contact') {
       return (
         <button
-          key={`${mode}-${id}`}
+          key={id}
           type="button"
           onClick={() => {
             closeFab();
@@ -240,15 +225,15 @@ export function PublicExperience({
           title={ACTION_LABELS[id]}
           {...sharedProps}
         >
-          {isFab ? label : icon}
-          {isFab ? icon : label}
+          {label}
+          {icon}
         </button>
       );
     }
 
     return (
       <Link
-        key={`${mode}-${id}`}
+        key={id}
         href="/"
         onClick={() => {
           setActiveAction('home');
@@ -258,8 +243,8 @@ export function PublicExperience({
         title={ACTION_LABELS[id]}
         {...sharedProps}
       >
-        {isFab ? label : icon}
-        {isFab ? icon : label}
+        {label}
+        {icon}
       </Link>
     );
   };
@@ -269,39 +254,11 @@ export function PublicExperience({
       {children}
       {shouldShow && (
         <>
-          <div
-            className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] hidden justify-center px-2 pb-[max(0.65rem,env(safe-area-inset-bottom))] lg:left-72 lg:flex"
-            data-public-tab-bar
-          >
-            <nav
-              aria-label="Masaüstü hızlı erişim menüsü"
-              data-light-palette={settings.lightPalette}
-              data-dark-palette={settings.darkPalette}
-              data-odd={hasRaisedCenter || undefined}
-              className="public-tab-bar public-tab-bar__surface pointer-events-auto grid"
-              style={
-                {
-                  gridTemplateColumns: `repeat(${visibleActions.length}, minmax(0, 1fr))`,
-                  width: `${visibleActions.length * 76 + 16}px`,
-                } as CSSProperties
-              }
-            >
-              {visibleActions.map(({ id }, index) =>
-                renderAction(
-                  id,
-                  'desktop',
-                  index,
-                  hasRaisedCenter && index === Math.floor(visibleActions.length / 2)
-                )
-              )}
-            </nav>
-          </div>
-
           {isFabOpen && (
             <button
               type="button"
               aria-label="Mobil hızlı menüyü kapat"
-              className="fixed inset-0 z-[53] bg-academic-overlay/10 backdrop-blur-[1px] lg:hidden"
+              className="fixed inset-0 z-[53] bg-academic-overlay/5 backdrop-blur-[1px] lg:hidden"
               onClick={() => setIsFabOpen(false)}
             />
           )}
@@ -319,7 +276,7 @@ export function PublicExperience({
               className="public-fab-bar__actions"
             >
               {visibleActions.map(({ id }, index) =>
-                renderAction(id, 'fab', index)
+                renderAction(id, index)
               )}
             </div>
             <button
@@ -331,7 +288,8 @@ export function PublicExperience({
               className="public-fab-bar__launcher"
               onClick={() => setIsFabOpen((open) => !open)}
             >
-              <Plus className="public-fab-bar__launcher-icon h-6 w-6" aria-hidden="true" />
+              <Menu className="public-fab-bar__launcher-menu h-5 w-5" aria-hidden="true" />
+              <X className="public-fab-bar__launcher-close h-5 w-5" aria-hidden="true" />
               <span className="sr-only">Hızlı menü</span>
             </button>
           </nav>
