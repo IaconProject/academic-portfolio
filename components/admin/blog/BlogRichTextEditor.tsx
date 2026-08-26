@@ -10,6 +10,7 @@ import TaskList from '@tiptap/extension-task-list';
 import TextAlign from '@tiptap/extension-text-align';
 import { CharacterCount, Placeholder } from '@tiptap/extensions';
 import { EditorContent, useEditor } from '@tiptap/react';
+import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { common, createLowlight } from 'lowlight';
 import {
@@ -41,6 +42,10 @@ import {
   Unlink,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import {
+  looksLikeMarkdown,
+  markdownToBlogHtml,
+} from '@/lib/blog/content';
 
 const lowlight = createLowlight(common);
 
@@ -262,6 +267,19 @@ export function BlogRichTextEditor({
         class: 'focus:outline-none',
         spellcheck: 'true',
         'aria-label': 'Blog yazısı metin editörü',
+      },
+      handlePaste: (view, event) => {
+        const markdown = event.clipboardData?.getData('text/plain') || '';
+        if (!looksLikeMarkdown(markdown)) return false;
+
+        const container = document.createElement('div');
+        container.innerHTML = markdownToBlogHtml(markdown);
+        const slice = ProseMirrorDOMParser.fromSchema(view.state.schema).parseSlice(
+          container,
+          { preserveWhitespace: true }
+        );
+        view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView());
+        return true;
       },
     },
     onUpdate: ({ editor: current }) => {

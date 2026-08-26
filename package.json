@@ -33,6 +33,7 @@
     "katex": "0.16.22",
     "lowlight": "3.3.0",
     "lucide-react": "^0.453.0",
+    "marked": "^18.0.11",
     "next": "16.3.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",

@@ -1,5 +1,5 @@
 import sanitizeHtml from 'sanitize-html';
-import { sanitizeBlogHtml } from './content';
+import { normalizeBlogContentHtml } from './content';
 import { blogSlug } from './slug';
 
 export interface PreparedBlogDocument {
@@ -20,7 +20,7 @@ function textFromHtml(value: string) {
 }
 
 export function prepareBlogDocument(inputHtml: string): PreparedBlogDocument {
-  const safeHtml = sanitizeBlogHtml(inputHtml.slice(0, 2_000_000));
+  const safeHtml = normalizeBlogContentHtml(inputHtml.slice(0, 2_000_000));
   const usedIds = new Set<string>();
   const tableOfContents: PreparedBlogDocument['tableOfContents'] = [];
   const html = safeHtml.replace(

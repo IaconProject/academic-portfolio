@@ -1,4 +1,12 @@
+import { marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
+
+const markdownBlockPattern =
+  /(^|\n)\s{0,3}(?:#{1,6}\s+\S|>\s+\S|(?:[-+*]|\d+[.)])\s+\S|```|~~~|\|[^\n]+\|\s*\n\s*\|?\s*:?-{3,})/m;
+const markdownInlinePattern =
+  /(?:\*\*[^*\n]+\*\*|__[^_\n]+__|~~[^~\n]+~~|`[^`\n]+`|\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]+\))/;
+const richHtmlPattern =
+  /<(?:h[1-6]|blockquote|ul|ol|li|pre|table|figure|img|strong|em|s|del|details|hr)\b/i;
 
 function escapeHtml(value: string) {
   return value
@@ -14,6 +22,24 @@ export function plainTextToBlogHtml(value: string) {
     .split(/\n{2,}/)
     .map((paragraph) => `<p>${escapeHtml(paragraph).replace(/\n/g, '<br>')}</p>`)
     .join('');
+}
+
+export function looksLikeMarkdown(value: string) {
+  const source = value.trim();
+  return Boolean(source && (markdownBlockPattern.test(source) || markdownInlinePattern.test(source)));
+}
+
+function markdownCandidateFromHtml(value: string) {
+  return sanitizeHtml(
+    value
+      .replace(/<br\s*\/?\s*>/gi, '\n')
+      .replace(/<\/(?:p|div|h[1-6]|blockquote|li|pre|tr)>/gi, '\n\n'),
+    { allowedTags: [], allowedAttributes: {} }
+  )
+    .replace(/\u00a0/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export function sanitizeBlogHtml(value: string) {
@@ -92,6 +118,8 @@ export function sanitizeBlogHtml(value: string) {
     },
     allowProtocolRelative: false,
     transformTags: {
+      h1: 'h2',
+      del: 's',
       a: (_tagName, attributes) => {
         const href = attributes.href || '';
         const external = /^https?:\/\//i.test(href);
@@ -117,9 +145,35 @@ export function sanitizeBlogHtml(value: string) {
   });
 }
 
-export function renderBlogContentHtml(contentHtml: string, contentText: string) {
-  const source = contentHtml.trim()
-    ? contentHtml
-    : plainTextToBlogHtml(contentText);
+export function markdownToBlogHtml(value: string) {
+  const rendered = marked.parse(value, {
+    async: false,
+    breaks: false,
+    gfm: true,
+  });
+  return sanitizeBlogHtml(rendered);
+}
+
+export function normalizeBlogContentHtml(value: string, fallbackText = '') {
+  const source = value.trim();
+  if (!source) {
+    return fallbackText.trim()
+      ? looksLikeMarkdown(fallbackText)
+        ? markdownToBlogHtml(fallbackText)
+        : plainTextToBlogHtml(fallbackText)
+      : '';
+  }
+
+  if (!richHtmlPattern.test(source)) {
+    const markdownCandidate = fallbackText.trim() || markdownCandidateFromHtml(source);
+    if (looksLikeMarkdown(markdownCandidate)) {
+      return markdownToBlogHtml(markdownCandidate);
+    }
+  }
+
   return sanitizeBlogHtml(source);
+}
+
+export function renderBlogContentHtml(contentHtml: string, contentText: string) {
+  return normalizeBlogContentHtml(contentHtml, contentText);
 }
