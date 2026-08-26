@@ -3,6 +3,7 @@ import {
   looksLikeMarkdown,
   markdownToBlogHtml,
   renderBlogContentHtml,
+  unwrapMarkdownDocument,
 } from '../lib/blog/content';
 import { prepareBlogDocument } from '../lib/blog/document';
 
@@ -91,5 +92,32 @@ describe('Blog Markdown içerik işleme', () => {
     expect(looksLikeMarkdown('## Başlık\n\n- madde')).toBe(true);
     expect(looksLikeMarkdown('Bu **kalın** bir metin.')).toBe(true);
     expect(looksLikeMarkdown('Sade bir paragraf.')).toBe(false);
+  });
+
+  it('tamamı markdown kod çiti içinde kopyalanan belgeyi kod bloğu yerine zengin içerik yapar', () => {
+    const fenced = `\`\`\`markdown
+# Dış çit başlığı
+
+Bu metin **zengin** görünmeli.
+\`\`\``;
+    const html = markdownToBlogHtml(fenced);
+
+    expect(unwrapMarkdownDocument(fenced)).toBe(
+      '# Dış çit başlığı\n\nBu metin **zengin** görünmeli.'
+    );
+    expect(html).toContain('<h2>Dış çit başlığı</h2>');
+    expect(html).toContain('<strong>zengin</strong>');
+    expect(html).not.toContain('<pre>');
+  });
+
+  it('önceden language-markdown kod bloğu olarak kaydedilmiş belgeyi geriye dönük dönüştürür', () => {
+    const html = renderBlogContentHtml(
+      '<pre><code class="language-markdown">## Eski kayıt\n\n- Bir\n- İki</code></pre>',
+      '## Eski kayıt\n\n- Bir\n- İki'
+    );
+
+    expect(html).toContain('<h2>Eski kayıt</h2>');
+    expect(html).toContain('<ul>');
+    expect(html).not.toContain('language-markdown');
   });
 });

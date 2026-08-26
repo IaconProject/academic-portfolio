@@ -7,6 +7,8 @@ const markdownInlinePattern =
   /(?:\*\*[^*\n]+\*\*|__[^_\n]+__|~~[^~\n]+~~|`[^`\n]+`|\[[^\]\n]+\]\((?:https?:\/\/|mailto:)[^)\s]+\))/;
 const richHtmlPattern =
   /<(?:h[1-6]|blockquote|ul|ol|li|pre|table|figure|img|strong|em|s|del|details|hr)\b/i;
+const markdownFencePattern =
+  /^(?:```|~~~)\s*(?:markdown|md|mdx)\s*\n([\s\S]*?)\n(?:```|~~~)\s*$/i;
 
 function escapeHtml(value: string) {
   return value
@@ -25,8 +27,23 @@ export function plainTextToBlogHtml(value: string) {
 }
 
 export function looksLikeMarkdown(value: string) {
-  const source = value.trim();
+  const source = unwrapMarkdownDocument(value);
   return Boolean(source && (markdownBlockPattern.test(source) || markdownInlinePattern.test(source)));
+}
+
+export function unwrapMarkdownDocument(value: string) {
+  const source = value.trim();
+  return source.match(markdownFencePattern)?.[1]?.trim() || source;
+}
+
+function isMarkdownCodeBlockHtml(value: string) {
+  const match = value.match(
+    /^<pre\b[^>]*>\s*<code\b([^>]*)>[\s\S]*<\/code>\s*<\/pre>$/i
+  );
+  if (!match) return false;
+  return /(?:class=["'][^"']*\blanguage-(?:markdown|md|mdx)\b|data-language=["'](?:markdown|md|mdx)["'])/i.test(
+    match[1]
+  );
 }
 
 function markdownCandidateFromHtml(value: string) {
@@ -146,7 +163,7 @@ export function sanitizeBlogHtml(value: string) {
 }
 
 export function markdownToBlogHtml(value: string) {
-  const rendered = marked.parse(value, {
+  const rendered = marked.parse(unwrapMarkdownDocument(value), {
     async: false,
     breaks: false,
     gfm: true,
@@ -164,7 +181,7 @@ export function normalizeBlogContentHtml(value: string, fallbackText = '') {
       : '';
   }
 
-  if (!richHtmlPattern.test(source)) {
+  if (!richHtmlPattern.test(source) || isMarkdownCodeBlockHtml(source)) {
     const markdownCandidate = fallbackText.trim() || markdownCandidateFromHtml(source);
     if (looksLikeMarkdown(markdownCandidate)) {
       return markdownToBlogHtml(markdownCandidate);
