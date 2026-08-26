@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Mail, Menu, MessageSquareText, Moon, Sun, X } from 'lucide-react';
+import { BookOpen, Home, Mail, Menu, MessageSquareText, Moon, Sun, X } from 'lucide-react';
 import type { TabBarActionId, TabBarSettings } from '@/lib/types';
 import { normalizeTabBarSettings } from '@/lib/tab-bar';
 
@@ -13,6 +13,7 @@ type PublicTheme = 'light' | 'dark';
 
 const ACTION_LABELS: Record<TabBarActionId, string> = {
   home: 'Ana Sayfa',
+  blog: 'Blog',
   theme: 'Tema',
   email: 'E-posta',
   contact: 'İletişim',
@@ -190,7 +191,13 @@ export function PublicExperience({
     }
 
     const Icon =
-      id === 'home' ? Home : id === 'email' ? Mail : MessageSquareText;
+      id === 'home'
+        ? Home
+        : id === 'blog'
+          ? BookOpen
+          : id === 'email'
+            ? Mail
+            : MessageSquareText;
     const icon = (
       <span className="public-fab-bar__action-icon">
         <Icon className="h-[17px] w-[17px]" aria-hidden="true" />
@@ -238,9 +245,9 @@ export function PublicExperience({
     return (
       <Link
         key={id}
-        href="/"
+        href={id === 'blog' ? '/blog' : '/'}
         onClick={() => {
-          setActiveAction('home');
+          setActiveAction(id);
           closeFab();
         }}
         aria-current={isActive ? 'page' : undefined}

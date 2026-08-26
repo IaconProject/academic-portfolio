@@ -7,6 +7,7 @@ import type {
 
 export const TAB_BAR_ACTION_IDS = [
   'home',
+  'blog',
   'theme',
   'email',
   'contact',

@@ -30,6 +30,7 @@ describe('public tab bar settings contract', () => {
     expect(settings.buttons.map((button) => button.id)).toEqual([
       'contact',
       'home',
+      'blog',
       'theme',
       'email',
     ]);
@@ -67,6 +68,7 @@ describe('public tab bar settings contract', () => {
       { id: 'email', visible: false },
       { id: 'contact', visible: true },
       { id: 'home', visible: true },
+      { id: 'blog', visible: true },
       { id: 'theme', visible: true },
     ]);
     expect(settings.buttons.map((button) => button.id).sort()).toEqual(

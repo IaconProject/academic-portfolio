@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
+  BookOpen,
   Check,
   GripVertical,
   Home,
@@ -36,6 +37,7 @@ const ACTIONS: Array<{
   icon: typeof Home;
 }> = [
   { id: 'home', label: 'Ana Sayfa', description: 'Tüm sayfalardan biyografi ana sayfasına hızlı dönüş sağlar.', icon: Home },
+  { id: 'blog', label: 'Blog', description: 'Ziyaretçiyi teknik yazılar ve araştırma notlarının bulunduğu bloga yönlendirir.', icon: BookOpen },
   { id: 'theme', label: 'Tema Değiştirici', description: 'Ziyaretçinin açık ve koyu görünüm arasında geçiş yapmasını sağlar.', icon: Sun },
   { id: 'email', label: 'E-posta', description: 'Profilde kayıtlı e-posta adresini ziyaretçinin mail uygulamasında açar.', icon: Mail },
   { id: 'contact', label: 'İletişim Formu', description: 'Ana sayfadaki “İletişim & Mesaj Gönderin” alanına kaydırır.', icon: MessageSquareText },

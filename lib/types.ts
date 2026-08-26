@@ -250,7 +250,7 @@ export interface NotificationSettings {
   smtpPass?: string;
 }
 
-export type TabBarActionId = 'home' | 'theme' | 'email' | 'contact';
+export type TabBarActionId = 'home' | 'blog' | 'theme' | 'email' | 'contact';
 export type TabBarLightPalette = 'ivory' | 'sand' | 'sage' | 'mist';
 export type TabBarDarkPalette = 'obsidian' | 'midnight' | 'forest' | 'plum';
 
