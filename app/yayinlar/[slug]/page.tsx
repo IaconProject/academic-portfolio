@@ -21,11 +21,12 @@ import {
 export const revalidate = 300;
 
 interface PageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
-  const isPreview = draftMode().isEnabled;
+export async function generateMetadata(props: PageProps) {
+  const params = await props.params;
+  const isPreview = (await draftMode()).isEnabled;
   const data = await getSeoExperienceData();
   const item = data.publications.find(
     (entry) =>
@@ -50,8 +51,9 @@ export async function generateMetadata({ params }: PageProps) {
   });
 }
 
-export default async function PublicationDetailPage({ params }: PageProps) {
-  const isPreview = draftMode().isEnabled;
+export default async function PublicationDetailPage(props: PageProps) {
+  const params = await props.params;
+  const isPreview = (await draftMode()).isEnabled;
   const data = await getSeoExperienceData();
   const item = data.publications.find(
     (entry) =>

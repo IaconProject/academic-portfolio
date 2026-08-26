@@ -39,10 +39,8 @@ const pageSchema = z.object({
     .default({ eyebrow: '', heading: '', intro: '' }),
 });
 
-export async function GET(
-  request: Request,
-  { params }: { params: { routeKey: string } }
-) {
+export async function GET(request: Request, props: { params: Promise<{ routeKey: string }> }) {
+  const params = await props.params;
   const unauthorized = rejectUnauthorized(request);
   if (unauthorized) return unauthorized;
   const data = await getSeoExperienceData();
@@ -51,10 +49,8 @@ export async function GET(
   );
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { routeKey: string } }
-) {
+export async function PATCH(request: Request, props: { params: Promise<{ routeKey: string }> }) {
+  const params = await props.params;
   const unauthorized = rejectUnauthorized(request);
   if (unauthorized) return unauthorized;
   if (!serverSupabase) {

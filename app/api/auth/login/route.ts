@@ -6,11 +6,25 @@ import {
 } from '@/lib/auth-helpers';
 import { checkRateLimit } from '@/lib/rate-limiter';
 import { readAdminCredentials } from '@/lib/admin-credentials.server';
+import { isSupabaseAuthConfigured } from '@/lib/supabase/config';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    if (
+      isSupabaseAuthConfigured &&
+      process.env.ALLOW_LEGACY_ADMIN_LOGIN !== 'true'
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Yönetici girişi artık Supabase Auth ve TOTP ile korunuyor.',
+        },
+        { status: 410 }
+      );
+    }
+
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
     
     // Rate limit: Max 5 login attempts per 5 minutes per IP

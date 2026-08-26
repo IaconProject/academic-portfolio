@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, Mail, Menu, MessageSquareText, Moon, Sun, X } from 'lucide-react';
 import type { TabBarActionId, TabBarSettings } from '@/lib/types';
 import { normalizeTabBarSettings } from '@/lib/tab-bar';
@@ -47,6 +47,7 @@ export function PublicExperience({
   email: string;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const settings = useMemo(
     () => normalizeTabBarSettings(rawSettings),
     [rawSettings]
@@ -111,7 +112,10 @@ export function PublicExperience({
 
   const visibleActions = settings.buttons.filter((button) => button.visible);
   const shouldShow =
-    !pathname.startsWith('/admin') && settings.enabled && visibleActions.length > 0;
+    !pathname.startsWith('/admin') &&
+    !pathname.startsWith('/blog') &&
+    settings.enabled &&
+    visibleActions.length > 0;
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -125,13 +129,13 @@ export function PublicExperience({
     setActiveAction('contact');
 
     if (pathname !== '/') {
-      window.location.assign('/#iletisim');
+      router.push('/#iletisim');
       return;
     }
 
     const target = document.getElementById('iletisim');
     if (!target) {
-      window.location.assign('/#iletisim');
+      router.push('/#iletisim');
       return;
     }
 

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Eye, LogOut, LayoutDashboard, Bell, Mail, ChevronRight, X, Sun, Moon } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, LogOut, LayoutDashboard, Bell, Mail, ChevronRight, X, Sun, Moon, BookOpenText } from 'lucide-react';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { ContactMessage } from '@/lib/types';
 import { readSessionItem } from '@/lib/admin-session-storage';
@@ -86,6 +87,14 @@ export const AdminNavbar: React.FC<AdminNavbarProps> = ({
 
       {/* Right Controls */}
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+        <Link
+          href="/admin/blog"
+          className="inline-flex min-h-10 min-w-10 items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-100 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-sm transition-all hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+        >
+          <BookOpenText className="h-4 w-4" />
+          <span className="hidden lg:inline">Blog CMS</span>
+        </Link>
+
         {/* Theme Toggle Button */}
         <button
           onClick={onToggleTheme}

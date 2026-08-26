@@ -49,6 +49,44 @@ export default async function PrivacyPage() {
         </section>
         <section>
           <h2 className="font-serif text-xl font-bold text-academic-ink">
+            Blog ölçümü ve e-posta bülteni
+          </h2>
+          <div className="mt-3 space-y-3">
+            <p>
+              Blog yazılarında, yukarıdaki analitik tercihinin izin verdiği
+              durumda yazı kimliğiyle günlük görüntüleme, 30 saniye veya yüzde
+              50 kaydırma eşiğine ulaşan etkileşim, sekme görünürken geçirilen
+              toplam okuma saniyesi ve yazı üzerinden başlatılan bülten kaydı
+              sayılır. Bu ayrı blog özeti çerez, kalıcı ziyaretçi kimliği, ham
+              IP veya tam User-Agent saklamaz. Yeniden gönderilen aynı isteğin
+              iki kez sayılmaması için kullanılan rastgele event kimlikleri 48
+              saat içinde temizlenir.
+            </p>
+            <p>
+              Bültene katıldığınızda e-posta adresi, rıza metni sürümü, kayıt
+              kaynağı, dil ve abonelik durumu işlenir. Kayıt isteğinin kötüye
+              kullanımını sınırlamak için IP ve User-Agent yalnız ayrı gizli
+              anahtarlarla HMAC-SHA256 özetine dönüştürülür; ham değerler
+              veritabanına yazılmaz ve bu özetler en geç 30 gün içinde
+              temizlenir. Doğrulama bağlantısı veritabanında yalnız hash olarak
+              tutulur, 48 saatte geçersiz olur; 30 gün içinde doğrulanmayan
+              bekleyen kayıt silinir.
+            </p>
+            <p>
+              Onay ve bülten e-postaları Resend üzerinden gönderilir. Her
+              bültende kişisel abonelikten ayrılma bağlantısı bulunur; ayrılma,
+              bounce veya spam şikâyeti sonrasında yeni gönderim yapılmaz.
+              Teslimat güvenliği için sağlayıcı e-posta kimliği ve teslim,
+              bounce ya da şikâyet durumu en fazla 730 gün saklanır. Açılma ve
+              tıklama olaylarının bu sitede kaydı varsayılan olarak kapalıdır.
+              E-posta adresi aktif abonelik ve gönderim engeli kaydı sürdükçe
+              tutulur; silme talepleri aşağıdaki iletişim kanallarından
+              iletilebilir.
+            </p>
+          </div>
+        </section>
+        <section>
+          <h2 className="font-serif text-xl font-bold text-academic-ink">
             Analitik ölçüm ve bölgesel uygulama
           </h2>
           <div className="mt-3 space-y-3">

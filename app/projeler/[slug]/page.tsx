@@ -23,11 +23,12 @@ import { safeHttpUrl } from '@/lib/url-security';
 export const revalidate = 300;
 
 interface PageProps {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps) {
-  const isPreview = draftMode().isEnabled;
+export async function generateMetadata(props: PageProps) {
+  const params = await props.params;
+  const isPreview = (await draftMode()).isEnabled;
   const data = await getSeoExperienceData();
   const item = data.projects.find(
     (entry) =>
@@ -52,8 +53,9 @@ export async function generateMetadata({ params }: PageProps) {
   });
 }
 
-export default async function ProjectDetailPage({ params }: PageProps) {
-  const isPreview = draftMode().isEnabled;
+export default async function ProjectDetailPage(props: PageProps) {
+  const params = await props.params;
+  const isPreview = (await draftMode()).isEnabled;
   const data = await getSeoExperienceData();
   const item = data.projects.find(
     (entry) =>

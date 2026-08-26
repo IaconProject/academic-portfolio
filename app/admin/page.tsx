@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PortfolioData } from '@/lib/types';
 import { getPortfolioData, savePortfolioDataLocally, fetchPortfolioFromSupabase } from '@/lib/cms-store';
 import {
+  clearAdminSession,
   readSessionItem,
-  removeSessionItem,
 } from '@/lib/admin-session-storage';
 import { AdminNavbar } from '@/components/admin/AdminNavbar';
 import { ProfileForm } from '@/components/admin/ProfileForm';
@@ -131,16 +131,6 @@ function AdminDashboardContent() {
   };
 
   useEffect(() => {
-    // Auth Check — localStorage TTL'li yardımcı kullanılır, böylece tarayıcı
-    // kapatılsa bile 7 gün boyunca oturum açık kalır.
-    if (typeof window !== 'undefined') {
-      const isAuth = readSessionItem('academic_admin_auth');
-      if (!isAuth) {
-        router.push('/admin/login');
-        return;
-      }
-    }
-
     // Load initial CMS data
     const local = getPortfolioData();
     setData(local);
@@ -235,13 +225,12 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      removeSessionItem('academic_admin_auth');
-      removeSessionItem('admin_token');
-    }
+  const handleLogout = async () => {
+    await fetch('/api/blog/auth/sign-out', { method: 'POST' }).catch(() => null);
+    clearAdminSession();
     toast.success('Çıkış yapıldı.');
     router.push('/admin/login');
+    router.refresh();
   };
 
   if (!data) {

@@ -4,11 +4,12 @@ import { normalizePath } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
-export default async function RedirectResolverPage({
-  params,
-}: {
-  params: { path: string[] };
-}) {
+export default async function RedirectResolverPage(
+  props: {
+    params: Promise<{ path: string[] }>;
+  }
+) {
+  const params = await props.params;
   const fromPath = normalizePath(`/${params.path.join('/')}`);
   const target = await resolveRedirectPath(fromPath);
   if (target && target !== fromPath) permanentRedirect(target);

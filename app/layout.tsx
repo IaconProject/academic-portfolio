@@ -44,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
     alternates: {
       canonical: '/',
       types: {
-        'application/rss+xml': '/feed.xml',
+        'application/rss+xml': '/blog/feed.xml',
       },
     },
   };
@@ -61,6 +61,7 @@ export default async function RootLayout({
     <html
       lang="tr"
       className="scroll-smooth"
+      data-scroll-behavior="smooth"
       data-public-light-palette={data.tabBarSettings.lightPalette}
       data-public-dark-palette={data.tabBarSettings.darkPalette}
       suppressHydrationWarning

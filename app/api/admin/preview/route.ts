@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       422
     );
   }
-  draftMode().enable();
+  (await draftMode()).enable();
   return apiSuccess({
     url: previewPath(parsed.data.kind, parsed.data.slug),
   });
@@ -39,6 +39,6 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const unauthorized = rejectUnauthorized(request);
   if (unauthorized) return unauthorized;
-  draftMode().disable();
+  (await draftMode()).disable();
   return apiSuccess({ disabled: true });
 }

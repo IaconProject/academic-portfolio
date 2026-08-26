@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  outputFileTracingRoot: __dirname,
   async redirects() {
     const productionVercelRedirects =
       process.env.VERCEL_ENV === 'production'
@@ -32,6 +33,16 @@ const nextConfig = {
         : [];
 
     return [
+      {
+        source: '/yazilar/:slug',
+        destination: '/blog/:slug',
+        permanent: true,
+      },
+      {
+        source: '/yazilar',
+        destination: '/blog/arsiv',
+        permanent: true,
+      },
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'muhammedakan.com' }],

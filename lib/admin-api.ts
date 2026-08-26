@@ -50,8 +50,8 @@ export function rejectUnauthorized(request: Request) {
 }
 
 export function revalidateSeoRoutes(paths: string[] = []) {
-  revalidateTag('seo');
-  revalidateTag('portfolio-content');
+  revalidateTag('seo', 'max');
+  revalidateTag('portfolio-content', 'max');
   const routePaths = new Set([
     '/',
     '/yayinlar',

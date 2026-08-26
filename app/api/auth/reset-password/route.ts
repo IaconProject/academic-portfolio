@@ -1,8 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { sendOtpEmail } from '@/lib/email-service';
 import { hashPassword } from '@/lib/auth-helpers';
 import { checkRateLimit } from '@/lib/rate-limiter';
+import {
+  ADMIN_PASSWORD_RESET_COOKIE,
+  ADMIN_PASSWORD_RESET_TTL_SECONDS,
+  createAdminPasswordResetChallenge,
+  verifyAdminPasswordResetChallenge,
+} from '@/lib/admin-password-reset';
 import {
   readAdminCredentials,
   writeAdminCredentials,
@@ -11,10 +17,24 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Server-side OTP memory store (Email -> { code, expiresAt, attempts })
-const otpStore: Record<string, { code: string; expiresAt: number; attempts: number }> = {};
+function resetCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    maxAge: ADMIN_PASSWORD_RESET_TTL_SECONDS,
+    path: '/api/auth/reset-password',
+  };
+}
 
-export async function POST(request: Request) {
+function clearResetCookie(response: NextResponse) {
+  response.cookies.set(ADMIN_PASSWORD_RESET_COOKIE, '', {
+    ...resetCookieOptions(),
+    maxAge: 0,
+  });
+}
+
+export async function POST(request: NextRequest) {
   try {
     const clientIp = request.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
     const body = await request.json();
@@ -68,29 +88,29 @@ export async function POST(request: Request) {
 
       // Generate cryptographically secure 6-digit OTP code using crypto.randomInt
       const code = crypto.randomInt(100000, 1000000).toString();
-      const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes valid
-
-      otpStore[normalizedEmail] = {
-        code,
-        expiresAt,
-        attempts: 0,
-      };
-
       // Send OTP via Resend API
       const sent = await sendOtpEmail({ toEmail: normalizedEmail, otpCode: code });
 
       if (!sent) {
-        delete otpStore[normalizedEmail];
         return NextResponse.json(
           { success: false, error: 'Doğrulama e-postası gönderilemedi. Lütfen kısa süre sonra tekrar deneyin.' },
           { status: 502 }
         );
       }
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         message: `6 haneli doğrulama kodu ${normalizedEmail} adresine gönderildi. Lütfen e-posta gelen kutunuzu (ve Spam klasörünü) kontrol edin.`,
       });
+      response.cookies.set(
+        ADMIN_PASSWORD_RESET_COOKIE,
+        createAdminPasswordResetChallenge({
+          email: normalizedEmail,
+          code,
+        }),
+        resetCookieOptions()
+      );
+      return response;
     }
 
     // ── ACTION 2: Verify OTP and Update Password ──
@@ -106,37 +126,37 @@ export async function POST(request: Request) {
         );
       }
 
-      const record = otpStore[normalizedEmail];
-
-      if (!record) {
-        return NextResponse.json(
-          { success: false, error: 'Aktif bir doğrulama kodu bulunamadı. Lütfen tekrar kod talep edin.' },
-          { status: 400 }
+      const verification = verifyAdminPasswordResetChallenge({
+        token:
+          request.cookies.get(ADMIN_PASSWORD_RESET_COOKIE)?.value || '',
+        email: normalizedEmail,
+        code: (otpCode || '').trim(),
+      });
+      if (verification.status !== 'valid') {
+        const status = verification.status === 'locked' ? 429 : 400;
+        const message =
+          verification.status === 'expired'
+            ? 'Doğrulama kodunun süresi dolmuş. Lütfen yeni kod talep edin.'
+            : verification.status === 'locked'
+              ? 'Çok fazla hatalı kod denemesi yapıldı. Lütfen yeni kod talep edin.'
+              : 'Doğrulama kodu hatalı veya artık geçerli değil.';
+        const response = NextResponse.json(
+          { success: false, error: message },
+          { status }
         );
-      }
-
-      if (Date.now() > record.expiresAt) {
-        delete otpStore[normalizedEmail];
-        return NextResponse.json(
-          { success: false, error: 'Doğrulama kodunun süresi dolmuş. Lütfen yeni kod talep edin.' },
-          { status: 400 }
-        );
-      }
-
-      record.attempts += 1;
-      if (record.attempts > 3) {
-        delete otpStore[normalizedEmail];
-        return NextResponse.json(
-          { success: false, error: 'Çok fazla hatalı kod denemesi yapıldı. Güvenlik nedeniyle işlem iptal edildi. Lütfen tekrar deneyin.' },
-          { status: 429 }
-        );
-      }
-
-      if (record.code !== (otpCode || '').trim()) {
-        return NextResponse.json(
-          { success: false, error: `Girdiğiniz doğrulama kodu hatalı. (${4 - record.attempts} hakkınız kaldı)` },
-          { status: 400 }
-        );
+        if (
+          verification.status === 'invalid' &&
+          verification.nextToken
+        ) {
+          response.cookies.set(
+            ADMIN_PASSWORD_RESET_COOKIE,
+            verification.nextToken,
+            resetCookieOptions()
+          );
+        } else {
+          clearResetCookie(response);
+        }
+        return response;
       }
 
       const hashedPassword = hashPassword(newPassword);
@@ -152,12 +172,12 @@ export async function POST(request: Request) {
           { status: 503 }
         );
       }
-      delete otpStore[normalizedEmail];
-
-      return NextResponse.json({
+      const response = NextResponse.json({
         success: true,
         message: 'Şifreniz güvenle güncellendi. Yeni şifrenizle giriş yapabilirsiniz.',
       });
+      clearResetCookie(response);
+      return response;
     }
 
     return NextResponse.json({ success: false, error: 'Geçersiz işlem.' }, { status: 400 });

@@ -184,10 +184,8 @@ function dbPayload(kind: ContentKind, value: Record<string, any>) {
   };
 }
 
-export async function GET(
-  request: Request,
-  { params }: { params: { kind: string } }
-) {
+export async function GET(request: Request, props: { params: Promise<{ kind: string }> }) {
+  const params = await props.params;
   const unauthorized = rejectUnauthorized(request);
   if (unauthorized) return unauthorized;
   const kind = kindFrom(params.kind);
@@ -339,24 +337,18 @@ async function save(
   return apiSuccess(data, isPatch ? 200 : 201);
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: { kind: string } }
-) {
+export async function POST(request: Request, props: { params: Promise<{ kind: string }> }) {
+  const params = await props.params;
   return save(request, params.kind, false);
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { kind: string } }
-) {
+export async function PATCH(request: Request, props: { params: Promise<{ kind: string }> }) {
+  const params = await props.params;
   return save(request, params.kind, true);
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { kind: string } }
-) {
+export async function DELETE(request: Request, props: { params: Promise<{ kind: string }> }) {
+  const params = await props.params;
   const unauthorized = rejectUnauthorized(request);
   if (unauthorized) return unauthorized;
   const kind = kindFrom(params.kind);
