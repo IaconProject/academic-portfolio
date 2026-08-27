@@ -418,6 +418,13 @@ function currentTimezone(): string {
   }
 }
 
+function isMobileViewport(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.matchMedia('(max-width: 1023px)').matches
+  );
+}
+
 function hasGrantedConsent(): boolean {
   return readAnalyticsConsent()?.state === 'granted';
 }
@@ -1055,14 +1062,36 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       const detail = (
         event as CustomEvent<AnalyticsTrackEventDetail>
       ).detail;
+      const isContactSubmit =
+        detail?.eventType === 'contact_submit' &&
+        detail.contentType === 'form' &&
+        detail.contentKey === 'contact_form';
+      const isMobileInteraction =
+        detail?.eventType === 'engagement' &&
+        isMobileViewport() &&
+        ((detail.contentType === 'profile_interaction' &&
+          typeof detail.contentKey === 'string') ||
+          (detail.contentType === 'screen_interaction' &&
+            detail.contentKey === 'screen_zoom'));
+
+      if (!isContactSubmit && !isMobileInteraction) {
+        return;
+      }
+
+      const interactionKey =
+        isMobileInteraction && detail.eventType === 'engagement'
+          ? detail.contentKey
+          : 'contact_submit:contact_form';
       if (
-        detail?.eventType !== 'contact_submit' ||
-        detail.contentType !== 'form' ||
-        detail.contentKey !== 'contact_form' ||
-        !allowInteractionEvent('contact_submit:contact_form', 5_000)
+        !interactionKey ||
+        !allowInteractionEvent(
+          interactionKey,
+          isContactSubmit ? 5_000 : 1_000
+        )
       ) {
         return;
       }
+
       void emitAnalyticsEvent(detail, path);
     };
     const handleInteractionConsent = (event: Event) => {
@@ -1102,6 +1131,46 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
     enabled,
     pathname,
   ]);
+
+  useEffect(() => {
+    if (
+      !enabled ||
+      pathname === '/admin' ||
+      pathname.startsWith('/admin/') ||
+      !window.visualViewport
+    ) {
+      return;
+    }
+
+    let lastScale = window.visualViewport.scale || 1;
+
+    const handleViewportResize = () => {
+      if (!isMobileViewport() || !hasGrantedConsent()) return;
+
+      const nextScale = window.visualViewport?.scale || 1;
+      if (Math.abs(nextScale - lastScale) < 0.05) return;
+      lastScale = nextScale;
+
+      window.dispatchEvent(
+        new CustomEvent(ANALYTICS_TRACK_EVENT, {
+          detail: {
+            eventType: 'engagement',
+            contentType: 'screen_interaction',
+            contentKey: 'screen_zoom',
+            durationMs: 1,
+          },
+        })
+      );
+    };
+
+    window.visualViewport.addEventListener('resize', handleViewportResize);
+    return () => {
+      window.visualViewport?.removeEventListener(
+        'resize',
+        handleViewportResize
+      );
+    };
+  }, [enabled, pathname]);
 
   useEffect(() => {
     if (

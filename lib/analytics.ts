@@ -7,7 +7,9 @@ import {
   ANALYTICS_DOWNLOAD_EXTENSIONS,
   ANALYTICS_MAX_BATCH_EVENTS,
   ANALYTICS_NAVIGATION_TYPES,
+  ANALYTICS_PROFILE_INTERACTION_KEYS,
   ANALYTICS_SCHEMA_VERSION,
+  ANALYTICS_SCREEN_INTERACTION_KEYS,
   ANALYTICS_SCROLL_THRESHOLDS,
   ANALYTICS_SESSION_TIMEOUT_MS,
   ANALYTICS_WEB_VITAL_NAMES,
@@ -145,8 +147,35 @@ const engagementEventSchema = z
     ...analyticsCommonEventFields,
     eventType: z.literal('engagement'),
     durationMs: durationMsSchema,
+    contentType: z
+      .enum(['profile_interaction', 'screen_interaction'])
+      .optional(),
+    contentKey: z
+      .enum([
+        ...ANALYTICS_PROFILE_INTERACTION_KEYS,
+        ...ANALYTICS_SCREEN_INTERACTION_KEYS,
+      ])
+      .optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (event) =>
+      (event.contentType === undefined) ===
+      (event.contentKey === undefined),
+    'Etkileşim eventinde içerik türü ve anahtarı birlikte gönderilmelidir.'
+  )
+  .refine(
+    (event) =>
+      event.contentType === undefined ||
+      (event.contentType === 'profile_interaction'
+        ? ANALYTICS_PROFILE_INTERACTION_KEYS.includes(
+            event.contentKey as (typeof ANALYTICS_PROFILE_INTERACTION_KEYS)[number]
+          )
+        : ANALYTICS_SCREEN_INTERACTION_KEYS.includes(
+            event.contentKey as (typeof ANALYTICS_SCREEN_INTERACTION_KEYS)[number]
+          )),
+    'Etkileşim event anahtarı içerik türüyle eşleşmelidir.'
+  );
 
 const consentUpdateEventSchema = z
   .object({

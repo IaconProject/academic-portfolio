@@ -124,6 +124,7 @@ type DashboardData = {
     }>;
   };
   events: Array<{ eventType: string; count: number }>;
+  interactionEvents: Array<{ interactionKey: string; count: number }>;
   webVitals: Array<{
     metric: string;
     p75: number;
@@ -640,6 +641,12 @@ function eventLabel(eventType: string) {
       consent_update: 'Gizlilik / konum tercihi',
       web_vital: 'Web performans ölçümü',
       client_error: 'İstemci hatası',
+      profile_photo_click: 'Profil fotoğrafı tıklaması',
+      profile_photo_double_click: 'Profil fotoğrafı çift tıklaması',
+      profile_photo_zoom: 'Profil fotoğrafı büyütmesi',
+      profile_photo_open_new_tab: 'Profil fotoğrafını yeni sekmede açma niyeti',
+      profile_photo_save_intent: 'Profil fotoğrafını kaydetme menüsü niyeti',
+      screen_zoom: 'Ekran büyütmesi',
     }[eventType] || eventType
   );
 }
@@ -1906,6 +1913,25 @@ export function AnalyticsV2Dashboard() {
                   detail: row.eventType,
                 }))}
               />
+            </SectionCard>
+
+            <SectionCard
+              title="Mobil profil ve ekran etkileşimleri"
+              description="Profil fotoğrafı ve ekran büyütmeleri yalnızca mobil oturumlarda, Türkiye’deki birinci taraf analitik işleme dayanağı veya açık analitik izni kapsamında sayılır. Kaydetme/yeni sekme satırları gerçek tamamlanmış işlemi değil, tarayıcının gözlemlenebilen niyet sinyalini gösterir."
+            >
+              <BreakdownBars
+                rows={dashboard.interactionEvents.map((row) => ({
+                  label: eventLabel(row.interactionKey),
+                  value: row.count,
+                  detail: row.interactionKey,
+                }))}
+                emptyText="Bu aralıkta mobil etkileşim verisi yok."
+              />
+              <p className="mt-4 text-[10px] leading-relaxed text-stone-500 dark:text-stone-400">
+                Ekran görüntüsü/video çekimi ve sistem menüsünden gerçek dosya
+                kaydetme işlemi tarayıcı güvenliği nedeniyle güvenilir biçimde
+                tespit edilemez.
+              </p>
             </SectionCard>
           </div>
 

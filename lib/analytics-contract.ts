@@ -3,7 +3,7 @@
  * Updating the consent policy version here forces both sides to move together.
  */
 export const ANALYTICS_SCHEMA_VERSION = 2 as const;
-export const ANALYTICS_COLLECTOR_VERSION = '2.6.0';
+export const ANALYTICS_COLLECTOR_VERSION = '2.7.0';
 export const ANALYTICS_CONSENT_POLICY_VERSION = '2026-08-02.1';
 export const ANALYTICS_MAX_BATCH_EVENTS = 20;
 export const ANALYTICS_SESSION_TIMEOUT_MS = 30 * 60 * 1000;
@@ -30,6 +30,20 @@ export const ANALYTICS_WEB_VITAL_NAMES = [
 ] as const;
 export type AnalyticsWebVitalName =
   (typeof ANALYTICS_WEB_VITAL_NAMES)[number];
+
+export const ANALYTICS_PROFILE_INTERACTION_KEYS = [
+  'profile_photo_click',
+  'profile_photo_double_click',
+  'profile_photo_zoom',
+  'profile_photo_open_new_tab',
+  'profile_photo_save_intent',
+] as const;
+export type AnalyticsProfileInteractionKey =
+  (typeof ANALYTICS_PROFILE_INTERACTION_KEYS)[number];
+
+export const ANALYTICS_SCREEN_INTERACTION_KEYS = ['screen_zoom'] as const;
+export type AnalyticsScreenInteractionKey =
+  (typeof ANALYTICS_SCREEN_INTERACTION_KEYS)[number];
 
 export const ANALYTICS_WEB_VITAL_RATINGS = [
   'good',
@@ -162,7 +176,14 @@ export interface AnalyticsEventBase {
 export type AnalyticsEventDetails =
   | { eventType: 'page_view' }
   | { eventType: 'heartbeat'; durationMs: number }
-  | { eventType: 'engagement'; durationMs: number }
+  | {
+      eventType: 'engagement';
+      durationMs: number;
+      contentType?: 'profile_interaction' | 'screen_interaction';
+      contentKey?:
+        | AnalyticsProfileInteractionKey
+        | AnalyticsScreenInteractionKey;
+    }
   | {
       eventType: 'consent_update';
       contentType: 'privacy_preference';
@@ -216,7 +237,7 @@ export type AnalyticsClientEventContract =
 
 export type AnalyticsTrackEventDetail = Extract<
   AnalyticsEventDetails,
-  { eventType: 'contact_submit' }
+  { eventType: 'contact_submit' | 'engagement' }
 >;
 
 export function normalizeAnalyticsOutboundHostname(
