@@ -51,8 +51,8 @@ function event(
     visitor_id: trackedSession.visitor_id,
     session_id: trackedSession.id,
     event_type: 'page_view',
-    occurred_at: '2026-08-27T10:00:00.000Z',
-    received_at: '2026-08-27T10:00:01.000Z',
+    occurred_at: '2026-08-27T12:00:00.000Z',
+    received_at: '2026-08-27T12:00:01.000Z',
     path: '/7',
     screen_bucket: 'sm',
     duration_ms: null,
@@ -67,8 +67,8 @@ describe('/7 ziyaretçi raporu', () => {
   it('Google ve blog trafiğini dışarıda bırakıp yalnız /7 verisini toplar', () => {
     const report = buildVisitorLinkAnalyticsDashboard({
       range: {
-        from: '2026-08-27T00:00:00.000Z',
-        to: '2026-08-28T00:00:00.000Z',
+        from: '2026-08-27T11:00:00.000Z',
+        to: '2026-08-27T14:00:00.000Z',
         timezone: 'Europe/Istanbul',
       },
       sessions: [trackedSession, unrelatedSession],
@@ -83,13 +83,13 @@ describe('/7 ziyaretçi raporu', () => {
           visitor_id: unrelatedSession.visitor_id,
           session_id: unrelatedSession.id,
           path: '/blog/muhammed-akan-kimdir',
-          occurred_at: '2026-08-27T11:00:00.000Z',
+          occurred_at: '2026-08-27T13:00:00.000Z',
         }),
       ],
       health: {
         duplicate_events: 0,
         rejected_events: 0,
-        last_success_at: '2026-08-27T10:00:01.000Z',
+        last_success_at: '2026-08-27T12:00:01.000Z',
       },
     });
 
@@ -114,5 +114,36 @@ describe('/7 ziyaretçi raporu', () => {
         { eventType: 'engagement', count: 1 },
       ])
     );
+  });
+
+  it('kesim öncesi tarihî yolları korur', () => {
+    const report = buildVisitorLinkAnalyticsDashboard({
+      range: {
+        from: '2026-08-27T09:00:00.000Z',
+        to: '2026-08-27T11:00:00.000Z',
+        timezone: 'Europe/Istanbul',
+      },
+      sessions: [unrelatedSession],
+      events: [
+        event({
+          visitor_id: unrelatedSession.visitor_id,
+          session_id: unrelatedSession.id,
+          path: '/blog/muhammed-akan-kimdir',
+          occurred_at: '2026-08-27T10:00:00.000Z',
+        }),
+      ],
+    });
+
+    expect(report.summary).toMatchObject({
+      visitors: 1,
+      sessions: 1,
+      pageViews: 1,
+    });
+    expect(report.topPages).toEqual([
+      expect.objectContaining({
+        path: '/blog/muhammed-akan-kimdir',
+        pageViews: 1,
+      }),
+    ]);
   });
 });

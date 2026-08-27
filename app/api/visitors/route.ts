@@ -11,7 +11,6 @@ import {
   mapLegacySessionRow,
   parseLegacyRecordId,
 } from '@/lib/legacy-analytics';
-import { isVisitorAnalyticsTrackedPath } from '@/lib/analytics-contract';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -73,7 +72,6 @@ export async function GET(request: Request) {
           'id, ip_address, country, country_code, city, region, isp, is_mobile_network, device_type, device_brand, device_model, os_name, os_version, browser_name, browser_version, page_path, created_at',
           { count: 'exact' }
         )
-        .in('page_path', ['/7', '/7/'])
         .order('created_at', { ascending: false })
         .limit(MAX_SESSIONS + 1),
     ]);
@@ -94,25 +92,20 @@ export async function GET(request: Request) {
       ? sessionResult.data
       : [];
     const logRows = Array.isArray(logResult.data) ? logResult.data : [];
-    const scopedSessions = [
+    const sessions = [
       ...sessionRows.map((row) => mapLegacySessionRow(row)),
       ...logRows.map((row) => mapLegacyLogRow(row)),
     ]
-      .filter((session) =>
-        session.pages.some((step) =>
-          isVisitorAnalyticsTrackedPath(step?.path)
-        )
-      );
-    const sessions = scopedSessions
       .sort((left, right) => {
         const leftTime = Date.parse(left.updatedAt || left.createdAt) || 0;
         const rightTime = Date.parse(right.updatedAt || right.createdAt) || 0;
         return rightTime - leftTime;
       })
       .slice(0, MAX_SESSIONS);
-    const isPartial =
-      (sessionResult.count ?? sessionRows.length) > sessionRows.length ||
-      (logResult.count ?? logRows.length) > logRows.length;
+    const totalRows =
+      (sessionResult.count ?? sessionRows.length) +
+      (logResult.count ?? logRows.length);
+    const isPartial = totalRows > sessions.length;
     const stats = buildLegacyStats(sessions);
     const meta = {
       source: 'supabase-legacy-combined',
@@ -120,12 +113,8 @@ export async function GET(request: Request) {
       isPartial,
       limit: MAX_SESSIONS,
       sourceCounts: {
-        visitorSessions: scopedSessions.filter(
-          (session) => session.legacySource === 'visitor_sessions'
-        ).length,
-        visitorLogs: scopedSessions.filter(
-          (session) => session.legacySource === 'visitor_logs'
-        ).length,
+        visitorSessions: sessionResult.count ?? sessionRows.length,
+        visitorLogs: logResult.count ?? logRows.length,
       },
       displayedSourceCounts: {
         visitorSessions: sessions.filter(

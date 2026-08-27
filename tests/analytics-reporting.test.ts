@@ -22,8 +22,8 @@ import {
 } from '../lib/analytics-reporting.server';
 
 const baseQuery = {
-  from: '2026-07-01T00:00:00.000Z',
-  to: '2026-07-30T00:00:00.000Z',
+  from: '2026-08-27T12:00:00.000Z',
+  to: '2026-08-28T12:00:00.000Z',
   timezone: 'Europe/Istanbul',
   limit: 1,
   trafficClass: 'human' as const,
@@ -164,6 +164,22 @@ describe('Analytics reporting cursor sözleşmesi', () => {
     expect(reportingMocks.rpc).toHaveBeenCalledTimes(2);
     expect(reportingMocks.rpc.mock.calls[0][1].p_path).toBe('/7');
     expect(reportingMocks.rpc.mock.calls[1][1].p_path).toBe('/7');
+  });
+
+  it('kesim öncesi tarih aralığında tarihî oturum kapsamını korur', async () => {
+    reportingMocks.rpc.mockResolvedValueOnce({
+      data: { items: [], hasMore: false, nextCursor: null },
+      error: null,
+    });
+
+    await getAnalyticsSessions({
+      ...baseQuery,
+      from: '2026-07-01T00:00:00.000Z',
+      to: '2026-07-30T00:00:00.000Z',
+      path: '/7',
+    });
+
+    expect(reportingMocks.rpc.mock.calls[0][1].p_path).toBeNull();
   });
 
   it('değiştirilmiş cursor imzasını reddeder', async () => {

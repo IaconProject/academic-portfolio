@@ -92,10 +92,11 @@ export default async function PrivacyPage() {
           <div className="mt-3 space-y-3">
             <p>
               Türkiye’den yalnız <code>/7</code> Instagram biyografi
-              bağlantısına yapılan ziyaretlerde bu alan adına ait, siteler
+              bağlantısına yapılan yeni ziyaretlerde bu alan adına ait, siteler
               arası takip yapmayan ve bağlantı performansı ile hedef kitle
-              ölçümüyle sınırlı Analytics v2 çalışır. Ana site, arama motoru
-              ve blog ziyaretleri bu ziyaretçi sayacına yazılmaz. Bu bölgesel uygulama,
+              ölçümüyle sınırlı Analytics v2 çalışır. Dağıtımdan sonra ana site,
+              arama motoru ve blog ziyaretleri bu ziyaretçi sayacına yazılmaz;
+              önceki dönem kayıtları korunur. Bu bölgesel uygulama,
               KVKK Çerez Uygulamaları Hakkında Rehberindeki birinci taraf
               analitik yaklaşımıyla sınırlandırılmıştır. Google Analytics bu
               kapsamda otomatik olarak yüklenmez.
@@ -108,8 +109,8 @@ export default async function PrivacyPage() {
               Reklam depolaması hiçbir bölgede açılmaz.
             </p>
             <p>
-              Site içi ölçüm yalnız canonical <code>/7</code> sayfa yolu ve başlığı,
-              yalnız yönlendiren alan adı, izinli UTM kampanya alanları, dil,
+              Yeni site içi ölçüm yalnız canonical <code>/7</code> sayfa yolu ve
+              başlığı, yalnız yönlendiren alan adı, izinli UTM kampanya alanları, dil,
               saat dilimi, yaklaşık ekran sınıfı, cihaz sınıfı ve tarayıcının
               bildirebildiği ölçüde cihaz markası/modeli ile tarayıcı ve
               işletim sistemi adı/sürümü, sayfada görünür geçirilen süre,
