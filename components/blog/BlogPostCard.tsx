@@ -52,14 +52,14 @@ export function BlogPostCard({
       <article className="group grid min-w-0 grid-cols-[minmax(0,1fr)] border-y border-stone-400 dark:border-stone-700 md:grid-cols-[1.15fr_0.85fr]">
         <Link
           href={path}
-          className="blog-focus-ring block min-h-64 md:py-7 md:pr-8"
+          className="blog-focus-ring block md:min-h-64 md:py-7 md:pr-8"
           aria-label={`${post.title} yazısını oku`}
         >
           <BlogCover
             src={post.coverImageUrl}
             alt={post.coverImageAlt || post.title}
             priority={priority}
-            className="aspect-[16/10] h-full min-h-64"
+            className="aspect-[16/10] w-full md:h-full md:min-h-64"
           />
         </Link>
         <div className="flex flex-col justify-center border-t border-stone-300 py-8 md:border-l md:border-t-0 md:pl-8 dark:border-stone-800">
