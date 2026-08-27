@@ -1257,12 +1257,13 @@ export function AnalyticsV2Dashboard() {
             )}
           </div>
           <p className="mt-2 max-w-3xl text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-            Yalnız Instagram biyografisinde kullanılan{' '}
+            Yeni ziyaretçi kayıtları yalnız Instagram biyografisinde kullanılan{' '}
             <code className="font-bold text-amber-700 dark:text-amber-300">
               {VISITOR_ANALYTICS_TRACKED_PATH}
             </code>{' '}
-            bağlantısının pseudonim ve botlardan ayrıştırılmış ziyaretleri.
-            Ana site, Google araması ve blog trafiği bu rapora kaydedilmez.
+            bağlantının pseudonim ve botlardan ayrıştırılmış ziyaretleridir.
+            Dağıtım öncesi tarihî kayıtlar korunur; bu andan sonra ana site,
+            Google araması ve blog trafiği yeni ziyaretçi raporuna yazılmaz.
           </p>
         </div>
 
@@ -2138,7 +2139,7 @@ export function AnalyticsV2Dashboard() {
 
               <div className="w-full max-w-md">
                 <p className="mb-1 text-[10px] font-bold uppercase text-stone-500">
-                  Sabit bağlantı kapsamı
+                  Yeni ziyaretler için sabit bağlantı kapsamı
                 </p>
                 <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200">
                   <Route className="h-4 w-4" />

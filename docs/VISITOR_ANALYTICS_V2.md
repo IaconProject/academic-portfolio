@@ -66,16 +66,21 @@ Migration'lar eklemelidir ve tekrar çalıştırılabilir. `visitor_sessions` il
 
 ## Collector sözleşmesi
 
-İstemci yalnız `/7` Instagram biyografi bağlantısında, geçerli işleme dayanağı
-ve CMS ana anahtarı açıkken `POST /api/analytics/events` çağırır. Ana sayfa,
-arama motoru ve blog trafiği bu birinci taraf collector'a yazılmaz. Batch en
-fazla 20 event ve 32 KiB'dir.
+İstemci dağıtım kesiminden sonra yalnız `/7` Instagram biyografi bağlantısında,
+geçerli işleme dayanağı ve CMS ana anahtarı açıkken
+`POST /api/analytics/events` çağırır. Ana sayfa, arama motoru ve blog trafiği
+bu kesimden sonra birinci taraf collector'a yazılmaz; kesimden önceki eventler
+raporlarda korunur. Batch en fazla 20 event ve 32 KiB'dir.
+
+Kesim anı kodda sabit `2026-08-27T11:40:47.200Z` olarak tutulur. Bu değer,
+`main` dağıtımının Vercel Production'da `READY` olduğu andır; yeni bir
+dağıtımda değiştirilmemelidir.
 
 Collector:
 
 - event sözleşmesini doğrular;
-- canonical `/7` ve `/7/` dışındaki bütün yolları kalıcı yazımdan önce filtreler
-  ve kabul edilen yolu `/7` olarak saklar;
+- kesim anından sonraki canonical `/7` ve `/7/` dışındaki bütün yolları kalıcı
+  yazımdan önce filtreler ve kabul edilen yolu `/7` olarak saklar;
 - preview ve açık bot trafiğini ana ölçüme almaz;
 - geçici IP değerini HMAC rate-limit ve konum önbellek anahtarı üretmek için
   kullanır; ham IP hiçbir tabloya yazılmaz;
@@ -147,8 +152,9 @@ oturumundan çağrılabilen server API'leriyle sunulur:
 - `GET /api/analytics/export`: geçerli filtreleri kullanan, formül
   enjeksiyonuna karşı güvenli CSV dışa aktarımı.
 
-Üç raporlama uç noktası da yolu sunucuda sabit `/7` olarak uygular; istemcinin
-başka bir yol göndermesi kapsamı genişletemez. Tarih aralığı, saat dilimi ve
+Raporlama uç noktaları kesim öncesi tarihî veriyi eski kapsamıyla korur; kesim
+sonrası eventleri yalnız `/7` olarak kabul eder. İstemcinin başka bir yol
+göndermesi kesim sonrası kapsamı genişletemez. Tarih aralığı, saat dilimi ve
 trafik sınıfı sunucuda doğrulanır. Dashboard sorguları yalnız toplu sonuç
 döndürür; oturum görünümü pseudonim kimliği veya ham kişisel veri göstermez.
 
@@ -195,8 +201,8 @@ manuel çalıştırır. Veritabanı fonksiyonları yalnız `service_role` taraf�
 - Yönetim ekranı Analytics v2 raporlarını varsayılan görünüm olarak sunar.
   Legacy sekmesi, `visitor_sessions` oturumlarını ve daha eski
   `visitor_logs` sayfa kayıtlarını kaynak işaretli ortak bir okuma modelinde
-  birleştirir ve yalnız `/7` yoluyla eşleşen kayıtları gösterir; ham IP ve
-  User-Agent değerleri tarayıcıya gönderilmez.
+  birleştirir; bu tarihî arşivdeki kayıtlar silinmez veya `/7` filtresiyle
+  gizlenmez. Ham IP ve User-Agent değerleri tarayıcıya gönderilmez.
 - `ANALYTICS_RETENTION_DAYS` yalnız 30–3650 aralığında kabul edilir; geçersiz
   değer güvenli 425 günlük varsayılana döner.
 - Manuel ve zamanlanmış bakım aynı atomik, server-only RPC zincirini kullanır.
@@ -208,9 +214,10 @@ manuel çalıştırır. Veritabanı fonksiyonları yalnız `service_role` taraf�
 
 1. Collector kill-switch ve consent kapalıyken event isteği çıkmadığını
    doğrulayın.
-2. Ana sayfa ile bir blog yazısını ziyaret edip collector'a event yazılmadığını,
-   ardından `/7` üzerinde `page_view`, görünür `heartbeat` ve scroll eşiklerinin
-   tekilleştirildiğini kontrol edin.
+2. Kesim öncesi tarih aralığında eski toplu/oturum verisinin göründüğünü,
+   kesim sonrası ana sayfa ile bir blog yazısının collector'a event yazmadığını,
+   ardından `/7` üzerinde `page_view`, görünür `heartbeat` ve scroll
+   eşiklerinin tekilleştirildiğini kontrol edin.
 3. Aynı event batch'ini yeniden göndererek duplicate sayacının arttığını,
    event toplamının artmadığını doğrulayın.
 4. Dashboard toplamlarını seçili aralık için örnek sessionlarla karşılaştırın.

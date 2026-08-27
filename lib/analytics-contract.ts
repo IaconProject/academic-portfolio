@@ -11,6 +11,12 @@ export const ANALYTICS_RUNTIME_DISABLED_EVENT =
   'analytics-runtime-disabled';
 export const ANALYTICS_TRACK_EVENT = 'analytics-track-v2';
 export const VISITOR_ANALYTICS_TRACKED_PATH = '/7' as const;
+/**
+ * Cutover instant for the scoped collector. Events before this deployment
+ * remain part of the historical report; events after it are limited to /7.
+ */
+export const VISITOR_ANALYTICS_TRACKED_FROM =
+  '2026-08-27T11:40:47.200Z' as const;
 
 /**
  * The first-party visitor dashboard is a private link counter for the
