@@ -36,6 +36,11 @@ export function SeoPageShell({
   children,
 }: SeoPageShellProps) {
   const isArchiveIndex = breadcrumbs.length === 0;
+  const themeToggleEnabled =
+    data.tabBarSettings.enabled &&
+    data.tabBarSettings.buttons.some(
+      (button) => button.id === 'theme' && button.visible
+    );
 
   return (
     <div className="flex min-h-screen flex-col bg-academic-bg font-sans text-academic-ink antialiased transition-colors duration-300 selection:bg-academic-accent-soft">
@@ -43,6 +48,7 @@ export function SeoPageShell({
         profile={data.profile}
         pageContext="subpage"
         currentArchive={currentArchive}
+        themeToggleEnabled={themeToggleEnabled}
       />
       <MobileHeader
         pageContext="subpage"

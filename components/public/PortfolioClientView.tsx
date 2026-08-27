@@ -29,6 +29,11 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
   const orderedProjects = sortArchiveContent(
     projects.filter((item) => (item.locale || 'tr') === 'tr')
   );
+  const themeToggleEnabled =
+    data.tabBarSettings.enabled &&
+    data.tabBarSettings.buttons.some(
+      (button) => button.id === 'theme' && button.visible
+    );
 
   return (
     <div className="min-h-screen bg-academic-bg text-academic-ink font-sans antialiased flex flex-col transition-colors duration-300 selection:bg-academic-accent-soft">
@@ -38,6 +43,7 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
       {/* Desktop Navigation Sidebar */}
       <DesktopSidebar
         profile={profile}
+        themeToggleEnabled={themeToggleEnabled}
       />
 
       {/* Mobile Sticky Navigation Header */}
