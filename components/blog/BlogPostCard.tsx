@@ -49,7 +49,7 @@ export function BlogPostCard({
 
   if (featured) {
     return (
-      <article className="group grid border-y border-stone-400 dark:border-stone-700 md:grid-cols-[1.15fr_0.85fr]">
+      <article className="group grid min-w-0 grid-cols-[minmax(0,1fr)] border-y border-stone-400 dark:border-stone-700 md:grid-cols-[1.15fr_0.85fr]">
         <Link
           href={path}
           className="blog-focus-ring block min-h-64 md:py-7 md:pr-8"

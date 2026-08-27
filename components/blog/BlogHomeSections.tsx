@@ -53,7 +53,7 @@ export function BlogHomeSections({ data }: { data: BlogHomeData }) {
               className="border-b border-[#d8cfc0] dark:border-stone-800"
             >
               <div className="mx-auto max-w-[76rem] px-4 pb-12 pt-14 sm:px-6 sm:pb-16 sm:pt-20 lg:px-8 lg:pb-20 lg:pt-24">
-                <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end lg:gap-20">
+                <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-end lg:gap-20">
                   <div className="max-w-[52rem]">
                     <p className="text-sm leading-6 text-amber-800 dark:text-amber-300">
                       Muhammed Akan’ın teknoloji notları
