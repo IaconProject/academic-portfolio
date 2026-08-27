@@ -1,5 +1,4 @@
 import Image from 'next/image';
-import { Binary, BrainCircuit } from 'lucide-react';
 
 function supportedRemoteImage(url: string) {
   try {
@@ -39,7 +38,7 @@ export function BlogCover({
           fill
           priority={priority}
           sizes={sizes}
-          className="object-cover transition duration-700 group-hover:scale-[1.025]"
+          className="object-cover transition duration-700 group-hover:scale-[1.015]"
         />
       </div>
     );
@@ -47,12 +46,14 @@ export function BlogCover({
 
   return (
     <div
-      className={`relative overflow-hidden bg-[radial-gradient(circle_at_20%_20%,rgba(245,158,11,0.35),transparent_32%),radial-gradient(circle_at_82%_78%,rgba(14,116,144,0.3),transparent_34%),linear-gradient(135deg,#171717,#292524)] ${className}`}
+      className={`relative flex overflow-hidden bg-[#d7ccb9] p-6 text-stone-800 dark:bg-[#292622] dark:text-stone-200 ${className}`}
       role="img"
       aria-label={alt}
     >
-      <Binary className="absolute -right-4 -top-4 h-36 w-36 rotate-12 text-white/[0.06]" />
-      <BrainCircuit className="absolute bottom-5 left-5 h-12 w-12 text-amber-300/80" />
+      <span className="absolute inset-4 border border-stone-700/20 dark:border-stone-100/15" aria-hidden="true" />
+      <p className="blog-article-title relative mt-auto max-w-[18ch] text-xl font-medium leading-tight sm:text-2xl">
+        {alt}
+      </p>
     </div>
   );
 }

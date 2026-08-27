@@ -536,29 +536,8 @@ html.dark .public-fab-bar__moon {
   }
 
   .blog-focus-ring:focus-visible {
-    outline: 3px solid #0e7490;
+    outline: 2px solid #a16207;
     outline-offset: 3px;
-  }
-
-  .blog-brand-mark {
-    clip-path: polygon(
-      0 0,
-      calc(100% - 0.55rem) 0,
-      100% 0.55rem,
-      100% 100%,
-      0.55rem 100%,
-      0 calc(100% - 0.55rem)
-    );
-  }
-
-  .blog-signal-field {
-    background-image:
-      radial-gradient(circle at 12% 24%, rgb(214 154 45 / 0.9) 0 2px, transparent 2.5px),
-      radial-gradient(circle at 74% 24%, rgb(14 116 144 / 0.7) 0 2px, transparent 2.5px),
-      radial-gradient(circle at 74% 72%, rgb(214 154 45 / 0.75) 0 2px, transparent 2.5px),
-      linear-gradient(90deg, transparent 11.9%, rgb(120 113 108 / 0.17) 12%, rgb(120 113 108 / 0.17) 73.9%, transparent 74%),
-      linear-gradient(180deg, transparent 23.9%, rgb(120 113 108 / 0.14) 24%, rgb(120 113 108 / 0.14) 71.9%, transparent 72%);
-    mask-image: linear-gradient(90deg, black, rgb(0 0 0 / 0.62) 72%, transparent 100%);
   }
 
   .blog-article-title {
@@ -566,9 +545,9 @@ html.dark .public-fab-bar__moon {
   }
 
   .blog-prose {
-    @apply max-w-none text-[1.0625rem] text-stone-700 dark:text-stone-200 sm:text-[1.125rem];
+    @apply max-w-none text-[1.125rem] text-stone-700 dark:text-stone-200 sm:text-[1.1875rem];
     font-family: var(--font-blog-serif), Georgia, Cambria, "Times New Roman", serif;
-    line-height: 1.78;
+    line-height: 1.82;
     text-wrap: pretty;
   }
 
@@ -584,18 +563,17 @@ html.dark .public-fab-bar__moon {
   .blog-prose h3,
   .blog-prose h4,
   .blog-prose h5 {
-    @apply scroll-mt-32 font-bold tracking-[-0.025em] text-stone-950 dark:text-white;
-    font-family: var(--font-blog-sans), Inter, -apple-system, BlinkMacSystemFont,
-      "Segoe UI", sans-serif;
+    @apply scroll-mt-32 font-semibold tracking-[-0.025em] text-stone-950 dark:text-white;
+    font-family: var(--font-blog-serif), Georgia, Cambria, "Times New Roman", serif;
     text-wrap: balance;
   }
 
   .blog-prose h2 {
-    @apply mb-5 mt-14 text-[1.8rem] leading-[1.18] sm:text-[2.05rem];
+    @apply mb-5 mt-16 border-t border-stone-300 pt-8 text-[1.9rem] leading-[1.18] dark:border-stone-700 sm:text-[2.2rem];
   }
 
   .blog-prose h3 {
-    @apply mb-4 mt-11 text-[1.45rem] leading-[1.22] sm:text-[1.6rem];
+    @apply mb-4 mt-12 text-[1.55rem] leading-[1.22] sm:text-[1.75rem];
   }
 
   .blog-prose h4,
@@ -607,12 +585,8 @@ html.dark .public-fab-bar__moon {
     @apply my-6;
   }
 
-  .blog-prose > p:first-of-type {
-    @apply text-[1.12em] leading-[1.72] text-stone-800 dark:text-stone-100;
-  }
-
   .blog-prose a {
-    @apply break-words font-semibold text-cyan-800 underline decoration-cyan-700/35 decoration-2 underline-offset-4 transition-colors hover:decoration-cyan-700 dark:text-cyan-300 dark:decoration-cyan-300/35 dark:hover:decoration-cyan-300;
+    @apply break-words font-semibold text-amber-800 underline decoration-amber-700/35 underline-offset-4 transition-colors hover:decoration-amber-700 dark:text-amber-300 dark:decoration-amber-300/35 dark:hover:decoration-amber-300;
   }
 
   .blog-prose strong {
@@ -620,7 +594,7 @@ html.dark .public-fab-bar__moon {
   }
 
   .blog-prose mark {
-    @apply rounded bg-amber-200 px-1 text-stone-950 dark:bg-amber-500/30 dark:text-amber-100;
+    @apply bg-amber-200 px-1 text-stone-950 dark:bg-amber-500/30 dark:text-amber-100;
   }
 
   .blog-prose ul,
@@ -641,7 +615,7 @@ html.dark .public-fab-bar__moon {
   }
 
   .blog-prose blockquote {
-    @apply my-10 border-l-2 border-amber-600 bg-amber-50/70 px-5 py-4 text-[1.08em] font-medium italic text-stone-700 dark:border-amber-400 dark:bg-amber-500/10 dark:text-stone-200 sm:px-7 sm:py-5;
+    @apply my-11 border-l border-amber-700 py-1 pl-6 text-[1.12em] italic leading-[1.72] text-stone-700 dark:border-amber-400 dark:text-stone-200 sm:pl-8;
   }
 
   .blog-prose hr {
@@ -649,11 +623,11 @@ html.dark .public-fab-bar__moon {
   }
 
   .blog-prose :not(pre) > code {
-    @apply rounded-md bg-stone-200 px-1.5 py-0.5 font-mono text-[0.9em] font-bold text-stone-900 dark:bg-stone-800 dark:text-amber-200;
+    @apply bg-stone-200 px-1.5 py-0.5 font-mono text-[0.88em] font-semibold text-stone-900 dark:bg-stone-800 dark:text-amber-200;
   }
 
   .blog-prose pre {
-    @apply my-9 overflow-x-auto rounded-xl border border-stone-800 bg-stone-950 p-4 text-sm leading-6 text-stone-100 shadow-lg sm:p-5;
+    @apply my-10 overflow-x-auto border border-stone-800 bg-stone-950 p-4 text-sm leading-6 text-stone-100 sm:p-5;
   }
 
   .blog-prose pre code {
@@ -665,11 +639,11 @@ html.dark .public-fab-bar__moon {
   }
 
   .blog-prose img {
-    @apply mx-auto h-auto max-w-full rounded-xl border border-stone-200 shadow-lg dark:border-stone-800;
+    @apply mx-auto h-auto max-w-full border border-stone-200 dark:border-stone-800;
   }
 
   .blog-prose figcaption {
-    @apply mt-3 text-center text-sm leading-6 text-stone-500 dark:text-stone-400;
+    @apply mt-3 text-left text-sm leading-6 text-stone-500 dark:text-stone-400;
   }
 
   .blog-prose table {
@@ -677,19 +651,19 @@ html.dark .public-fab-bar__moon {
   }
 
   .blog-prose th {
-    @apply border border-stone-300 bg-stone-100 p-3 font-black text-stone-900 dark:border-stone-700 dark:bg-stone-800 dark:text-white;
+    @apply border-y border-stone-400 bg-stone-100/60 p-3 font-bold text-stone-900 dark:border-stone-700 dark:bg-stone-800/60 dark:text-white;
   }
 
   .blog-prose td {
-    @apply border border-stone-300 p-3 align-top dark:border-stone-700;
+    @apply border-b border-stone-300 p-3 align-top dark:border-stone-700;
   }
 
   .blog-prose details {
-    @apply my-8 rounded-xl border border-stone-300 bg-white/70 p-5 dark:border-stone-700 dark:bg-stone-900;
+    @apply my-8 border-y border-stone-300 py-5 dark:border-stone-700;
   }
 
   .blog-prose summary {
-    @apply cursor-pointer font-black text-stone-950 dark:text-white;
+    @apply cursor-pointer font-bold text-stone-950 dark:text-white;
   }
 
   .blog-prose ul[data-type='taskList'],

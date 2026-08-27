@@ -60,7 +60,7 @@ export function BlogShareButton({ title }: { title: string }) {
     <button
       type="button"
       onClick={share}
-      className="blog-focus-ring inline-flex h-11 items-center gap-2 rounded-xl border border-stone-300 bg-white px-3 text-xs font-bold text-stone-700 transition-colors hover:border-stone-500 hover:text-stone-950 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:border-stone-500"
+      className="blog-focus-ring inline-flex h-9 items-center gap-2 border-b border-stone-400 px-1 text-xs font-semibold text-stone-600 transition-colors hover:border-stone-800 hover:text-stone-950 dark:border-stone-600 dark:text-stone-300 dark:hover:border-stone-200 dark:hover:text-white"
       aria-live="polite"
     >
       {copied ? (
