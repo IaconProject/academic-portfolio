@@ -1185,7 +1185,7 @@ export const VisitorLogsManager: React.FC = () => {
 
       <p className="max-w-3xl text-xs leading-5 text-stone-500 dark:text-stone-400">
         {activeView === 'v2'
-          ? 'Analytics v2 aktif ölçüm sistemidir; yeni ziyaret, etkileşim, performans ve edinme kayıtları burada üretilir.'
+          ? 'Analytics v2 yalnız /7 Instagram biyografi bağlantısının ziyaret, etkileşim ve edinme kayıtlarını gösterir; ana site ve blog trafiği bu alana yazılmaz.'
           : 'Arşiv, Analytics v2 öncesinde visitor_logs ve visitor_sessions tablolarına yazılmış tarihî kayıtlardır. Yeni ziyaretler bu eski tablolara eklenmez; alan yalnız geçmiş veriyi incelemek veya temizlemek için korunur.'}
       </p>
 

@@ -91,22 +91,24 @@ export default async function PrivacyPage() {
           </h2>
           <div className="mt-3 space-y-3">
             <p>
-              Türkiye’den yapılan ziyaretlerde yalnız bu alan adına ait,
-              siteler arası takip yapmayan ve site performansı ile hedef kitle
-              ölçümüyle sınırlı Analytics v2 çalışır. Bu bölgesel uygulama,
+              Türkiye’den yalnız <code>/7</code> Instagram biyografi
+              bağlantısına yapılan ziyaretlerde bu alan adına ait, siteler
+              arası takip yapmayan ve bağlantı performansı ile hedef kitle
+              ölçümüyle sınırlı Analytics v2 çalışır. Ana site, arama motoru
+              ve blog ziyaretleri bu ziyaretçi sayacına yazılmaz. Bu bölgesel uygulama,
               KVKK Çerez Uygulamaları Hakkında Rehberindeki birinci taraf
               analitik yaklaşımıyla sınırlandırılmıştır. Google Analytics bu
               kapsamda otomatik olarak yüklenmez.
             </p>
             <p>
-              Türkiye dışındaki ziyaretlerde site içi Analytics v2 ve Google
-              Analytics varsayılan olarak kapalıdır; yalnız açık analitik izni
-              sonrasında etkinleşir. Ülke güvenilir biçimde belirlenemezse de
-              aynı güvenli varsayılan uygulanır. Reklam depolaması hiçbir
-              bölgede açılmaz.
+              Türkiye dışındaki <code>/7</code> ziyaretlerinde Analytics v2,
+              tüm sayfalarda ise Google Analytics varsayılan olarak kapalıdır;
+              yalnız açık analitik izni sonrasında etkinleşir. Ülke güvenilir
+              biçimde belirlenemezse de aynı güvenli varsayılan uygulanır.
+              Reklam depolaması hiçbir bölgede açılmaz.
             </p>
             <p>
-              Site içi ölçüm; ziyaret edilen canonical sayfa yolu ve başlığı,
+              Site içi ölçüm yalnız canonical <code>/7</code> sayfa yolu ve başlığı,
               yalnız yönlendiren alan adı, izinli UTM kampanya alanları, dil,
               saat dilimi, yaklaşık ekran sınıfı, cihaz sınıfı ve tarayıcının
               bildirebildiği ölçüde cihaz markası/modeli ile tarayıcı ve

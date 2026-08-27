@@ -16,7 +16,11 @@ import {
   toDatabaseAnalyticsEvent,
 } from '@/lib/analytics';
 import { analyticsCollectionModeForRequest } from '@/lib/analytics-consent-policy';
-import { ANALYTICS_COLLECTOR_VERSION } from '@/lib/analytics-contract';
+import {
+  ANALYTICS_COLLECTOR_VERSION,
+  VISITOR_ANALYTICS_TRACKED_PATH,
+  isVisitorAnalyticsTrackedPath,
+} from '@/lib/analytics-contract';
 import { resolveAnalyticsRequestContext } from '@/lib/analytics-geo.server';
 import { readAnalyticsCmsEnabled } from '@/lib/analytics-settings.server';
 import {
@@ -327,8 +331,9 @@ export async function POST(request: Request) {
 
   const now = Date.now();
   for (const event of parsed.data.events) {
+    const normalizedPath = normalizeAnalyticsPath(event.path);
     if (
-      !normalizeAnalyticsPath(event.path) ||
+      !normalizedPath ||
       !isAnalyticsTimestampAccepted(event.occurredAt, now)
     ) {
       return rejectedFailure(
@@ -338,6 +343,22 @@ export async function POST(request: Request) {
         422
       );
     }
+
+    if (!isVisitorAnalyticsTrackedPath(normalizedPath)) {
+      return success(
+        {
+          acceptedCount: 0,
+          duplicateCount: 0,
+          rejectedCount: 0,
+          filtered: 'untracked_path',
+        },
+        200
+      );
+    }
+
+    // Store one canonical value so trailing slashes cannot fragment the link
+    // report or bypass its fixed /7 query scope.
+    event.path = VISITOR_ANALYTICS_TRACKED_PATH;
   }
 
   const detectedTrafficClass = classifyObviousBot(

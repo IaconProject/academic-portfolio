@@ -3,10 +3,17 @@ import 'server-only';
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import { getAnalyticsHashSecret } from './analytics';
+import { VISITOR_ANALYTICS_TRACKED_PATH } from './analytics-contract';
 import {
   hasSupabaseServiceRole,
   serverSupabase,
 } from './supabase/server';
+import {
+  buildVisitorLinkAnalyticsDashboard,
+  VisitorLinkEventRow,
+  VisitorLinkIngestHealthRow,
+  VisitorLinkSessionRow,
+} from './visitor-link-analytics-report';
 
 const MAX_RANGE_MS = 366 * 24 * 60 * 60 * 1000;
 const DEFAULT_TIMEZONE = 'Europe/Istanbul';
@@ -207,6 +214,7 @@ export interface AnalyticsDashboardData {
     }>;
   };
   events: Array<{ eventType: string; count: number }>;
+  interactionEvents: Array<{ interactionKey: string; count: number }>;
   webVitals: Array<{
     metric: string;
     p75: number;
@@ -425,6 +433,14 @@ const dashboardOutputSchema = z
       z
         .object({
           eventType: z.string(),
+          count: finiteCountSchema,
+        })
+        .strict()
+    ),
+    interactionEvents: z.array(
+      z
+        .object({
+          interactionKey: z.string(),
           count: finiteCountSchema,
         })
         .strict()
@@ -652,19 +668,169 @@ function reportContractFailed() {
   );
 }
 
+const VISITOR_LINK_REPORT_PAGE_SIZE = 1_000;
+const VISITOR_LINK_REPORT_MAX_EVENTS = 50_000;
+const VISITOR_LINK_SESSION_CHUNK_SIZE = 100;
+
+const visitorLinkEventRowSchema = z
+  .object({
+    event_id: z.string().uuid(),
+    visitor_id: z.string().uuid(),
+    session_id: z.string().uuid(),
+    event_type: z.string(),
+    occurred_at: isoTimestampSchema,
+    received_at: isoTimestampSchema,
+    path: nullableTextSchema,
+    screen_bucket: nullableTextSchema,
+    duration_ms: z.number().int().nonnegative().nullable(),
+    content_type: nullableTextSchema,
+    content_key: nullableTextSchema,
+    properties: z.record(z.string(), z.unknown()).nullable(),
+  })
+  .strict();
+
+const visitorLinkSessionRowSchema = z
+  .object({
+    id: z.string().uuid(),
+    visitor_id: z.string().uuid(),
+    traffic_class: z.string(),
+    referrer_domain: nullableTextSchema,
+    source: nullableTextSchema,
+    medium: nullableTextSchema,
+    campaign: nullableTextSchema,
+    country_code: nullableTextSchema,
+    country_name: nullableTextSchema,
+    region: nullableTextSchema,
+    city: nullableTextSchema,
+    geo_source: nullableTextSchema,
+    geo_confidence: nullableTextSchema,
+    isp_name: nullableTextSchema,
+    network_organization: nullableTextSchema,
+    asn: nullableTextSchema,
+    is_mobile_network: z.boolean().nullable(),
+    is_proxy: z.boolean().nullable(),
+    is_hosting: z.boolean().nullable(),
+    device_type: nullableTextSchema,
+    device_brand: nullableTextSchema,
+    device_model: nullableTextSchema,
+    browser_name: nullableTextSchema,
+    browser_version: nullableTextSchema,
+    os_name: nullableTextSchema,
+    os_version: nullableTextSchema,
+    consent_version: nullableTextSchema,
+  })
+  .strict();
+
+const visitorLinkHealthRowSchema = z
+  .object({
+    duplicate_events: finiteCountSchema,
+    rejected_events: finiteCountSchema,
+    last_success_at: isoTimestampSchema.nullable(),
+  })
+  .strict();
+
+async function getVisitorLinkEvents(
+  client: ReturnType<typeof requireReportingClient>,
+  query: AnalyticsDashboardQuery
+): Promise<VisitorLinkEventRow[]> {
+  const rows: VisitorLinkEventRow[] = [];
+
+  for (let offset = 0; offset < VISITOR_LINK_REPORT_MAX_EVENTS; offset += VISITOR_LINK_REPORT_PAGE_SIZE) {
+    const { data, error } = await client
+      .from('analytics_events')
+      .select(
+        'event_id, visitor_id, session_id, event_type, occurred_at, received_at, path, screen_bucket, duration_ms, content_type, content_key, properties'
+      )
+      .eq('path', VISITOR_ANALYTICS_TRACKED_PATH)
+      .gte('occurred_at', query.from)
+      .lt('occurred_at', query.to)
+      .order('occurred_at', { ascending: true })
+      .order('event_id', { ascending: true })
+      .range(offset, offset + VISITOR_LINK_REPORT_PAGE_SIZE - 1);
+
+    if (error || !Array.isArray(data)) throw reportQueryFailed();
+    const parsed = z.array(visitorLinkEventRowSchema).safeParse(data);
+    if (!parsed.success) throw reportContractFailed();
+    rows.push(...parsed.data);
+
+    if (parsed.data.length < VISITOR_LINK_REPORT_PAGE_SIZE) return rows;
+  }
+
+  throw new AnalyticsReportingError(
+    'ANALYTICS_REPORT_TOO_LARGE',
+    'Seçilen tarih aralığındaki /7 analitik verisi rapor sınırını aşıyor. Daha kısa bir tarih aralığı seçin.',
+    413
+  );
+}
+
+async function getVisitorLinkSessions(
+  client: ReturnType<typeof requireReportingClient>,
+  sessionIds: string[]
+): Promise<VisitorLinkSessionRow[]> {
+  const rows: VisitorLinkSessionRow[] = [];
+  for (
+    let offset = 0;
+    offset < sessionIds.length;
+    offset += VISITOR_LINK_SESSION_CHUNK_SIZE
+  ) {
+    const chunk = sessionIds.slice(
+      offset,
+      offset + VISITOR_LINK_SESSION_CHUNK_SIZE
+    );
+    const { data, error } = await client
+      .from('analytics_sessions')
+      .select(
+        'id, visitor_id, traffic_class, referrer_domain, source, medium, campaign, country_code, country_name, region, city, geo_source, geo_confidence, isp_name, network_organization, asn, is_mobile_network, is_proxy, is_hosting, device_type, device_brand, device_model, browser_name, browser_version, os_name, os_version, consent_version'
+      )
+      .in('id', chunk);
+
+    if (error || !Array.isArray(data)) throw reportQueryFailed();
+    const parsed = z.array(visitorLinkSessionRowSchema).safeParse(data);
+    if (!parsed.success) throw reportContractFailed();
+    rows.push(...parsed.data);
+  }
+  return rows;
+}
+
+async function getVisitorLinkHealth(
+  client: ReturnType<typeof requireReportingClient>
+): Promise<VisitorLinkIngestHealthRow | null> {
+  const { data, error } = await client
+    .from('analytics_ingest_health')
+    .select('duplicate_events, rejected_events, last_success_at')
+    .eq('id', 1)
+    .maybeSingle();
+  if (error) throw reportQueryFailed();
+  if (!data) return null;
+  const parsed = visitorLinkHealthRowSchema.safeParse(data);
+  if (!parsed.success) throw reportContractFailed();
+  return parsed.data;
+}
+
 export async function getAnalyticsDashboard(
   query: AnalyticsDashboardQuery
 ): Promise<AnalyticsDashboardData> {
   const client = requireReportingClient();
-  const { data, error } = await client.rpc('get_analytics_dashboard', {
-    p_from: query.from,
-    p_to: query.to,
-    p_timezone: query.timezone,
-  });
-
-  if (error || !data) throw reportQueryFailed();
-
-  const parsed = dashboardOutputSchema.safeParse(data);
+  const [events, health] = await Promise.all([
+    getVisitorLinkEvents(client, query),
+    getVisitorLinkHealth(client),
+  ]);
+  const sessions = await getVisitorLinkSessions(
+    client,
+    Array.from(new Set(events.map((event) => event.session_id)))
+  );
+  const parsed = dashboardOutputSchema.safeParse(
+    buildVisitorLinkAnalyticsDashboard({
+      range: {
+        from: query.from,
+        to: query.to,
+        timezone: query.timezone,
+      },
+      events,
+      sessions,
+      health,
+    })
+  );
   if (!parsed.success) throw reportContractFailed();
   return parsed.data;
 }
@@ -799,17 +965,21 @@ export async function getAnalyticsSessions(
   query: AnalyticsSessionsQuery
 ): Promise<AnalyticsSessionsData> {
   const client = requireReportingClient();
-  const fingerprint = sessionQueryFingerprint(query);
-  const cursor = decodeCursor(query.cursor, fingerprint);
+  const scopedQuery = {
+    ...query,
+    path: VISITOR_ANALYTICS_TRACKED_PATH,
+  };
+  const fingerprint = sessionQueryFingerprint(scopedQuery);
+  const cursor = decodeCursor(scopedQuery.cursor, fingerprint);
   const { data, error } = await client.rpc('get_analytics_sessions', {
-    p_from: query.from,
-    p_to: query.to,
-    p_timezone: query.timezone,
-    p_limit: query.limit,
+    p_from: scopedQuery.from,
+    p_to: scopedQuery.to,
+    p_timezone: scopedQuery.timezone,
+    p_limit: scopedQuery.limit,
     p_cursor_at: cursor.at,
     p_cursor_key: cursor.key,
-    p_traffic_class: query.trafficClass,
-    p_path: query.path || null,
+    p_traffic_class: scopedQuery.trafficClass,
+    p_path: VISITOR_ANALYTICS_TRACKED_PATH,
     p_snapshot_to: cursor.snapshotTo,
   });
 
@@ -820,9 +990,9 @@ export async function getAnalyticsSessions(
 
   return {
     range: {
-      from: query.from,
-      to: query.to,
-      timezone: query.timezone,
+      from: scopedQuery.from,
+      to: scopedQuery.to,
+      timezone: scopedQuery.timezone,
     },
     sessions: parsed.data.items.map((session) => ({
       id: session.sessionRef,
@@ -913,17 +1083,73 @@ const exportRowSchema = z.record(
 export async function getAnalyticsExportRows(
   query: AnalyticsExportQuery
 ): Promise<AnalyticsExportRow[]> {
-  const client = requireReportingClient();
-  const { data, error } = await client.rpc('export_analytics_report', {
-    p_from: query.from,
-    p_to: query.to,
-    p_timezone: query.timezone,
-    p_dataset: query.dataset,
-    p_limit: query.limit,
-  });
+  let rows: AnalyticsExportRow[] = [];
 
-  if (error || !Array.isArray(data)) throw reportQueryFailed();
-  const parsed = z.array(exportRowSchema).max(query.limit).safeParse(data);
+  if (query.dataset === 'sessions') {
+    let cursor: string | undefined;
+    while (rows.length < query.limit) {
+      const page = await getAnalyticsSessions({
+        from: query.from,
+        to: query.to,
+        timezone: query.timezone,
+        limit: Math.min(100, query.limit - rows.length),
+        trafficClass: 'human',
+        path: VISITOR_ANALYTICS_TRACKED_PATH,
+        cursor,
+      });
+      rows.push(
+        ...page.sessions.map((session) => ({
+          sessionRef: session.id,
+          startedAt: session.startedAt,
+          lastActivityAt: session.lastActivityAt,
+          durationSeconds: session.durationSeconds,
+          trafficClass: session.trafficClass,
+          isEngaged: session.isEngaged,
+          pageViews: session.pageViews,
+          eventCount: session.eventCount,
+          engagementSeconds: session.engagementSeconds,
+          maxScrollPercent: session.maxScrollPercent,
+          conversions: session.conversionCount,
+          landingPath: session.landingPath,
+          exitPath: session.exitPath,
+          source: session.source,
+          medium: session.medium,
+          campaign: session.campaign,
+          referrerDomain: session.referrerDomain,
+          countryCode: session.countryCode,
+          countryName: session.countryName,
+          region: session.region,
+          city: session.city,
+          geoSource: session.geoSource,
+          geoConfidence: session.geoConfidence,
+          ispName: session.ispName,
+          networkOrganization: session.networkOrganization,
+          asn: session.asn,
+          isMobileNetwork: session.isMobileNetwork,
+          isProxy: session.isProxy,
+          isHosting: session.isHosting,
+          deviceType: session.deviceType,
+          deviceBrand: session.deviceBrand,
+          deviceModel: session.deviceModel,
+          browser: session.browserName,
+          browserVersion: session.browserVersion,
+          operatingSystem: session.osName,
+          osVersion: session.osVersion,
+          consentVersion: session.consentVersion,
+        }))
+      );
+      if (!page.nextCursor) break;
+      cursor = page.nextCursor;
+    }
+  } else {
+    const dashboard = await getAnalyticsDashboard(query);
+    rows =
+      query.dataset === 'pages'
+        ? dashboard.topPages
+        : dashboard.acquisition;
+  }
+
+  const parsed = z.array(exportRowSchema).max(query.limit).safeParse(rows);
   if (!parsed.success) throw reportContractFailed();
 
   for (const row of parsed.data) {

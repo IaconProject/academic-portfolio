@@ -482,8 +482,8 @@ export function ConsentManager({
           </p>
           <p className="mt-2 text-xs leading-5 text-academic-slate">
             {isRegionalFirstPartyMode
-              ? 'Türkiye için site içi, birinci taraf ve siteler arası takip yapmayan performans ölçümü etkindir. İsterseniz bu ölçümü kapatabilir veya Google Analytics için ayrıca izin verebilirsiniz. Reklam depolaması kullanılmaz.'
-              : 'Site içi ölçüm ve Google Analytics yalnız izninizle çalışır. Reklam depolaması kullanılmaz.'}{' '}
+              ? 'Türkiye için yalnız /7 Instagram biyografi bağlantısında, birinci taraf ve siteler arası takip yapmayan ölçüm etkindir. Ana site ve blog ziyaretleri bu sayaca yazılmaz. İsterseniz bu ölçümü kapatabilir veya Google Analytics için ayrıca izin verebilirsiniz. Reklam depolaması kullanılmaz.'
+              : '/7 Instagram biyografi bağlantısındaki site içi ölçüm ve Google Analytics yalnız izninizle çalışır. Ana site ve blog ziyaretleri birinci taraf ziyaretçi sayacına yazılmaz. Reklam depolaması kullanılmaz.'}{' '}
             Ayrıntılar için{' '}
             <Link
               href="/gizlilik"
