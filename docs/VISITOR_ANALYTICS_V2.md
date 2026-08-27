@@ -51,6 +51,7 @@ sonrasında otomatik açılır.
    - `supabase/migrations/20260801163723_analytics_network_geo_enrichment.sql`
    - `supabase/migrations/20260801210247_analytics_ip_geo_network.sql`
    - `supabase/migrations/20260801212029_analytics_geo_provider_health.sql`
+   - `supabase/migrations/20260809090000_visitor_interaction_analytics.sql`
 3. Vercel environment değerlerini ekleyin.
 4. Production deployment oluşturun.
 5. Admin panelinde **SEO → Performans ve Entegrasyonlar** bölümündeki
@@ -65,13 +66,16 @@ Migration'lar eklemelidir ve tekrar çalıştırılabilir. `visitor_sessions` il
 
 ## Collector sözleşmesi
 
-İstemci yalnız açık analitik izni ve CMS ana anahtarı açıkken
-`POST /api/analytics/events` çağırır. Batch en fazla 20 event ve 32 KiB'dir.
+İstemci yalnız `/7` Instagram biyografi bağlantısında, geçerli işleme dayanağı
+ve CMS ana anahtarı açıkken `POST /api/analytics/events` çağırır. Ana sayfa,
+arama motoru ve blog trafiği bu birinci taraf collector'a yazılmaz. Batch en
+fazla 20 event ve 32 KiB'dir.
 
 Collector:
 
 - event sözleşmesini doğrular;
-- admin/API yollarını reddeder;
+- canonical `/7` ve `/7/` dışındaki bütün yolları kalıcı yazımdan önce filtreler
+  ve kabul edilen yolu `/7` olarak saklar;
 - preview ve açık bot trafiğini ana ölçüme almaz;
 - geçici IP değerini HMAC rate-limit ve konum önbellek anahtarı üretmek için
   kullanır; ham IP hiçbir tabloya yazılmaz;
@@ -115,7 +119,7 @@ etkinleştirilmelidir.
 
 ## Faz 2: etkileşim ve deneyim sinyalleri
 
-İzinli ziyaretlerde şu tipler katı bir sözleşmeyle toplanır:
+İzinli `/7` ziyaretlerinde şu tipler katı bir sözleşmeyle toplanır:
 
 - `page_view`: canonical yol ve temizlenmiş sayfa başlığı;
 - `heartbeat`: sekme görünürken sınırlı aralıklarla gerçek etkileşim süresi;
@@ -143,9 +147,10 @@ oturumundan çağrılabilen server API'leriyle sunulur:
 - `GET /api/analytics/export`: geçerli filtreleri kullanan, formül
   enjeksiyonuna karşı güvenli CSV dışa aktarımı.
 
-Tarih aralığı, saat dilimi, trafik sınıfı ve diğer filtreler sunucuda
-doğrulanır. Dashboard sorguları yalnız toplu sonuç döndürür; oturum görünümü
-pseudonim kimliği veya ham kişisel veri göstermez.
+Üç raporlama uç noktası da yolu sunucuda sabit `/7` olarak uygular; istemcinin
+başka bir yol göndermesi kapsamı genişletemez. Tarih aralığı, saat dilimi ve
+trafik sınıfı sunucuda doğrulanır. Dashboard sorguları yalnız toplu sonuç
+döndürür; oturum görünümü pseudonim kimliği veya ham kişisel veri göstermez.
 
 ## Faz 4: veri kalitesi ve yaşam döngüsü
 
@@ -190,7 +195,8 @@ manuel çalıştırır. Veritabanı fonksiyonları yalnız `service_role` taraf�
 - Yönetim ekranı Analytics v2 raporlarını varsayılan görünüm olarak sunar.
   Legacy sekmesi, `visitor_sessions` oturumlarını ve daha eski
   `visitor_logs` sayfa kayıtlarını kaynak işaretli ortak bir okuma modelinde
-  birleştirir; ham IP ve User-Agent değerleri tarayıcıya gönderilmez.
+  birleştirir ve yalnız `/7` yoluyla eşleşen kayıtları gösterir; ham IP ve
+  User-Agent değerleri tarayıcıya gönderilmez.
 - `ANALYTICS_RETENTION_DAYS` yalnız 30–3650 aralığında kabul edilir; geçersiz
   değer güvenli 425 günlük varsayılana döner.
 - Manuel ve zamanlanmış bakım aynı atomik, server-only RPC zincirini kullanır.
@@ -202,8 +208,9 @@ manuel çalıştırır. Veritabanı fonksiyonları yalnız `service_role` taraf�
 
 1. Collector kill-switch ve consent kapalıyken event isteği çıkmadığını
    doğrulayın.
-2. Consent verip iki sayfa gezin; `page_view`, görünür `heartbeat` ve scroll
-   eşiklerinin tekilleştirildiğini kontrol edin.
+2. Ana sayfa ile bir blog yazısını ziyaret edip collector'a event yazılmadığını,
+   ardından `/7` üzerinde `page_view`, görünür `heartbeat` ve scroll eşiklerinin
+   tekilleştirildiğini kontrol edin.
 3. Aynı event batch'ini yeniden göndererek duplicate sayacının arttığını,
    event toplamının artmadığını doğrulayın.
 4. Dashboard toplamlarını seçili aralık için örnek sessionlarla karşılaştırın.

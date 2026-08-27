@@ -3,13 +3,36 @@
  * Updating the consent policy version here forces both sides to move together.
  */
 export const ANALYTICS_SCHEMA_VERSION = 2 as const;
-export const ANALYTICS_COLLECTOR_VERSION = '2.7.0';
+export const ANALYTICS_COLLECTOR_VERSION = '2.8.0';
 export const ANALYTICS_CONSENT_POLICY_VERSION = '2026-08-02.1';
 export const ANALYTICS_MAX_BATCH_EVENTS = 20;
 export const ANALYTICS_SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 export const ANALYTICS_RUNTIME_DISABLED_EVENT =
   'analytics-runtime-disabled';
 export const ANALYTICS_TRACK_EVENT = 'analytics-track-v2';
+export const VISITOR_ANALYTICS_TRACKED_PATH = '/7' as const;
+
+/**
+ * The first-party visitor dashboard is a private link counter for the
+ * Instagram biography URL. Public pages and blog traffic must never enter it.
+ */
+export function isVisitorAnalyticsTrackedPath(
+  value: string | null | undefined
+): boolean {
+  if (
+    typeof value !== 'string' ||
+    !value.startsWith('/') ||
+    value.startsWith('//') ||
+    /[\\\u0000-\u001F\u007F]/.test(value)
+  ) {
+    return false;
+  }
+
+  const pathname = value.split(/[?#]/, 1)[0].replace(/\/{2,}/g, '/');
+  const canonicalPath =
+    pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  return canonicalPath === VISITOR_ANALYTICS_TRACKED_PATH;
+}
 
 export const ANALYTICS_SCROLL_THRESHOLDS = [
   25,

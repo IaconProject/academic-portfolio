@@ -20,6 +20,7 @@ import {
 } from '../lib/analytics-turkey-geo';
 import {
   getSafeAnalyticsDownload,
+  isVisitorAnalyticsTrackedPath,
   normalizeAnalyticsCampaignValue,
   normalizeAnalyticsClientErrorName,
   normalizeAnalyticsNavigationType,
@@ -52,6 +53,18 @@ afterEach(() => {
 });
 
 describe('Analytics v2 event sözleşmesi', () => {
+  it('ziyaretçi sayacını yalnız /7 canonical yoluna sınırlar', () => {
+    expect(isVisitorAnalyticsTrackedPath('/7')).toBe(true);
+    expect(isVisitorAnalyticsTrackedPath('/7/')).toBe(true);
+    expect(isVisitorAnalyticsTrackedPath('/7?utm_source=instagram')).toBe(true);
+    expect(isVisitorAnalyticsTrackedPath('/')).toBe(false);
+    expect(isVisitorAnalyticsTrackedPath('/blog/muhammed-akan-kimdir')).toBe(
+      false
+    );
+    expect(isVisitorAnalyticsTrackedPath('//7')).toBe(false);
+    expect(isVisitorAnalyticsTrackedPath('/70')).toBe(false);
+  });
+
   it('açık rıza ve Türkiye birinci taraf işleme dayanaklarını ayırır', () => {
     expect(getAnalyticsAuthorizationBasis(ANALYTICS_CONSENT_VERSION)).toBe(
       'consent'

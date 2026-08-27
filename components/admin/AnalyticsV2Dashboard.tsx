@@ -23,12 +23,12 @@ import {
   MousePointerClick,
   RefreshCw,
   Route,
-  Search,
   ServerCog,
   Trash2,
   Users,
 } from 'lucide-react';
 import { readSessionItem } from '@/lib/admin-session-storage';
+import { VISITOR_ANALYTICS_TRACKED_PATH } from '@/lib/analytics-contract';
 import toast from 'react-hot-toast';
 
 type DateRangeKey = '7d' | '30d' | '90d' | 'custom';
@@ -733,8 +733,6 @@ export function AnalyticsV2Dashboard() {
   const [hasMore, setHasMore] = useState(false);
   const [trafficFilter, setTrafficFilter] =
     useState<TrafficFilter>('human');
-  const [pathInput, setPathInput] = useState('');
-  const [pathFilter, setPathFilter] = useState('');
   const [exportDataset, setExportDataset] =
     useState<ExportDataset>('sessions');
   const [exporting, setExporting] = useState(false);
@@ -840,7 +838,7 @@ export function AnalyticsV2Dashboard() {
         const params = buildRangeQuery();
         params.set('limit', String(SESSION_PAGE_SIZE));
         params.set('trafficClass', trafficFilter);
-        if (pathFilter) params.set('path', pathFilter);
+        params.set('path', VISITOR_ANALYTICS_TRACKED_PATH);
         if (cursor) params.set('cursor', cursor);
 
         const response = await fetch(
@@ -894,7 +892,7 @@ export function AnalyticsV2Dashboard() {
         }
       }
     },
-    [buildRangeQuery, pathFilter, trafficFilter]
+    [buildRangeQuery, trafficFilter]
   );
 
   const fetchHealth = useCallback(async () => {
@@ -1083,19 +1081,6 @@ export function AnalyticsV2Dashboard() {
     }
   };
 
-  const applyPathFilter = (event: FormEvent) => {
-    event.preventDefault();
-    const normalized = pathInput.trim();
-    if (normalized && !normalized.startsWith('/')) {
-      toast.error('Sayfa filtresi “/” ile başlamalıdır.');
-      return;
-    }
-    setAnalyticsSessions([]);
-    setNextCursor(null);
-    setHasMore(false);
-    setPathFilter(normalized);
-  };
-
   const exportCsv = async () => {
     setExporting(true);
     try {
@@ -1272,10 +1257,12 @@ export function AnalyticsV2Dashboard() {
             )}
           </div>
           <p className="mt-2 max-w-3xl text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-            Bölgesel işleme kuralı veya izin sonrasında toplanan, pseudonim ve
-            botlardan ayrıştırılmış Analytics v2 verileri. Ham IP, kesin
-            koordinat, ziyaretçi anahtarı veya kalıcı kişi kimliği bu ekranda
-            gösterilmez.
+            Yalnız Instagram biyografisinde kullanılan{' '}
+            <code className="font-bold text-amber-700 dark:text-amber-300">
+              {VISITOR_ANALYTICS_TRACKED_PATH}
+            </code>{' '}
+            bağlantısının pseudonim ve botlardan ayrıştırılmış ziyaretleri.
+            Ana site, Google araması ve blog trafiği bu rapora kaydedilmez.
           </p>
         </div>
 
@@ -2149,36 +2136,15 @@ export function AnalyticsV2Dashboard() {
                 </select>
               </div>
 
-              <form
-                onSubmit={applyPathFilter}
-                className="flex w-full max-w-md items-end gap-2"
-              >
-                <div className="flex-1">
-                  <label
-                    htmlFor="analytics-path-filter"
-                    className="mb-1 block text-[10px] font-bold uppercase text-stone-500"
-                  >
-                    Sayfa yolu
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-stone-400" />
-                    <input
-                      id="analytics-path-filter"
-                      type="search"
-                      placeholder="/yayinlar"
-                      value={pathInput}
-                      onChange={(event) => setPathInput(event.target.value)}
-                      className="w-full rounded-lg border border-stone-200 bg-stone-50 py-2 pl-9 pr-3 text-xs text-stone-700 outline-none focus:border-amber-500 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
-                    />
-                  </div>
+              <div className="w-full max-w-md">
+                <p className="mb-1 text-[10px] font-bold uppercase text-stone-500">
+                  Sabit bağlantı kapsamı
+                </p>
+                <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200">
+                  <Route className="h-4 w-4" />
+                  {VISITOR_ANALYTICS_TRACKED_PATH}
                 </div>
-                <button
-                  type="submit"
-                  className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs font-bold text-stone-700 hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200"
-                >
-                  Filtrele
-                </button>
-              </form>
+              </div>
             </div>
 
             {analyticsSessions.length > 0 && (
