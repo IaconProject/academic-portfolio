@@ -753,39 +753,34 @@ const COLS = 6;
 const FRAMES_PER_SHEET = 60;
 const TOTAL_FRAMES = 240;
 
-function gaze2DFrame(x: number, y: number) {
-  const px = Math.min(Math.max(x, 0), 1);
-  const py = Math.min(Math.max(y, 0), 1);
+// 2D Gaze Frame Mapper (0-indexed):
+// UP   (y < 0.28): Up-Left (frame 70 -> 69), Up-Center (frame 18 -> 17), Up-Right (frame 100 -> 99)
+// MID  (0.28..0.62): Mid-Left (frame 146 -> 145), Mid-Center (frame 1 -> 0), Mid-Right (frame 218 -> 217)
+// DOWN (y > 0.62): Down-Left (frame 147 -> 146), Down-Center (frame 230 -> 229), Down-Right (frame 221 -> 220)
+function get2DGazeFrame(x: number, y: number): number {
+  const cx = Math.min(Math.max(x, 0), 1);
+  const cy = Math.min(Math.max(y, 0), 1);
 
-  const isTop = py < 0.45;
-  const isLeft = px < 0.38;
-  const isRight = px > 0.62;
-
-  if (isTop) {
-    // Yukarı bakışlar
-    if (isLeft) return 64; // Frame 65: Yukarı Sol
-    if (isRight) return 99; // Frame 100: Yukarı Sağ
-    return 9; // Frame 10: Yukarı Merkez
-  } else {
-    // Aşağı bakışlar
-    if (isLeft) return 145; // Frame 146: Aşağı Sol
-    if (isRight) return 86; // Frame 87: Aşağı Sağ
-    return 134; // Frame 135: Aşağı / Düz Merkez
+  if (cy < 0.28) {
+    if (cx < 0.38) return 69;
+    if (cx > 0.62) return 99;
+    return 17;
   }
+  if (cy > 0.62) {
+    if (cx < 0.38) return 146;
+    if (cx > 0.62) return 220;
+    return 229;
+  }
+  if (cx < 0.38) return 145;
+  if (cx > 0.62) return 217;
+  return 0;
 }
 
-function emailGazeFrame(emailLength: number) {
-  // E-posta alanı karakterin altında yer aldığından aşağı doğru soldan sağa takip eder
-  const p = Math.min(Math.max(emailLength / 30, 0), 1);
-  if (p < 0.35) return 145; // Frame 146: Aşağı Sol
-  if (p > 0.65) return 86; // Frame 87: Aşağı Sağ
-  return 134; // Frame 135: Aşağı Merkez
-}
-
-function targetFrameForMode(mode: CharacterMode, emailLength: number) {
-  if (mode === 'privacy') return 179; // Frame 180: eller gözleri kapalı tutar
-  if (mode === 'typing') return emailGazeFrame(emailLength);
-  return 134; // Frame 135: merkez / öne bakış (idle)
+function getEmailTypingFrame(emailLength: number): number {
+  const p = Math.min(emailLength, 30) / 30;
+  if (p < 0.35) return 146; // DOWN_LEFT
+  if (p > 0.65) return 220; // DOWN_RIGHT
+  return 229;               // DOWN_CENTER
 }
 
 function CharacterFrames({
@@ -797,12 +792,12 @@ function CharacterFrames({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const characterRef = useRef<HTMLDivElement>(null);
-  const behaviorRef = useRef({ mode, emailLength });
-  const targetFrameRef = useRef(134);
-  const currentFrameRef = useRef(134);
-  const rafRef = useRef<number>(0);
+  const currentFrameRef = useRef<number>(0);
   const sheetsRef = useRef<HTMLImageElement[]>([]);
-  const lastDrawnFrameRef = useRef<number>(-1);
+  const privacyStageRef = useRef<'none' | 'raising' | 'covered' | 'lowering'>(
+    'none'
+  );
+  const animTimerRef = useRef<number | null>(null);
 
   const drawFrame = useCallback((frameIndex: number) => {
     const canvas = canvasRef.current;
@@ -830,7 +825,7 @@ function CharacterFrames({
         FRAME_W,
         FRAME_H
       );
-      lastDrawnFrameRef.current = f;
+      currentFrameRef.current = f;
     }
   }, []);
 
@@ -841,8 +836,7 @@ function CharacterFrames({
       const img = new window.Image();
       img.src = `/media/character/sheet_${i}.webp`;
       img.onload = () => {
-        // As soon as sheet 2 (containing idle frame 134 and privacy frame 179) or sheet 0 loads, draw initial pose
-        if (i === 2 || i === 0) {
+        if (i === 0 || i === 2) {
           drawFrame(currentFrameRef.current);
         }
       };
@@ -851,52 +845,92 @@ function CharacterFrames({
     sheetsRef.current = sheets;
   }, [drawFrame]);
 
-  // Smooth lerp loop: interpolates current frame toward target at 60fps
+  // Handle privacy mode transitions (hands raising / covering / lowering)
   useEffect(() => {
-    const tick = () => {
-      const target = targetFrameRef.current;
-      const current = currentFrameRef.current;
-      const delta = target - current;
+    if (animTimerRef.current) {
+      window.clearInterval(animTimerRef.current);
+      animTimerRef.current = null;
+    }
 
-      if (Math.abs(delta) > 0.04) {
-        currentFrameRef.current += delta * 0.2;
-        drawFrame(currentFrameRef.current);
-      } else if (lastDrawnFrameRef.current !== Math.round(target)) {
-        currentFrameRef.current = target;
-        drawFrame(target);
+    if (mode === 'privacy') {
+      privacyStageRef.current = 'raising';
+      let currentF = 154;
+      drawFrame(currentF);
+
+      animTimerRef.current = window.setInterval(() => {
+        currentF += 4;
+        if (currentF >= 179) {
+          currentF = 179;
+          drawFrame(179);
+          privacyStageRef.current = 'covered';
+          if (animTimerRef.current) {
+            window.clearInterval(animTimerRef.current);
+            animTimerRef.current = null;
+          }
+        } else {
+          drawFrame(currentF);
+        }
+      }, 25);
+    } else if (
+      privacyStageRef.current === 'covered' ||
+      privacyStageRef.current === 'raising'
+    ) {
+      privacyStageRef.current = 'lowering';
+      let currentF = 180;
+      drawFrame(currentF);
+
+      animTimerRef.current = window.setInterval(() => {
+        currentF += 5;
+        if (currentF >= 210) {
+          privacyStageRef.current = 'none';
+          if (animTimerRef.current) {
+            window.clearInterval(animTimerRef.current);
+            animTimerRef.current = null;
+          }
+          const defaultF =
+            mode === 'typing' ? getEmailTypingFrame(emailLength) : 0;
+          drawFrame(defaultF);
+        } else {
+          drawFrame(currentF);
+        }
+      }, 25);
+    } else if (mode === 'typing') {
+      privacyStageRef.current = 'none';
+      drawFrame(getEmailTypingFrame(emailLength));
+    } else {
+      privacyStageRef.current = 'none';
+      drawFrame(0);
+    }
+
+    return () => {
+      if (animTimerRef.current) {
+        window.clearInterval(animTimerRef.current);
       }
-
-      rafRef.current = requestAnimationFrame(tick);
     };
+  }, [drawFrame, emailLength, mode]);
 
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [drawFrame]);
-
-  useEffect(() => {
-    behaviorRef.current = { mode, emailLength };
-    targetFrameRef.current = targetFrameForMode(mode, emailLength);
-  }, [emailLength, mode]);
-
+  // Handle pointer tracking
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
-      if (behaviorRef.current.mode !== 'pointer') return;
+      if (mode !== 'pointer' || privacyStageRef.current !== 'none') return;
 
       const x = event.clientX / window.innerWidth;
       const y = event.clientY / window.innerHeight;
-      const character = characterRef.current;
 
-      if (character) {
-        character.style.transform = `translate3d(${(x - 0.5) * 14}px, ${(y - 0.5) * 10}px, 0)`;
+      if (characterRef.current) {
+        characterRef.current.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
       }
-      targetFrameRef.current = gaze2DFrame(x, y);
+
+      const gazeF = get2DGazeFrame(x, y);
+      drawFrame(gazeF);
     };
 
     document.addEventListener('pointermove', handlePointerMove, {
       passive: true,
     });
     return () => document.removeEventListener('pointermove', handlePointerMove);
-  }, []);
+  }, [drawFrame, mode]);
+
 
   return (
     <div
