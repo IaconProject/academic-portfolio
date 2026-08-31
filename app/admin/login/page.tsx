@@ -828,11 +828,7 @@ function CharacterVideo({
     <div
       ref={characterRef}
       className="will-change-transform"
-      style={{
-        transition: 'transform 0.12s cubic-bezier(0.22, 1, 0.36, 1)',
-        WebkitMaskImage: 'radial-gradient(ellipse 70% 80% at 50% 45%, black 55%, transparent 100%)',
-        maskImage: 'radial-gradient(ellipse 70% 80% at 50% 45%, black 55%, transparent 100%)',
-      }}
+      style={{ transition: 'transform 0.12s cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
       <video
         ref={videoRef}
@@ -842,7 +838,13 @@ function CharacterVideo({
         onLoadedData={() => {
           targetTimeRef.current = characterTimestamp(mode, emailLength);
         }}
-        className="h-[14rem] w-auto max-w-none mix-blend-multiply sm:h-[17rem] lg:h-[20rem]"
+        className="h-[14rem] w-auto max-w-none sm:h-[17rem] lg:h-[20rem]"
+        style={{
+          WebkitMaskImage:
+            'radial-gradient(ellipse 70% 80% at 50% 55%, black 50%, transparent 100%)',
+          maskImage:
+            'radial-gradient(ellipse 70% 80% at 50% 55%, black 50%, transparent 100%)',
+        }}
       >
         <source src="/media/monion.mp4" type="video/mp4" />
       </video>
