@@ -39,7 +39,7 @@ type LoginStep =
   | 'reset-verify'
   | 'complete';
 
-type CharacterMode = 'idle' | 'pointer' | 'typing' | 'privacy' | 'success';
+type CharacterMode = 'idle' | 'pointer' | 'typing' | 'privacy';
 
 function friendlyAuthError(message?: string) {
   const value = (message || '').toLowerCase();
@@ -374,15 +374,13 @@ export default function AdminLoginPage() {
   }
 
   const characterMode: CharacterMode =
-    step === 'complete'
-      ? 'success'
-      : step !== 'credentials'
-        ? 'idle'
-        : activeField === 'password'
-          ? 'privacy'
-          : activeField === 'email'
-            ? 'typing'
-            : 'pointer';
+    step !== 'credentials'
+      ? 'idle'
+      : activeField === 'password'
+        ? 'privacy'
+        : activeField === 'email'
+          ? 'typing'
+          : 'pointer';
 
   const heading =
     step === 'credentials'
@@ -749,60 +747,134 @@ export default function AdminLoginPage() {
   );
 }
 
+// Sprite sheet sabitleri
 const FRAME_W = 270;
 const FRAME_H = 480;
 const COLS = 6;
 const FRAMES_PER_SHEET = 60;
 const TOTAL_FRAMES = 240;
 
-// Continuous frame sequences (0-indexed)
-// Raising hands to cover eyes: frames 153 to 180 (28 consecutive frames)
-const RAISE_FRAMES = Array.from({ length: 28 }, (_, i) => 152 + i);
-// Lowering hands from eyes: frames 205 to 217 (13 consecutive frames)
-const LOWER_FRAMES = Array.from({ length: 13 }, (_, i) => 204 + i);
+// === Sprite frame haritası (0-indexed) ===
+// Görsel analiz sonucu belirlenen gerçek frame içerikleri:
+//   0..29   (1..30)   → Öne/Idle, hafif gülümseme, gözler merkezde
+//   30..90  (31..91)  → SOLA net bakış, ağız nötr
+//   91..104 (92..105) → SOLA bakış, ağız açık (üzüntülü)
+//   105..149(106..150)→ Öne, kaşları çatık (frowny)
+//   150..179(151..180)→ Eller yukarı çıkıyor (peekaboo raise)
+//   180..199(181..200)→ Eller gözleri tam kapalı tutuyor
+//   200..209(201..210)→ Eller iniyor (peekaboo lower)
+//   210..224(211..225)→ Gözler açılıyor, nötr
+//   225..239(226..240)→ Geniş gülümseme (celebrate)
+//
+// Sprite'ta "sağ bakış" frame'i YOK. Bu yüzden sağa bakış için
+// sol frame'ler canvas yatay çevirme (scaleX=-1) ile aynalanır.
+// Sprite'ta "yukarı/aşağı bakış" frame'i de yok; bunun yerine gövde
+// dikey öteleme + hafif döndürme (tilt) ile yukarı/aşağı bakış
+// hissi yaratılır.
 
-function calculateGazeFrame(dx: number, dy: number): number {
-  const dist = Math.hypot(dx, dy);
-  if (dist < 0.14) {
-    return 49; // Neutral Center (frame 50)
+// Frame aralık sabitleri
+const IDLE_FRAME = 13; // 0-indexed: yumuşak gülümseme + öne bakış
+const LEFT_GAZE_START = 30;
+const LEFT_GAZE_END = 90; // en belirgin sol bakışın sonu
+const HANDS_RAISE_START = 150;
+const HANDS_COVERED = 180;
+const HANDS_RAISE_END = 179; // tam kapalıdan bir önceki
+const HANDS_LOWER_START = 200;
+const HANDS_LOWER_END = 209;
+const EYES_OPEN = 211;
+
+// Privacy modu için ardışık frame dizileri
+const RAISE_FRAMES = Array.from(
+  { length: HANDS_RAISE_END - HANDS_RAISE_START + 1 },
+  (_, i) => HANDS_RAISE_START + i
+);
+const LOWER_FRAMES = Array.from(
+  { length: HANDS_LOWER_END - HANDS_LOWER_START + 1 },
+  (_, i) => HANDS_LOWER_START + i
+);
+
+// Göz bakış sonucu: çerçeve + aynalama bilgisi
+type GazePose = {
+  frame: number;
+  mirrored: boolean;
+};
+
+// İmlecin x, y koordinatına göre bakış yönünü hesapla.
+// x: 0 (sol) → 1 (sağ), y: 0 (üst) → 1 (alt)
+// Sprite sadece sol/öne bakışa sahip; sağ için aynalama kullanılır.
+function gazeFrame(x: number, y: number): GazePose {
+  const px = Math.min(Math.max(x, 0), 1);
+  const py = Math.min(Math.max(y, 0), 1);
+
+  const centerWidth = 0.18; // tam ortada kabul edilen ölü bölge
+  const leftEdge = 0.5 - centerWidth / 2;
+  const rightEdge = 0.5 + centerWidth / 2;
+
+  // Y koordinatına göre dikey bakış seti:
+  //   y < 0.35  → yukarı (yukarı çekilmiş gözlü setler)
+  //   y > 0.65  → aşağı (daha aşağı kaymış gözlü setler)
+  // Aksi halde orta.
+  let verticalOffset = 0; // sol gaze aralığında ne kadar kaydırılacak
+  if (py < 0.35) {
+    verticalOffset = -12; // yukarı → aralığın başına doğru
+  } else if (py > 0.65) {
+    verticalOffset = 12; // aşağı → aralığın sonuna doğru (ağız açık, üzgün)
   }
 
-  // Mid-level horizontal gaze (-0.35 <= dy <= 0.35)
-  if (Math.abs(dy) <= 0.35) {
-    if (dx > 0.15) {
-      const t = Math.min(Math.max((dx - 0.15) / 0.75, 0), 1);
-      return Math.round(30 + t * 10); // Frames 31..40 (Center to Right)
-    } else if (dx < -0.15) {
-      const t = Math.min(Math.max((-dx - 0.15) / 0.75, 0), 1);
-      return Math.round(9 + t * 11); // Frames 10..20 (Center to Left)
+  if (px < leftEdge) {
+    // SOLA bakış
+    const t = px / leftEdge; // 0..1
+    // Sol bakış aralığında y'ye göre konum seç
+    // Üst yarı: 30..65 (nötr ağız), alt yarı: 65..104 (ağız açık)
+    const leftRange = LEFT_GAZE_END - LEFT_GAZE_START; // 60
+    const base = LEFT_GAZE_START + t * leftRange;
+    const f = Math.round(Math.min(LEFT_GAZE_END, Math.max(LEFT_GAZE_START, base + verticalOffset)));
+    return { frame: f, mirrored: false };
+  } else if (px > rightEdge) {
+    // SAĞA bakış → sol frame'leri aynala
+    const t = (px - rightEdge) / (1 - rightEdge); // 0..1
+    const leftRange = LEFT_GAZE_END - LEFT_GAZE_START;
+    const base = LEFT_GAZE_START + t * leftRange;
+    const f = Math.round(Math.min(LEFT_GAZE_END, Math.max(LEFT_GAZE_START, base + verticalOffset)));
+    return { frame: f, mirrored: true };
+  } else {
+    // MERKEZ/ÖNE bakış
+    // Y'ye göre hafif öne-üst veya öne-alt frame'ler arasında geçiş yap
+    if (py < 0.35) {
+      return { frame: IDLE_FRAME, mirrored: false };
+    } else if (py > 0.65) {
+      // Öne hafif üzgün (ağız açık ama bakış merkezde)
+      return { frame: 99, mirrored: false };
     }
+    return { frame: IDLE_FRAME, mirrored: false };
   }
+}
 
-  // Upward gaze (dy < -0.2)
-  if (dy < -0.2) {
-    const tY = Math.min(Math.max((-dy - 0.2) / 0.75, 0), 1);
-    if (dx > 0.1) {
-      return Math.round(53 + tY * 17); // Frames 54..70 (Up-Right)
-    } else if (dx < -0.1) {
-      return Math.round(86 + tY * 18); // Frames 87..104 (Up-Left)
-    } else {
-      return Math.round(88 + tY * 4); // Frames 89..92 (Up-Center)
+function targetPoseForMode(
+  mode: CharacterMode,
+  emailLength: number
+): { frame: number; mirrored: boolean } {
+  if (mode === 'privacy') {
+    return { frame: HANDS_COVERED, mirrored: false };
+  }
+  if (mode === 'typing') {
+    // Yazarken: yazılan karakter sayısına göre sol→öne doğru hafif bakış
+    // 0..4 karakter → sola, 5..15 → öne, 16+ → öne hafif sağa (aynalamasız)
+    const p = Math.min(emailLength, 24) / 24;
+    if (p < 0.25) {
+      const t = p / 0.25;
+      return {
+        frame: Math.round(LEFT_GAZE_START + t * 25),
+        mirrored: false,
+      };
     }
+    return { frame: IDLE_FRAME, mirrored: false };
   }
-
-  // Downward gaze (dy > 0.15)
-  if (dy > 0.15) {
-    const tY = Math.min(Math.max((dy - 0.15) / 0.75, 0), 1);
-    if (dx < -0.1) {
-      return Math.round(135 + tY * 9); // Frames 136..144 (Down-Left)
-    } else if (dx > 0.1) {
-      return Math.round(214 + tY * 5); // Frames 215..219 (Down-Right)
-    } else {
-      return Math.round(145 + tY * 6); // Frames 146..151 (Down-Center)
-    }
+  if (mode === 'idle') {
+    return { frame: IDLE_FRAME, mirrored: false };
   }
-
-  return 49;
+  // pointer modu default - sonraki adımda imleç pozisyonuyla güncellenecek
+  return { frame: IDLE_FRAME, mirrored: false };
 }
 
 function CharacterFrames({
@@ -814,42 +886,64 @@ function CharacterFrames({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const characterRef = useRef<HTMLDivElement>(null);
+
+  // Davranış durumu
+  const behaviorRef = useRef({ mode, emailLength });
+
+  // Hedef ve güncel değerler (her biri ayrı ref ile yumuşatılır)
+  const targetFrameRef = useRef(IDLE_FRAME);
+  const currentFrameRef = useRef(IDLE_FRAME);
+  const targetMirroredRef = useRef(false);
+  const currentMirroredRef = useRef(false);
+  // İmleç pozisyonu (smooth)
+  const targetPointerRef = useRef({ x: 0.5, y: 0.5 });
+  const smoothPointerRef = useRef({ x: 0.5, y: 0.5 });
+
+  // Privacy animasyon durumu
+  const privacyAnimRef = useRef<{
+    active: boolean;
+    phase: 'raise' | 'cover' | 'lower' | 'none';
+    start: number;
+    fromFrame: number;
+  }>({ active: false, phase: 'none', start: 0, fromFrame: IDLE_FRAME });
+
+  const rafRef = useRef<number>(0);
   const sheetsRef = useRef<HTMLImageElement[]>([]);
   const lastDrawnFrameRef = useRef<number>(-1);
+  const lastDrawnMirrorRef = useRef<boolean>(false);
 
-  const targetPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const smoothPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const smoothTypingRef = useRef<number>(0);
+  const drawFrame = useCallback(
+    (frameIndex: number, mirrored: boolean) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-  const animStateRef = useRef<{
-    mode: CharacterMode;
-    privacyPhase: 'none' | 'raising' | 'covered' | 'lowering';
-    privacyStart: number;
-    emailLength: number;
-    targetFrame: number;
-  }>({
-    mode,
-    privacyPhase: mode === 'privacy' ? 'covered' : 'none',
-    privacyStart: 0,
-    emailLength,
-    targetFrame: mode === 'privacy' ? 179 : 49,
-  });
+      const f = Math.min(
+        TOTAL_FRAMES - 1,
+        Math.max(0, Math.round(frameIndex))
+      );
+      const sheetIdx = Math.floor(f / FRAMES_PER_SHEET);
+      const localIdx = f % FRAMES_PER_SHEET;
+      const col = localIdx % COLS;
+      const row = Math.floor(localIdx / COLS);
 
-  const drawFrame = useCallback((frameIndex: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      const sheet = sheetsRef.current[sheetIdx];
+      if (!sheet || !sheet.complete || sheet.naturalWidth === 0) {
+        return;
+      }
 
-    const f = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(frameIndex)));
-    const sheetIdx = Math.floor(f / FRAMES_PER_SHEET);
-    const localIdx = f % FRAMES_PER_SHEET;
-    const col = localIdx % COLS;
-    const row = Math.floor(localIdx / COLS);
+      const mirrorChanged = lastDrawnMirrorRef.current !== mirrored;
+      const frameChanged = lastDrawnFrameRef.current !== f;
+      if (!mirrorChanged && !frameChanged) return;
 
-    const sheet = sheetsRef.current[sheetIdx];
-    if (sheet && sheet.complete && sheet.naturalWidth > 0) {
+      ctx.save();
       ctx.clearRect(0, 0, FRAME_W, FRAME_H);
+      if (mirrored) {
+        // Yatay aynalama: önce sağa flip et, sonra FRAME_W kadar sola ötele
+        ctx.translate(FRAME_W, 0);
+        ctx.scale(-1, 1);
+      }
       ctx.drawImage(
         sheet,
         col * FRAME_W,
@@ -861,19 +955,24 @@ function CharacterFrames({
         FRAME_W,
         FRAME_H
       );
-      lastDrawnFrameRef.current = f;
-    }
-  }, []);
+      ctx.restore();
 
-  // Preload all 4 sprite sheets
+      lastDrawnFrameRef.current = f;
+      lastDrawnMirrorRef.current = mirrored;
+    },
+    []
+  );
+
+  // Sprite sheet'leri yükle
   useEffect(() => {
     const sheets: HTMLImageElement[] = [];
     for (let i = 0; i < 4; i++) {
       const img = new window.Image();
       img.src = `/media/character/sheet_${i}.webp`;
       img.onload = () => {
+        // İlk yüklenen sheet'lerden birinde idle/privacy frame varsa çiz
         if (i === 0 || i === 2) {
-          drawFrame(animStateRef.current.targetFrame);
+          drawFrame(currentFrameRef.current, currentMirroredRef.current);
         }
       };
       sheets.push(img);
@@ -881,161 +980,175 @@ function CharacterFrames({
     sheetsRef.current = sheets;
   }, [drawFrame]);
 
-  // Synchronize state when mode or emailLength changes
+  // 60fps ana render döngüsü
   useEffect(() => {
-    const state = animStateRef.current;
-    const prevMode = state.mode;
-    state.mode = mode;
-    state.emailLength = emailLength;
-
-    if (mode === 'privacy') {
-      if (
-        prevMode !== 'privacy' &&
-        state.privacyPhase !== 'raising' &&
-        state.privacyPhase !== 'covered'
-      ) {
-        state.privacyPhase = 'raising';
-        state.privacyStart = performance.now();
-      }
-    } else {
-      if (
-        prevMode === 'privacy' ||
-        state.privacyPhase === 'covered' ||
-        state.privacyPhase === 'raising'
-      ) {
-        state.privacyPhase = 'lowering';
-        state.privacyStart = performance.now();
-      }
-    }
-  }, [mode, emailLength]);
-
-  // Master 60fps render and physics animation loop
-  useEffect(() => {
-    let rafId = 0;
+    const PRIVACY_RAISE_MS = 720; // 30 frame × 24ms
+    const PRIVACY_LOWER_MS = 360; // 10 frame × 36ms
 
     const tick = (now: number) => {
-      const state = animStateRef.current;
-      let frameToDraw = state.targetFrame;
+      const behavior = behaviorRef.current;
 
-      // Smooth pointer position lerp (spring effect)
+      // === İmleç yumuşatma (her frame'de hedefe yaklaş) ===
       smoothPointerRef.current.x +=
-        (targetPointerRef.current.x - smoothPointerRef.current.x) * 0.18;
+        (targetPointerRef.current.x - smoothPointerRef.current.x) * 0.22;
       smoothPointerRef.current.y +=
-        (targetPointerRef.current.y - smoothPointerRef.current.y) * 0.18;
+        (targetPointerRef.current.y - smoothPointerRef.current.y) * 0.22;
 
-      if (state.privacyPhase === 'raising') {
-        const elapsed = now - state.privacyStart;
-        const frameIdx = Math.floor(elapsed / 30); // ~33fps playback
-        if (frameIdx >= RAISE_FRAMES.length - 1) {
-          state.privacyPhase = 'covered';
-          frameToDraw = 179; // Frame 180 (Hands holding eyes covered)
-        } else {
-          frameToDraw = RAISE_FRAMES[frameIdx];
+      // === Privacy animasyonu ===
+      const priv = privacyAnimRef.current;
+      let privacyActive = false;
+      if (priv.active && priv.phase !== 'none') {
+        const elapsed = now - priv.start;
+        if (priv.phase === 'raise') {
+          // Raise: HANDS_RAISE_START..HANDS_RAISE_END, 720ms'de
+          const frames = RAISE_FRAMES;
+          const idx = Math.min(
+            frames.length - 1,
+            Math.floor((elapsed / PRIVACY_RAISE_MS) * frames.length)
+          );
+          targetFrameRef.current = frames[idx];
+          if (elapsed >= PRIVACY_RAISE_MS) {
+            priv.phase = 'cover';
+            priv.start = now;
+            targetFrameRef.current = HANDS_COVERED;
+          }
+          privacyActive = true;
+        } else if (priv.phase === 'cover') {
+          targetFrameRef.current = HANDS_COVERED;
+          if (behavior.mode !== 'privacy') {
+            priv.phase = 'lower';
+            priv.start = now;
+          }
+          privacyActive = true;
+        } else if (priv.phase === 'lower') {
+          const frames = LOWER_FRAMES;
+          const idx = Math.min(
+            frames.length - 1,
+            Math.floor((elapsed / PRIVACY_LOWER_MS) * frames.length)
+          );
+          targetFrameRef.current = frames[idx];
+          if (elapsed >= PRIVACY_LOWER_MS) {
+            priv.phase = 'none';
+            priv.active = false;
+            targetFrameRef.current = EYES_OPEN;
+          }
+          privacyActive = true;
         }
-      } else if (state.privacyPhase === 'covered') {
-        frameToDraw = 179; // Frame 180 (Hold eyes covered)
-      } else if (state.privacyPhase === 'lowering') {
-        const elapsed = now - state.privacyStart;
-        const frameIdx = Math.floor(elapsed / 30); // ~33fps playback
-        if (frameIdx >= LOWER_FRAMES.length - 1) {
-          state.privacyPhase = 'none';
-          frameToDraw = 49;
-        } else {
-          frameToDraw = LOWER_FRAMES[frameIdx];
-        }
+      }
+
+      // === Hedef frame'i güncelle ===
+      if (!privacyActive && behavior.mode === 'pointer') {
+        const pose = gazeFrame(
+          smoothPointerRef.current.x,
+          smoothPointerRef.current.y
+        );
+        targetFrameRef.current = pose.frame;
+        targetMirroredRef.current = pose.mirrored;
+      } else if (!privacyActive && behavior.mode === 'typing') {
+        // Typing modunda imleç takibi YOK, sadece yumuşak ileri-geri
+        const p = Math.min(behavior.emailLength, 24) / 24;
+        const idleFrame = p < 0.25
+          ? Math.round(LEFT_GAZE_START + (p / 0.25) * 25)
+          : IDLE_FRAME;
+        targetFrameRef.current = idleFrame;
+        targetMirroredRef.current = false;
+      } else if (!privacyActive) {
+        // idle modu: hedef zaten ayarlandı
+        const pose = targetPoseForMode(behavior.mode, behavior.emailLength);
+        targetFrameRef.current = pose.frame;
+        targetMirroredRef.current = pose.mirrored;
+      }
+
+      // === Yumuşak enterpolasyon (spring) ===
+      // Frame lerp
+      const frameDelta = targetFrameRef.current - currentFrameRef.current;
+      if (Math.abs(frameDelta) > 0.05) {
+        currentFrameRef.current += frameDelta * 0.22;
       } else {
-        // Normal interactive modes (privacyPhase === 'none')
-        if (state.mode === 'typing') {
-          const targetP = Math.min(state.emailLength, 30) / 30;
-          smoothTypingRef.current +=
-            (targetP - smoothTypingRef.current) * 0.2;
-          const p = smoothTypingRef.current;
-
-          if (p < 0.4) {
-            const t = p / 0.4;
-            frameToDraw = Math.round(138 + t * 6); // Down-Left
-          } else if (p < 0.7) {
-            const t = (p - 0.4) / 0.3;
-            frameToDraw = Math.round(146 + t * 5); // Down-Center
-          } else {
-            const t = (p - 0.7) / 0.3;
-            frameToDraw = Math.round(215 + t * 4); // Down-Right
-          }
-
-          const character = characterRef.current;
-          if (character) {
-            const offsetX = (p - 0.5) * 16;
-            character.style.transform = `translate3d(${offsetX}px, 6px, 0) rotate(${(p - 0.5) * 2}deg)`;
-          }
-        } else if (state.mode === 'success') {
-          frameToDraw = 234; // Frame 235: Happy celebration
-          const character = characterRef.current;
-          if (character) {
-            character.style.transform = `translate3d(0, 0, 0) scale(1.04)`;
-          }
-        } else if (state.mode === 'idle') {
-          frameToDraw = 49; // Frame 50: Neutral forward
-          const character = characterRef.current;
-          if (character) {
-            character.style.transform = `translate3d(0, 0, 0)`;
-          }
-        } else {
-          // Pointer tracking mode
-          const { x: sx, y: sy } = smoothPointerRef.current;
-          frameToDraw = calculateGazeFrame(sx, sy);
-
-          const character = characterRef.current;
-          if (character) {
-            character.style.transform = `translate3d(${sx * 12}px, ${sy * 10}px, 0) rotate(${sx * 1.8}deg)`;
-          }
-        }
+        currentFrameRef.current = targetFrameRef.current;
       }
 
-      state.targetFrame = frameToDraw;
-      if (lastDrawnFrameRef.current !== frameToDraw) {
-        drawFrame(frameToDraw);
+      // Mirror hedefine doğru yumuşak geçiş (mirror bool'unu lerp edemeyiz,
+      // doğrudan hedefe atıyoruz ama yalnızca değiştiğinde)
+      const mirrorChanged = currentMirroredRef.current !== targetMirroredRef.current;
+      if (mirrorChanged) {
+        currentMirroredRef.current = targetMirroredRef.current;
       }
 
-      rafId = requestAnimationFrame(tick);
+      // === Gövde dönüşümü ===
+      // x, y düzleminden bedenin hafifçe kayması + dönmesi
+      if (characterRef.current) {
+        const sx = smoothPointerRef.current.x;
+        const sy = smoothPointerRef.current.y;
+        // Yumuşak geçiş için hedef değerleri
+        const targetDx = (sx - 0.5) * 16; // px
+        const targetDy = (sy - 0.5) * 10; // px (aşağı/yukarı takip)
+        const targetRot = (sx - 0.5) * 1.6 + (sy - 0.5) * 0.8; // derece
+        characterRef.current.style.transform = `translate3d(${targetDx}px, ${targetDy}px, 0) rotate(${targetRot}deg)`;
+      }
+
+      drawFrame(currentFrameRef.current, currentMirroredRef.current);
+
+      rafRef.current = requestAnimationFrame(tick);
     };
 
-    rafId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafId);
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
   }, [drawFrame]);
 
-  // Pointer listener for eye tracking and 3D parallax
+  // Mode değişimlerinde davranış güncelle ve privacy animasyonunu tetikle
+  useEffect(() => {
+    const prev = behaviorRef.current;
+    behaviorRef.current = { mode, emailLength };
+
+    if (mode === 'privacy' && prev.mode !== 'privacy') {
+      // Privacy'ye giriş: elleri kaldır
+      privacyAnimRef.current = {
+        active: true,
+        phase: 'raise',
+        start: performance.now(),
+        fromFrame: currentFrameRef.current,
+      };
+    } else if (mode !== 'privacy' && prev.mode === 'privacy') {
+      // Privacy'den çıkış: elleri indir
+      privacyAnimRef.current = {
+        active: true,
+        phase: 'lower',
+        start: performance.now(),
+        fromFrame: HANDS_COVERED,
+      };
+    } else {
+      // Diğer mod değişimlerinde sadece hedefi güncelle
+      const pose = targetPoseForMode(mode, emailLength);
+      targetFrameRef.current = pose.frame;
+      targetMirroredRef.current = pose.mirrored;
+    }
+  }, [emailLength, mode]);
+
+  // İmleç takibi
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
-      const state = animStateRef.current;
-      if (state.privacyPhase !== 'none' || state.mode !== 'pointer') return;
-
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const rect = canvas.getBoundingClientRect();
-      const charCenterX = rect.left + rect.width / 2;
-      const charEyesY = rect.top + rect.height * 0.35;
-
-      const halfW = Math.max(window.innerWidth * 0.4, 200);
-      const halfH = Math.max(window.innerHeight * 0.4, 200);
-
-      const dx = Math.max(-1, Math.min(1, (event.clientX - charCenterX) / halfW));
-      const dy = Math.max(-1, Math.min(1, (event.clientY - charEyesY) / halfH));
-
-      targetPointerRef.current = { x: dx, y: dy };
+      const x = event.clientX / window.innerWidth;
+      const y = event.clientY / window.innerHeight;
+      targetPointerRef.current = { x, y };
     };
 
-    window.addEventListener('pointermove', handlePointerMove, {
+    document.addEventListener('pointermove', handlePointerMove, {
       passive: true,
     });
-    return () => window.removeEventListener('pointermove', handlePointerMove);
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+    };
   }, []);
 
   return (
     <div
       ref={characterRef}
       className="will-change-transform"
-      style={{ transition: 'transform 0.08s ease-out' }}
+      style={{
+        transition: 'none',
+        transformOrigin: '50% 100%',
+      }}
     >
       <canvas
         ref={canvasRef}
