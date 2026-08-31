@@ -753,34 +753,62 @@ const COLS = 6;
 const FRAMES_PER_SHEET = 60;
 const TOTAL_FRAMES = 240;
 
-// 2D Gaze Frame Mapper (0-indexed):
-// UP   (y < 0.28): Up-Left (frame 70 -> 69), Up-Center (frame 18 -> 17), Up-Right (frame 100 -> 99)
-// MID  (0.28..0.62): Mid-Left (frame 146 -> 145), Mid-Center (frame 1 -> 0), Mid-Right (frame 218 -> 217)
-// DOWN (y > 0.62): Down-Left (frame 147 -> 146), Down-Center (frame 230 -> 229), Down-Right (frame 221 -> 220)
-function get2DGazeFrame(x: number, y: number): number {
-  const cx = Math.min(Math.max(x, 0), 1);
-  const cy = Math.min(Math.max(y, 0), 1);
+function gazeFrame(x: number, y: number = 0.5) {
+  const px = Math.min(Math.max(x, 0), 1);
+  const py = Math.min(Math.max(y, 0), 1);
 
-  if (cy < 0.28) {
-    if (cx < 0.38) return 69;
-    if (cx > 0.62) return 99;
-    return 17;
+  if (py < 0.45) {
+    // Üst kısım (Yukarı bakış)
+    if (px < 0.4) {
+      // Yukarı Sol (kullanıcının solu) -> Frame 105 (max)
+      const t = px / 0.4;
+      return Math.round(105 + t * 15);
+    } else if (px > 0.6) {
+      // Yukarı Sağ (kullanıcının sağı) -> Frame 65 (max)
+      const t = (px - 0.6) / 0.4;
+      return Math.round(80 - t * 15);
+    } else {
+      return 134;
+    }
+  } else if (py > 0.65) {
+    // Alt kısım (Aşağı bakış)
+    if (px < 0.4) {
+      // Aşağı Sol -> Frame 144 (max)
+      const t = px / 0.4;
+      return Math.round(144 - t * 10);
+    } else if (px > 0.6) {
+      // Aşağı Sağ -> Frame 130 (max)
+      const t = (px - 0.6) / 0.4;
+      return Math.round(134 - t * 4);
+    } else {
+      // Aşağı Merkez -> Frame 151
+      return 151;
+    }
+  } else {
+    // Orta kısım (Düz bakış)
+    if (px < 0.4) {
+      // Sol -> Frame 40 (max)
+      const t = px / 0.4;
+      return Math.round(40 - t * 10);
+    } else if (px > 0.6) {
+      // Sağ -> Frame 10 (max)
+      const t = (px - 0.6) / 0.4;
+      return Math.round(30 - t * 20);
+    } else {
+      return 134;
+    }
   }
-  if (cy > 0.62) {
-    if (cx < 0.38) return 146;
-    if (cx > 0.62) return 220;
-    return 229;
-  }
-  if (cx < 0.38) return 145;
-  if (cx > 0.62) return 217;
-  return 0;
 }
 
-function getEmailTypingFrame(emailLength: number): number {
-  const p = Math.min(emailLength, 30) / 30;
-  if (p < 0.35) return 146; // DOWN_LEFT
-  if (p > 0.65) return 220; // DOWN_RIGHT
-  return 229;               // DOWN_CENTER
+function targetFrameForMode(mode: CharacterMode, emailLength: number) {
+  if (mode === 'privacy') return 179; // Frame 180: eller gözleri kapalı tutar
+  if (mode === 'typing') {
+    // Yazı yazarken alt kısma bakmasını sağlıyoruz (y = 0.8)
+    const x = Math.min(emailLength, 32) / 32;
+    const mappedX = 0.1 + (x * 0.8); // 0.1 ile 0.9 arası (aşağı sol ile aşağı sağ)
+    return gazeFrame(mappedX, 0.8);
+  }
+  return 134; // Frame 135: merkeze / öne bakış (idle)
 }
 
 function CharacterFrames({
@@ -792,12 +820,12 @@ function CharacterFrames({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const characterRef = useRef<HTMLDivElement>(null);
-  const currentFrameRef = useRef<number>(0);
+  const behaviorRef = useRef({ mode, emailLength });
+  const targetFrameRef = useRef(134);
+  const currentFrameRef = useRef(134);
+  const rafRef = useRef<number>(0);
   const sheetsRef = useRef<HTMLImageElement[]>([]);
-  const privacyStageRef = useRef<'none' | 'raising' | 'covered' | 'lowering'>(
-    'none'
-  );
-  const animTimerRef = useRef<number | null>(null);
+  const lastDrawnFrameRef = useRef<number>(-1);
 
   const drawFrame = useCallback((frameIndex: number) => {
     const canvas = canvasRef.current;
@@ -825,7 +853,7 @@ function CharacterFrames({
         FRAME_W,
         FRAME_H
       );
-      currentFrameRef.current = f;
+      lastDrawnFrameRef.current = f;
     }
   }, []);
 
@@ -836,7 +864,8 @@ function CharacterFrames({
       const img = new window.Image();
       img.src = `/media/character/sheet_${i}.webp`;
       img.onload = () => {
-        if (i === 0 || i === 2) {
+        // As soon as sheet 2 (containing idle frame 134 and privacy frame 179) or sheet 0 loads, draw initial pose
+        if (i === 2 || i === 0) {
           drawFrame(currentFrameRef.current);
         }
       };
@@ -845,92 +874,55 @@ function CharacterFrames({
     sheetsRef.current = sheets;
   }, [drawFrame]);
 
-  // Handle privacy mode transitions (hands raising / covering / lowering)
+  // Smooth lerp loop: interpolates current frame toward target at 60fps
   useEffect(() => {
-    if (animTimerRef.current) {
-      window.clearInterval(animTimerRef.current);
-      animTimerRef.current = null;
-    }
+    const tick = () => {
+      const target = targetFrameRef.current;
+      const current = currentFrameRef.current;
+      const delta = target - current;
 
-    if (mode === 'privacy') {
-      privacyStageRef.current = 'raising';
-      let currentF = 154;
-      drawFrame(currentF);
-
-      animTimerRef.current = window.setInterval(() => {
-        currentF += 4;
-        if (currentF >= 179) {
-          currentF = 179;
-          drawFrame(179);
-          privacyStageRef.current = 'covered';
-          if (animTimerRef.current) {
-            window.clearInterval(animTimerRef.current);
-            animTimerRef.current = null;
-          }
-        } else {
-          drawFrame(currentF);
-        }
-      }, 25);
-    } else if (
-      privacyStageRef.current === 'covered' ||
-      privacyStageRef.current === 'raising'
-    ) {
-      privacyStageRef.current = 'lowering';
-      let currentF = 180;
-      drawFrame(currentF);
-
-      animTimerRef.current = window.setInterval(() => {
-        currentF += 5;
-        if (currentF >= 210) {
-          privacyStageRef.current = 'none';
-          if (animTimerRef.current) {
-            window.clearInterval(animTimerRef.current);
-            animTimerRef.current = null;
-          }
-          const defaultF =
-            mode === 'typing' ? getEmailTypingFrame(emailLength) : 0;
-          drawFrame(defaultF);
-        } else {
-          drawFrame(currentF);
-        }
-      }, 25);
-    } else if (mode === 'typing') {
-      privacyStageRef.current = 'none';
-      drawFrame(getEmailTypingFrame(emailLength));
-    } else {
-      privacyStageRef.current = 'none';
-      drawFrame(0);
-    }
-
-    return () => {
-      if (animTimerRef.current) {
-        window.clearInterval(animTimerRef.current);
+      if (Math.abs(delta) > 15) {
+        currentFrameRef.current = target;
+        drawFrame(target);
+      } else if (Math.abs(delta) > 0.04) {
+        currentFrameRef.current += delta * 0.2;
+        drawFrame(currentFrameRef.current);
+      } else if (lastDrawnFrameRef.current !== Math.round(target)) {
+        currentFrameRef.current = target;
+        drawFrame(target);
       }
-    };
-  }, [drawFrame, emailLength, mode]);
 
-  // Handle pointer tracking
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [drawFrame]);
+
+  useEffect(() => {
+    behaviorRef.current = { mode, emailLength };
+    targetFrameRef.current = targetFrameForMode(mode, emailLength);
+  }, [emailLength, mode]);
+
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
-      if (mode !== 'pointer' || privacyStageRef.current !== 'none') return;
+      if (behaviorRef.current.mode !== 'pointer') return;
 
       const x = event.clientX / window.innerWidth;
       const y = event.clientY / window.innerHeight;
+      const character = characterRef.current;
 
-      if (characterRef.current) {
-        characterRef.current.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
+      if (character) {
+        character.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
       }
-
-      const gazeF = get2DGazeFrame(x, y);
-      drawFrame(gazeF);
+      targetFrameRef.current = gazeFrame(x, y);
     };
 
     document.addEventListener('pointermove', handlePointerMove, {
       passive: true,
     });
     return () => document.removeEventListener('pointermove', handlePointerMove);
-  }, [drawFrame, mode]);
-
+  }, []);
 
   return (
     <div
