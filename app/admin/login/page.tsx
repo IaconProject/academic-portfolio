@@ -376,9 +376,9 @@ export default function AdminLoginPage() {
   const characterMode: CharacterMode =
     step !== 'credentials'
       ? 'idle'
-      : activeField === 'password' && password.length > 0
+      : activeField === 'password'
         ? 'privacy'
-        : activeField === 'email' && email.length > 0
+        : activeField === 'email'
           ? 'typing'
           : 'pointer';
 
@@ -754,19 +754,24 @@ const FRAMES_PER_SHEET = 60;
 const TOTAL_FRAMES = 240;
 
 function gazeFrame(progress: number) {
-  const clampedProgress = Math.min(Math.max(progress, 0), 1);
-  // Klipte sol bakış 1–2.5 sn (frames 33–75), sağ bakış 3.3–5.1 sn (frames 99–153)
-  const time =
-    clampedProgress < 0.5
-      ? 1.1 + clampedProgress * 2.8
-      : 3.3 + (clampedProgress - 0.5) * 3.6;
-  return Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(time * 30)));
+  const p = Math.min(Math.max(progress, 0), 1);
+  if (p < 0.4) {
+    // Sola / Yukarı Sola bakış (frame 65 - 75)
+    const t = p / 0.4;
+    return Math.round(64 + t * 10);
+  } else if (p > 0.6) {
+    // Sağa / Yukarı Sağa bakış (frame 95 - 105)
+    const t = (p - 0.6) / 0.4;
+    return Math.round(94 + t * 10);
+  }
+  // Merkeze / öne bakış (frame 135)
+  return 134;
 }
 
 function targetFrameForMode(mode: CharacterMode, emailLength: number) {
-  if (mode === 'privacy') return 239; // 8.0s - gözleri ellerle kapatma
+  if (mode === 'privacy') return 179; // Frame 180: eller gözleri kapalı tutar
   if (mode === 'typing') return gazeFrame(Math.min(emailLength, 32) / 32);
-  return 174; // 5.8s - merkeze / öne bakış
+  return 134; // Frame 135: merkeze / öne bakış (idle)
 }
 
 function CharacterFrames({
@@ -779,8 +784,8 @@ function CharacterFrames({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const characterRef = useRef<HTMLDivElement>(null);
   const behaviorRef = useRef({ mode, emailLength });
-  const targetFrameRef = useRef(174);
-  const currentFrameRef = useRef(174);
+  const targetFrameRef = useRef(134);
+  const currentFrameRef = useRef(134);
   const rafRef = useRef<number>(0);
   const sheetsRef = useRef<HTMLImageElement[]>([]);
   const lastDrawnFrameRef = useRef<number>(-1);
@@ -822,7 +827,7 @@ function CharacterFrames({
       const img = new window.Image();
       img.src = `/media/character/sheet_${i}.webp`;
       img.onload = () => {
-        // As soon as sheet 2 (containing idle frame 174) or sheet 0 loads, draw initial pose
+        // As soon as sheet 2 (containing idle frame 134 and privacy frame 179) or sheet 0 loads, draw initial pose
         if (i === 2 || i === 0) {
           drawFrame(currentFrameRef.current);
         }
