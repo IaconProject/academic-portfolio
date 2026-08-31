@@ -763,6 +763,19 @@ function characterTimestamp(mode: CharacterMode, emailLength: number) {
   return 5.8;
 }
 
+const FRAME_FPS = 15;
+const FRAME_COUNT = 150;
+
+// Build frame paths once at module level
+const FRAME_PATHS: string[] = [];
+for (let i = 1; i <= FRAME_COUNT; i++) {
+  FRAME_PATHS.push(`/media/frames/f${String(i).padStart(3, '0')}.jpg`);
+}
+
+function timeToFrame(time: number) {
+  return Math.max(0, Math.min(FRAME_COUNT - 1, Math.round(time * FRAME_FPS)));
+}
+
 function CharacterVideo({
   mode,
   emailLength,
@@ -770,58 +783,76 @@ function CharacterVideo({
   mode: CharacterMode;
   emailLength: number;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const characterRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const behaviorRef = useRef({ mode, emailLength });
-  const targetTimeRef = useRef(5.8);
+  const targetFrameRef = useRef(timeToFrame(5.8));
+  const currentFrameRef = useRef(timeToFrame(5.8));
+  const displayedFrameRef = useRef(-1);
   const rafRef = useRef<number>(0);
 
-  // Smooth lerp loop: interpolates currentTime toward target for stutter-free motion
-  const startLerp = useCallback(() => {
-    const tick = () => {
-      const video = videoRef.current;
-      if (!video || video.readyState < HTMLMediaElement.HAVE_METADATA) {
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
-      video.pause();
-      const delta = targetTimeRef.current - video.currentTime;
-      if (Math.abs(delta) > 0.005) {
-        // Lerp factor: 0.18 gives ~60fps smooth catch-up without delay
-        video.currentTime += delta * 0.18;
-      }
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(tick);
+  // Preload all frames on mount
+  useEffect(() => {
+    for (const src of FRAME_PATHS) {
+      const img = new window.Image();
+      img.src = src;
+    }
   }, []);
 
+  // Lerp loop — interpolates frame index, swaps img src (instant, no decode)
   useEffect(() => {
-    startLerp();
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [startLerp]);
+    const tick = () => {
+      const delta = targetFrameRef.current - currentFrameRef.current;
+      if (Math.abs(delta) > 0.4) {
+        currentFrameRef.current += delta * 0.22;
+      } else {
+        currentFrameRef.current = targetFrameRef.current;
+      }
 
+      const frameIdx = Math.max(
+        0,
+        Math.min(FRAME_COUNT - 1, Math.round(currentFrameRef.current))
+      );
+
+      if (frameIdx !== displayedFrameRef.current && imgRef.current) {
+        imgRef.current.src = FRAME_PATHS[frameIdx];
+        displayedFrameRef.current = frameIdx;
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  // React to mode / email length changes
   useEffect(() => {
     behaviorRef.current = { mode, emailLength };
-    targetTimeRef.current = characterTimestamp(mode, emailLength);
+    targetFrameRef.current = timeToFrame(
+      characterTimestamp(mode, emailLength)
+    );
   }, [emailLength, mode]);
 
+  // Pointer tracking
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       if (behaviorRef.current.mode !== 'pointer') return;
 
       const x = event.clientX / window.innerWidth;
       const y = event.clientY / window.innerHeight;
-      const character = characterRef.current;
+      const el = characterRef.current;
 
-      if (character) {
-        character.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
+      if (el) {
+        el.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
       }
-      targetTimeRef.current = gazeTimestamp(x);
+      targetFrameRef.current = timeToFrame(gazeTimestamp(x));
     };
 
-    document.addEventListener('pointermove', handlePointerMove, { passive: true });
-    return () => document.removeEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointermove', handlePointerMove, {
+      passive: true,
+    });
+    return () =>
+      document.removeEventListener('pointermove', handlePointerMove);
   }, []);
 
   return (
@@ -830,20 +861,14 @@ function CharacterVideo({
       className="will-change-transform"
       style={{ transition: 'transform 0.12s cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
-      <video
-        ref={videoRef}
-        muted
-        playsInline
-        preload="auto"
-        onLoadedData={() => {
-          targetTimeRef.current = characterTimestamp(mode, emailLength);
-        }}
-        className="h-[14rem] w-auto max-w-none sm:h-[17rem] lg:h-[20rem]"
-      >
-        <source src="/media/minion.mp4" type='video/mp4; codecs="hvc1"' />
-        <source src="/media/minion.webm" type="video/webm" />
-        <source src="/media/minion-h264.mp4" type="video/mp4" />
-      </video>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        ref={imgRef}
+        alt=""
+        src={FRAME_PATHS[timeToFrame(5.8)]}
+        className="pointer-events-none h-[14rem] w-auto max-w-none select-none sm:h-[17rem] lg:h-[20rem]"
+        draggable={false}
+      />
     </div>
   );
 }
