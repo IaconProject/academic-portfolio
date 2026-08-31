@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
@@ -23,7 +24,6 @@ import {
   Mail,
   RefreshCw,
   ShieldCheck,
-  Smartphone,
 } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import { isSupabaseAuthConfigured } from '@/lib/supabase/config';
@@ -39,6 +39,8 @@ type LoginStep =
   | 'reset-request'
   | 'reset-verify'
   | 'complete';
+
+type CharacterMode = 'idle' | 'pointer' | 'typing' | 'privacy';
 
 function friendlyAuthError(message?: string) {
   const value = (message || '').toLowerCase();
@@ -73,6 +75,9 @@ export default function AdminLoginPage() {
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [activeField, setActiveField] = useState<'email' | 'password' | null>(
+    null
+  );
 
   const completeLogin = useCallback(async () => {
     setIsBusy(true);
@@ -369,72 +374,66 @@ export default function AdminLoginPage() {
     window.setTimeout(() => setCopied(false), 1500);
   }
 
-  return (
-    <main className="relative min-h-screen overflow-hidden bg-[#f4f0e7] px-4 py-8 text-stone-950 dark:bg-[#11100f] dark:text-stone-100 sm:px-6 lg:px-8">
-      <div className="pointer-events-none absolute inset-0 opacity-70 [background:radial-gradient(circle_at_15%_10%,rgba(245,158,11,0.16),transparent_32%),radial-gradient(circle_at_88%_85%,rgba(14,116,144,0.13),transparent_35%)]" />
-      <div className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-stone-300/70 bg-white/80 shadow-2xl shadow-stone-900/10 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/75 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="hidden border-r border-stone-200/80 bg-stone-950 p-12 text-stone-50 dark:border-stone-800 lg:flex lg:flex-col lg:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-amber-300">
-              <ShieldCheck className="h-4 w-4" />
-              Güvenli yayın alanı
-            </div>
-            <h1 className="mt-8 max-w-xl text-5xl font-black leading-[1.04] tracking-[-0.045em]">
-              Fikirden yayına, eksiksiz blog yönetimi.
-            </h1>
-            <p className="mt-6 max-w-lg text-base leading-7 text-stone-300">
-              Yazılar, kaynaklar, seriler, medya, anasayfa blokları ve bülten
-              tek bir editoryal çalışma alanında.
-            </p>
-          </div>
+  const characterMode: CharacterMode =
+    step !== 'credentials'
+      ? 'idle'
+      : activeField === 'password' && password.length > 0
+        ? 'privacy'
+        : activeField === 'email' && email.length > 0
+          ? 'typing'
+          : 'pointer';
 
-          <div className="grid gap-3 text-sm text-stone-300">
-            {[
-              'Supabase Auth ile doğrulanmış oturum',
-              'Zorunlu TOTP iki aşamalı doğrulama',
-              'Rol ve satır düzeyi güvenlik politikaları',
-            ].map((item) => (
-              <div key={item} className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                {item}
-              </div>
-            ))}
-          </div>
+  const heading =
+    step === 'credentials'
+      ? 'Hoş geldin'
+      : step === 'challenge'
+        ? 'Kodu doğrula'
+        : step === 'enrollment'
+          ? 'Authenticator kurulumu'
+          : step === 'reset-request'
+            ? 'Parolanı yenile'
+            : step === 'reset-verify'
+              ? 'Yeni parolanı belirle'
+              : 'Giriş tamamlandı';
+
+  return (
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#fff7df] p-4 text-[#27333b] sm:p-6 lg:p-10">
+      <div className="pointer-events-none absolute -left-24 top-10 h-64 w-64 rounded-full bg-[#ffdd71]/35 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 right-0 h-80 w-80 rounded-full bg-[#b9ead5]/45 blur-3xl" />
+      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[2.25rem] border border-[#ead9ad] bg-white shadow-[0_30px_90px_rgba(72,53,20,0.18)] lg:min-h-[38rem] lg:grid-cols-[0.92fr_1.08fr]">
+        <section className="order-1 relative min-h-[17rem] overflow-hidden bg-[radial-gradient(circle_at_50%_25%,#fff9d6_0%,#ffe78e_42%,#ffc947_100%)] lg:order-2 lg:min-h-full">
+          <Link
+            href="/"
+            className="absolute left-5 top-5 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-2 text-xs font-bold text-[#73550e] shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-white"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Siteye dön
+          </Link>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[radial-gradient(ellipse_at_center_bottom,rgba(116,77,17,0.22),transparent_67%)]" />
+          <CharacterVideo mode={characterMode} emailLength={email.length} />
         </section>
 
-        <section className="flex items-center justify-center p-6 sm:p-10 lg:p-14">
-          <div className="w-full max-w-md">
-            <Link
-              href="/"
-              className="mb-10 inline-flex items-center gap-2 text-sm font-semibold text-stone-500 transition hover:text-stone-950 dark:text-stone-400 dark:hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Siteye dön
-            </Link>
-
-            <div className="mb-8 flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-stone-950 text-amber-300 shadow-lg dark:bg-amber-500 dark:text-stone-950">
+        <section className="order-2 flex items-center p-6 sm:p-10 lg:order-1 lg:p-14">
+          <div className="w-full max-w-sm">
+            <div className="mb-8">
+              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#27333b] text-[#ffe271] shadow-[0_8px_20px_rgba(39,51,59,0.2)]">
                 {step === 'credentials' ? (
-                  <LockKeyhole className="h-6 w-6" />
-                ) : step === 'reset-request' || step === 'reset-verify' ? (
-                  <KeyRound className="h-6 w-6" />
+                  <LockKeyhole className="h-5 w-5" />
                 ) : (
-                  <Smartphone className="h-6 w-6" />
+                  <KeyRound className="h-5 w-5" />
                 )}
               </div>
-              <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-400">
-                  Blog CMS
+              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#b37a00]">
+                Blog CMS
+              </p>
+              <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-[#27333b] sm:text-[2.1rem]">
+                {heading}
+              </h1>
+              {step === 'credentials' ? (
+                <p className="mt-2 text-sm leading-6 text-[#66737b]">
+                  Devam etmek için giriş yap.
                 </p>
-                <h2 className="mt-1 text-3xl font-black tracking-tight">
-                  {step === 'credentials' && 'Yönetici girişi'}
-                  {step === 'challenge' && 'Doğrulama kodu'}
-                  {step === 'enrollment' && 'Authenticator kurulumu'}
-                  {step === 'reset-request' && 'Parolamı unuttum'}
-                  {step === 'reset-verify' && 'Yeni parola belirle'}
-                  {step === 'complete' && 'Giriş tamamlandı'}
-                </h2>
-              </div>
+              ) : null}
             </div>
 
             {!isSupabaseAuthConfigured ? (
@@ -473,8 +472,10 @@ export default function AdminLoginPage() {
                       autoComplete="username"
                       required
                       value={email}
+                      onFocus={() => setActiveField('email')}
+                      onBlur={() => setActiveField(null)}
                       onChange={(event) => setEmail(event.target.value)}
-                      className="h-13 w-full rounded-2xl border border-stone-300 bg-white px-12 py-3.5 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-stone-700 dark:bg-stone-900"
+                      className="h-14 w-full rounded-[1.1rem] border border-[#e7ddc7] bg-[#fffdf7] px-12 py-3.5 text-[#27333b] outline-none transition placeholder:text-[#a9a196] focus:border-[#edb52c] focus:ring-4 focus:ring-[#f7d66c]/35"
                       placeholder="bilgi@muhammedakan.com"
                     />
                   </span>
@@ -505,8 +506,10 @@ export default function AdminLoginPage() {
                       autoComplete="current-password"
                       required
                       value={password}
+                      onFocus={() => setActiveField('password')}
+                      onBlur={() => setActiveField(null)}
                       onChange={(event) => setPassword(event.target.value)}
-                      className="h-13 w-full rounded-2xl border border-stone-300 bg-white px-12 py-3.5 pr-14 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-stone-700 dark:bg-stone-900"
+                      className="h-14 w-full rounded-[1.1rem] border border-[#e7ddc7] bg-[#fffdf7] px-12 py-3.5 pr-14 text-[#27333b] outline-none transition placeholder:text-[#a9a196] focus:border-[#edb52c] focus:ring-4 focus:ring-[#f7d66c]/35"
                       placeholder="••••••••••••"
                     />
                     <button
@@ -527,7 +530,7 @@ export default function AdminLoginPage() {
                 <button
                   type="submit"
                   disabled={isBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-stone-950 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-stone-950 dark:hover:bg-amber-400"
+                  className="flex h-14 w-full items-center justify-center gap-2 rounded-[1.1rem] bg-[#27333b] px-5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(39,51,59,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a4b55] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isBusy ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -749,15 +752,94 @@ export default function AdminLoginPage() {
               </div>
             ) : null}
 
-            <p className="mt-8 text-xs leading-5 text-stone-500 dark:text-stone-400">
-              Bu alan yalnız yetkili editörler içindir. Oturumlar imzalı,
-              HttpOnly çerezlerle korunur ve yayın işlemleri RLS politikalarına
-              tabidir.
-            </p>
           </div>
         </section>
       </div>
     </main>
+  );
+}
+
+function gazeTimestamp(progress: number) {
+  const clampedProgress = Math.min(Math.max(progress, 0), 1);
+
+  // Klipte sol bakış 1–2.5 sn, sağ bakış ise 3.3–5.1 sn arasında.
+  // Ortadaki kısa göz kırpma geçişini atlayarak hareketi akıcı tutuyoruz.
+  return clampedProgress < 0.5
+    ? 1.1 + clampedProgress * 2.8
+    : 3.3 + (clampedProgress - 0.5) * 3.6;
+}
+
+function characterTimestamp(mode: CharacterMode, emailLength: number) {
+  if (mode === 'privacy') return 8;
+  if (mode === 'typing') return gazeTimestamp(Math.min(emailLength, 32) / 32);
+  return 5.8;
+}
+
+function CharacterVideo({
+  mode,
+  emailLength,
+}: {
+  mode: CharacterMode;
+  emailLength: number;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const characterRef = useRef<HTMLDivElement>(null);
+  const behaviorRef = useRef({ mode, emailLength });
+
+  const seekTo = useCallback((timestamp: number) => {
+    const video = videoRef.current;
+    if (!video || video.readyState < HTMLMediaElement.HAVE_METADATA) return;
+
+    video.pause();
+    if (Math.abs(video.currentTime - timestamp) > 0.04) {
+      video.currentTime = timestamp;
+    }
+  }, []);
+
+  useEffect(() => {
+    behaviorRef.current = { mode, emailLength };
+    seekTo(characterTimestamp(mode, emailLength));
+  }, [emailLength, mode, seekTo]);
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      if (behaviorRef.current.mode !== 'pointer') return;
+
+      const x = event.clientX / window.innerWidth;
+      const y = event.clientY / window.innerHeight;
+      const character = characterRef.current;
+
+      if (character) {
+        character.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
+      }
+      seekTo(gazeTimestamp(x));
+    };
+
+    document.addEventListener('pointermove', handlePointerMove, { passive: true });
+    return () => document.removeEventListener('pointermove', handlePointerMove);
+  }, [seekTo]);
+
+  return (
+    <div
+      className="absolute inset-x-0 bottom-[-2.25rem] top-7 flex items-end justify-center overflow-hidden"
+      aria-hidden="true"
+    >
+      <div
+        ref={characterRef}
+        className="transition-transform duration-100 ease-out motion-reduce:transform-none"
+      >
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          preload="auto"
+          onLoadedData={() => seekTo(characterTimestamp(mode, emailLength))}
+          className="h-[19rem] w-auto max-w-none mix-blend-multiply sm:h-[22rem] lg:h-[33rem]"
+        >
+          <source src="/media/monion.mp4" type="video/mp4" />
+        </video>
+      </div>
+    </div>
   );
 }
 
