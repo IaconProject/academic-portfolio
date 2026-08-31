@@ -755,56 +755,54 @@ const COLS = 6;
 const FRAMES_PER_SHEET = 60;
 const TOTAL_FRAMES = 240;
 
-// Keyframe sequences (0-indexed)
-// Raising hands to cover eyes: frames 153 to 180
-const RAISE_FRAMES = [152, 155, 157, 159, 161, 163, 167, 174, 179];
-// Lowering hands from eyes: frames 205 to 50
-const LOWER_FRAMES = [204, 206, 208, 210, 212, 214, 219, 224, 49];
-// Typing eye-tracking (Down-Left -> Down-Center -> Down-Right): frames 142, 144, 146, 148, 150, 215, 217, 219
-const TYPING_FRAMES = [141, 143, 145, 147, 149, 214, 216, 218];
+// Continuous frame sequences (0-indexed)
+// Raising hands to cover eyes: frames 153 to 180 (28 consecutive frames)
+const RAISE_FRAMES = Array.from({ length: 28 }, (_, i) => 152 + i);
+// Lowering hands from eyes: frames 205 to 217 (13 consecutive frames)
+const LOWER_FRAMES = Array.from({ length: 13 }, (_, i) => 204 + i);
 
 function calculateGazeFrame(dx: number, dy: number): number {
   const dist = Math.hypot(dx, dy);
-  if (dist < 0.12) {
+  if (dist < 0.14) {
     return 49; // Neutral Center (frame 50)
   }
 
-  // Angle in degrees from character center (-180 to 180)
-  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-
-  if (angle >= -22.5 && angle < 22.5) {
-    // Mid-Right (frames 36..42)
-    const t = Math.min(Math.max((dx - 0.12) / 0.88, 0), 1);
-    return Math.round(35 + t * 6);
-  } else if (angle >= 22.5 && angle < 67.5) {
-    // Down-Right (frames 216..220)
-    const t = Math.min(Math.max((dist - 0.12) / 0.88, 0), 1);
-    return Math.round(215 + t * 4);
-  } else if (angle >= 67.5 && angle < 112.5) {
-    // Down-Center (frames 148..152)
-    const t = Math.min(Math.max((dy - 0.12) / 0.88, 0), 1);
-    return Math.round(147 + t * 4);
-  } else if (angle >= 112.5 && angle < 157.5) {
-    // Down-Left (frames 142..146)
-    const t = Math.min(Math.max((dist - 0.12) / 0.88, 0), 1);
-    return Math.round(141 + t * 4);
-  } else if (angle >= 157.5 || angle < -157.5) {
-    // Mid-Left (frames 18..22)
-    const t = Math.min(Math.max((-dx - 0.12) / 0.88, 0), 1);
-    return Math.round(17 + t * 4);
-  } else if (angle >= -157.5 && angle < -112.5) {
-    // Up-Left (frames 100..106)
-    const t = Math.min(Math.max((dist - 0.12) / 0.88, 0), 1);
-    return Math.round(99 + t * 6);
-  } else if (angle >= -112.5 && angle < -67.5) {
-    // Up-Center (frames 88..92)
-    const t = Math.min(Math.max((-dy - 0.12) / 0.88, 0), 1);
-    return Math.round(87 + t * 4);
-  } else {
-    // Up-Right (frames 66..74)
-    const t = Math.min(Math.max((dist - 0.12) / 0.88, 0), 1);
-    return Math.round(65 + t * 8);
+  // Mid-level horizontal gaze (-0.35 <= dy <= 0.35)
+  if (Math.abs(dy) <= 0.35) {
+    if (dx > 0.15) {
+      const t = Math.min(Math.max((dx - 0.15) / 0.75, 0), 1);
+      return Math.round(30 + t * 10); // Frames 31..40 (Center to Right)
+    } else if (dx < -0.15) {
+      const t = Math.min(Math.max((-dx - 0.15) / 0.75, 0), 1);
+      return Math.round(9 + t * 11); // Frames 10..20 (Center to Left)
+    }
   }
+
+  // Upward gaze (dy < -0.2)
+  if (dy < -0.2) {
+    const tY = Math.min(Math.max((-dy - 0.2) / 0.75, 0), 1);
+    if (dx > 0.1) {
+      return Math.round(53 + tY * 17); // Frames 54..70 (Up-Right)
+    } else if (dx < -0.1) {
+      return Math.round(86 + tY * 18); // Frames 87..104 (Up-Left)
+    } else {
+      return Math.round(88 + tY * 4); // Frames 89..92 (Up-Center)
+    }
+  }
+
+  // Downward gaze (dy > 0.15)
+  if (dy > 0.15) {
+    const tY = Math.min(Math.max((dy - 0.15) / 0.75, 0), 1);
+    if (dx < -0.1) {
+      return Math.round(135 + tY * 9); // Frames 136..144 (Down-Left)
+    } else if (dx > 0.1) {
+      return Math.round(214 + tY * 5); // Frames 215..219 (Down-Right)
+    } else {
+      return Math.round(145 + tY * 6); // Frames 146..151 (Down-Center)
+    }
+  }
+
+  return 49;
 }
 
 function CharacterFrames({
@@ -818,20 +816,21 @@ function CharacterFrames({
   const characterRef = useRef<HTMLDivElement>(null);
   const sheetsRef = useRef<HTMLImageElement[]>([]);
   const lastDrawnFrameRef = useRef<number>(-1);
-  const currentPointerRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+
+  const targetPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const smoothPointerRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const smoothTypingRef = useRef<number>(0);
 
   const animStateRef = useRef<{
     mode: CharacterMode;
     privacyPhase: 'none' | 'raising' | 'covered' | 'lowering';
-    privacyIndex: number;
-    lastStepTime: number;
+    privacyStart: number;
     emailLength: number;
     targetFrame: number;
   }>({
     mode,
     privacyPhase: mode === 'privacy' ? 'covered' : 'none',
-    privacyIndex: 0,
-    lastStepTime: 0,
+    privacyStart: 0,
     emailLength,
     targetFrame: mode === 'privacy' ? 179 : 49,
   });
@@ -896,8 +895,7 @@ function CharacterFrames({
         state.privacyPhase !== 'covered'
       ) {
         state.privacyPhase = 'raising';
-        state.privacyIndex = 0;
-        state.lastStepTime = performance.now();
+        state.privacyStart = performance.now();
       }
     } else {
       if (
@@ -906,61 +904,90 @@ function CharacterFrames({
         state.privacyPhase === 'raising'
       ) {
         state.privacyPhase = 'lowering';
-        state.privacyIndex = 0;
-        state.lastStepTime = performance.now();
+        state.privacyStart = performance.now();
       }
     }
   }, [mode, emailLength]);
 
-  // Master 60fps render and animation loop
+  // Master 60fps render and physics animation loop
   useEffect(() => {
     let rafId = 0;
 
     const tick = (now: number) => {
       const state = animStateRef.current;
-      const STEP_INTERVAL = 38; // ms per step for cinematic character motion
-
       let frameToDraw = state.targetFrame;
 
+      // Smooth pointer position lerp (spring effect)
+      smoothPointerRef.current.x +=
+        (targetPointerRef.current.x - smoothPointerRef.current.x) * 0.18;
+      smoothPointerRef.current.y +=
+        (targetPointerRef.current.y - smoothPointerRef.current.y) * 0.18;
+
       if (state.privacyPhase === 'raising') {
-        if (now - state.lastStepTime >= STEP_INTERVAL) {
-          state.lastStepTime = now;
-          state.privacyIndex++;
-          if (state.privacyIndex >= RAISE_FRAMES.length - 1) {
-            state.privacyIndex = RAISE_FRAMES.length - 1;
-            state.privacyPhase = 'covered';
-          }
+        const elapsed = now - state.privacyStart;
+        const frameIdx = Math.floor(elapsed / 30); // ~33fps playback
+        if (frameIdx >= RAISE_FRAMES.length - 1) {
+          state.privacyPhase = 'covered';
+          frameToDraw = 179; // Frame 180 (Hands holding eyes covered)
+        } else {
+          frameToDraw = RAISE_FRAMES[frameIdx];
         }
-        frameToDraw = RAISE_FRAMES[state.privacyIndex];
       } else if (state.privacyPhase === 'covered') {
-        frameToDraw = 179; // Frame 180: hands covering eyes
+        frameToDraw = 179; // Frame 180 (Hold eyes covered)
       } else if (state.privacyPhase === 'lowering') {
-        if (now - state.lastStepTime >= STEP_INTERVAL) {
-          state.lastStepTime = now;
-          state.privacyIndex++;
-          if (state.privacyIndex >= LOWER_FRAMES.length - 1) {
-            state.privacyIndex = LOWER_FRAMES.length - 1;
-            state.privacyPhase = 'none';
-          }
+        const elapsed = now - state.privacyStart;
+        const frameIdx = Math.floor(elapsed / 30); // ~33fps playback
+        if (frameIdx >= LOWER_FRAMES.length - 1) {
+          state.privacyPhase = 'none';
+          frameToDraw = 49;
+        } else {
+          frameToDraw = LOWER_FRAMES[frameIdx];
         }
-        frameToDraw = LOWER_FRAMES[state.privacyIndex];
       } else {
         // Normal interactive modes (privacyPhase === 'none')
         if (state.mode === 'typing') {
-          const p = Math.min(state.emailLength, 28) / 28;
-          const idx = Math.min(
-            Math.floor(p * TYPING_FRAMES.length),
-            TYPING_FRAMES.length - 1
-          );
-          frameToDraw = TYPING_FRAMES[idx];
+          const targetP = Math.min(state.emailLength, 30) / 30;
+          smoothTypingRef.current +=
+            (targetP - smoothTypingRef.current) * 0.2;
+          const p = smoothTypingRef.current;
+
+          if (p < 0.4) {
+            const t = p / 0.4;
+            frameToDraw = Math.round(138 + t * 6); // Down-Left
+          } else if (p < 0.7) {
+            const t = (p - 0.4) / 0.3;
+            frameToDraw = Math.round(146 + t * 5); // Down-Center
+          } else {
+            const t = (p - 0.7) / 0.3;
+            frameToDraw = Math.round(215 + t * 4); // Down-Right
+          }
+
+          const character = characterRef.current;
+          if (character) {
+            const offsetX = (p - 0.5) * 16;
+            character.style.transform = `translate3d(${offsetX}px, 6px, 0) rotate(${(p - 0.5) * 2}deg)`;
+          }
         } else if (state.mode === 'success') {
           frameToDraw = 234; // Frame 235: Happy celebration
+          const character = characterRef.current;
+          if (character) {
+            character.style.transform = `translate3d(0, 0, 0) scale(1.04)`;
+          }
         } else if (state.mode === 'idle') {
-          frameToDraw = 49; // Frame 50: Neutral center
+          frameToDraw = 49; // Frame 50: Neutral forward
+          const character = characterRef.current;
+          if (character) {
+            character.style.transform = `translate3d(0, 0, 0)`;
+          }
         } else {
           // Pointer tracking mode
-          const { dx, dy } = currentPointerRef.current;
-          frameToDraw = calculateGazeFrame(dx, dy);
+          const { x: sx, y: sy } = smoothPointerRef.current;
+          frameToDraw = calculateGazeFrame(sx, sy);
+
+          const character = characterRef.current;
+          if (character) {
+            character.style.transform = `translate3d(${sx * 12}px, ${sy * 10}px, 0) rotate(${sx * 1.8}deg)`;
+          }
         }
       }
 
@@ -989,18 +1016,13 @@ function CharacterFrames({
       const charCenterX = rect.left + rect.width / 2;
       const charEyesY = rect.top + rect.height * 0.35;
 
-      const halfW = Math.max(window.innerWidth * 0.45, 200);
-      const halfH = Math.max(window.innerHeight * 0.45, 200);
+      const halfW = Math.max(window.innerWidth * 0.4, 200);
+      const halfH = Math.max(window.innerHeight * 0.4, 200);
 
       const dx = Math.max(-1, Math.min(1, (event.clientX - charCenterX) / halfW));
       const dy = Math.max(-1, Math.min(1, (event.clientY - charEyesY) / halfH));
 
-      currentPointerRef.current = { dx, dy };
-
-      const character = characterRef.current;
-      if (character) {
-        character.style.transform = `translate3d(${dx * 10}px, ${dy * 8}px, 0) rotate(${dx * 2}deg)`;
-      }
+      targetPointerRef.current = { x: dx, y: dy };
     };
 
     window.addEventListener('pointermove', handlePointerMove, {
@@ -1013,7 +1035,7 @@ function CharacterFrames({
     <div
       ref={characterRef}
       className="will-change-transform"
-      style={{ transition: 'transform 0.1s cubic-bezier(0.22, 1, 0.36, 1)' }}
+      style={{ transition: 'transform 0.08s ease-out' }}
     >
       <canvas
         ref={canvasRef}
