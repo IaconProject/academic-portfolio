@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Menu, Moon, Search, Sun, X } from 'lucide-react';
 import type { BlogNavigationItem, BlogSettings } from '@/lib/blog/types';
-import { togglePublicTheme } from '@/lib/public-theme';
 
 export function BlogHeader({
   settings,
@@ -47,7 +46,22 @@ export function BlogHeader({
   }
 
   function toggleTheme() {
-    togglePublicTheme();
+    const root = document.documentElement;
+    const dark = !root.classList.contains('dark');
+    root.classList.toggle('dark', dark);
+    root.dataset.publicTheme = dark ? 'dark' : 'light';
+    window.localStorage.setItem('academic_public_theme_v1', dark ? 'dark' : 'light');
+
+    window.requestAnimationFrame(() => {
+      const background = window
+        .getComputedStyle(root)
+        .getPropertyValue('--academic-bg')
+        .trim();
+      if (!background) return;
+      document
+        .querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
+        .forEach((meta) => meta.setAttribute('content', `rgb(${background})`));
+    });
   }
 
   return (

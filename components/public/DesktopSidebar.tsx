@@ -13,13 +13,11 @@ import {
   Users,
 } from 'lucide-react';
 import { Profile } from '@/lib/types';
-import { PublicThemeToggle } from '@/components/public/PublicThemeToggle';
 
 interface DesktopSidebarProps {
   profile: Profile;
   pageContext?: 'home' | 'subpage';
   currentArchive?: '/yayinlar' | '/projeler' | '/yazilar';
-  themeToggleEnabled?: boolean;
 }
 
 const sectionItems = [
@@ -43,7 +41,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
   profile,
   pageContext = 'home',
   currentArchive,
-  themeToggleEnabled = true,
 }) => {
   return (
     <aside className="fixed inset-y-0 left-0 z-50 hidden w-72 flex-col overflow-hidden border-r border-academic-sidebar-border bg-academic-sidebar-bg font-sans text-academic-sidebar-ink shadow-2xl transition-colors duration-300 lg:flex">
@@ -127,12 +124,6 @@ export const DesktopSidebar: React.FC<DesktopSidebarProps> = ({
           })}
         </ul>
       </nav>
-
-      {themeToggleEnabled && (
-        <div className="border-t border-academic-sidebar-border px-4 py-4">
-          <PublicThemeToggle />
-        </div>
-      )}
     </aside>
   );
 };

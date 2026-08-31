@@ -7,14 +7,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { BookOpen, Home, Mail, Menu, MessageSquareText, Moon, Sun, X } from 'lucide-react';
 import type { TabBarActionId, TabBarSettings } from '@/lib/types';
 import { normalizeTabBarSettings } from '@/lib/tab-bar';
-import {
-  applyPublicTheme,
-  PUBLIC_THEME_CHANGE_EVENT,
-  PUBLIC_THEME_STORAGE_KEY,
-  readStoredPublicTheme,
-  togglePublicTheme,
-  type PublicTheme,
-} from '@/lib/public-theme';
+
+const PUBLIC_THEME_STORAGE_KEY = 'academic_public_theme_v1';
+type PublicTheme = 'light' | 'dark';
 
 const ACTION_LABELS: Record<TabBarActionId, string> = {
   home: 'Ana Sayfa',
@@ -23,6 +18,25 @@ const ACTION_LABELS: Record<TabBarActionId, string> = {
   email: 'E-posta',
   contact: 'İletişim',
 };
+
+function applyTheme(theme: PublicTheme, settings: TabBarSettings) {
+  const root = document.documentElement;
+  root.dataset.publicLightPalette = settings.lightPalette;
+  root.dataset.publicDarkPalette = settings.darkPalette;
+  root.classList.toggle('dark', theme === 'dark');
+  root.dataset.publicTheme = theme;
+
+  window.requestAnimationFrame(() => {
+    const background = window
+      .getComputedStyle(root)
+      .getPropertyValue('--academic-bg')
+      .trim();
+    if (!background) return;
+    document
+      .querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')
+      .forEach((meta) => meta.setAttribute('content', `rgb(${background})`));
+  });
+}
 
 export function PublicExperience({
   children,
@@ -48,23 +62,13 @@ export function PublicExperience({
   useEffect(() => {
     if (pathname.startsWith('/admin')) return;
 
-    const initialTheme = readStoredPublicTheme();
+    const saved = window.localStorage.getItem(PUBLIC_THEME_STORAGE_KEY);
+    const initialTheme: PublicTheme =
+      saved === 'light' || saved === 'dark' ? saved : 'light';
 
     setTheme(initialTheme);
-    applyPublicTheme(initialTheme, settings);
+    applyTheme(initialTheme, settings);
   }, [pathname, settings]);
-
-  useEffect(() => {
-    const syncTheme = (event: Event) => {
-      const changedTheme = (event as CustomEvent<PublicTheme>).detail;
-      if (changedTheme === 'light' || changedTheme === 'dark') {
-        setTheme(changedTheme);
-      }
-    };
-
-    window.addEventListener(PUBLIC_THEME_CHANGE_EVENT, syncTheme);
-    return () => window.removeEventListener(PUBLIC_THEME_CHANGE_EVENT, syncTheme);
-  }, []);
 
   useEffect(() => {
     if (pathname.startsWith('/admin')) return;
@@ -115,9 +119,11 @@ export function PublicExperience({
     visibleActions.length > 0;
 
   const toggleTheme = () => {
-    const nextTheme = togglePublicTheme(settings);
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setActiveAction('theme');
     setTheme(nextTheme);
+    window.localStorage.setItem(PUBLIC_THEME_STORAGE_KEY, nextTheme);
+    applyTheme(nextTheme, settings);
   };
 
   const openContactSection = () => {

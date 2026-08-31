@@ -48,7 +48,7 @@ const ACTIONS_BY_ID = Object.fromEntries(
 ) as Record<TabBarActionId, (typeof ACTIONS)[number]>;
 
 const LIGHT_PALETTES: Record<TabBarLightPalette, { label: string; description: string; colors: [string, string, string] }> = {
-  ivory: { label: 'Fildişi & Bronz', description: 'Akademik ve zamansız sıcak nötrler', colors: ['#f9f6ef', '#8d5f2b', '#352e27'] },
+  ivory: { label: 'Fildişi & Bronz', description: 'Akademik ve zamansız sıcak nötrler', colors: ['#f9f6ef', '#946932', '#352e27'] },
   sand: { label: 'Klasik Akademik · Eski Varsayılan', description: 'Tema seçeneklerinden önceki özgün sıcak bej ve koyu navigasyon', colors: ['#f3efe6', '#1c2128', '#29241f'] },
   sage: { label: 'Adaçayı', description: 'Sakin ve rafine doğal yeşiller', colors: ['#f1f5ed', '#426f4b', '#2b3e2a'] },
   mist: { label: 'Sis Mavisi', description: 'Temiz ve güven veren serin tonlar', colors: ['#f1f6f9', '#30698b', '#263743'] },

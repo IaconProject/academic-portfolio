@@ -6,48 +6,25 @@
 @layer base {
   :root {
     color-scheme: light;
-    --academic-navy: 53 46 39;
-    --academic-blue: 73 64 54;
-    --academic-bg: 249 246 239;
-    --academic-surface: 255 253 248;
-    --academic-surface-muted: 244 239 229;
-    --academic-ink: 53 46 39;
-    --academic-slate: 105 94 82;
-    --academic-border: 222 211 193;
-    --academic-accent: 141 95 43;
+    --academic-navy: 28 25 23;
+    --academic-blue: 41 37 36;
+    --academic-bg: 243 239 230;
+    --academic-surface: 248 244 236;
+    --academic-surface-muted: 246 241 232;
+    --academic-ink: 41 36 31;
+    --academic-slate: 75 69 63;
+    --academic-border: 221 211 196;
+    --academic-accent: 148 105 50;
     --academic-accent-strong: 115 76 31;
-    --academic-accent-soft: 236 221 197;
-    --academic-on-accent: 255 253 248;
-    --academic-sidebar-bg: 241 235 224;
-    --academic-sidebar-surface: 255 253 248;
-    --academic-sidebar-ink: 53 46 39;
-    --academic-sidebar-muted: 105 94 82;
-    --academic-sidebar-border: 214 201 182;
-    --academic-sidebar-hover: 234 225 211;
-    --academic-sidebar-active: 225 214 197;
-    --academic-overlay: 28 33 40;
-  }
-
-  html[data-public-light-palette='ivory'] {
-    --academic-navy: 53 46 39;
-    --academic-blue: 73 64 54;
-    --academic-bg: 249 246 239;
-    --academic-surface: 255 253 248;
-    --academic-surface-muted: 244 239 229;
-    --academic-ink: 53 46 39;
-    --academic-slate: 105 94 82;
-    --academic-border: 222 211 193;
-    --academic-accent: 141 95 43;
-    --academic-accent-strong: 115 76 31;
-    --academic-accent-soft: 236 221 197;
-    --academic-on-accent: 255 253 248;
-    --academic-sidebar-bg: 241 235 224;
-    --academic-sidebar-surface: 255 253 248;
-    --academic-sidebar-ink: 53 46 39;
-    --academic-sidebar-muted: 105 94 82;
-    --academic-sidebar-border: 214 201 182;
-    --academic-sidebar-hover: 234 225 211;
-    --academic-sidebar-active: 225 214 197;
+    --academic-accent-soft: 233 217 193;
+    --academic-on-accent: 255 252 246;
+    --academic-sidebar-bg: 235 228 215;
+    --academic-sidebar-surface: 248 244 236;
+    --academic-sidebar-ink: 41 36 31;
+    --academic-sidebar-muted: 100 91 80;
+    --academic-sidebar-border: 207 196 179;
+    --academic-sidebar-hover: 225 216 202;
+    --academic-sidebar-active: 216 204 185;
     --academic-overlay: 28 33 40;
   }
 
@@ -60,7 +37,7 @@
     --academic-ink: 41 36 31;
     --academic-slate: 75 69 63;
     --academic-border: 221 211 196;
-    --academic-accent: 141 95 43;
+    --academic-accent: 148 105 50;
     --academic-accent-strong: 115 76 31;
     --academic-accent-soft: 233 217 193;
     --academic-on-accent: 255 252 246;
@@ -236,7 +213,7 @@
   --tab-border: 190 174 149;
   --tab-ink: 53 46 39;
   --tab-muted: 112 101 89;
-  --tab-accent: 141 95 43;
+  --tab-accent: 148 105 50;
   --tab-accent-soft: 233 217 193;
   --tab-shadow: 66 50 33;
 }

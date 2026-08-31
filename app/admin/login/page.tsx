@@ -24,6 +24,7 @@ import {
   Mail,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { createBrowserSupabaseClient } from '@/lib/supabase/browser';
 import { isSupabaseAuthConfigured } from '@/lib/supabase/config';
@@ -40,7 +41,7 @@ type LoginStep =
   | 'reset-verify'
   | 'complete';
 
-type CharacterMode = 'idle' | 'pointer' | 'typing' | 'privacy';
+type CharacterMode = 'idle' | 'pointer' | 'typing' | 'privacy' | 'peeking';
 
 function friendlyAuthError(message?: string) {
   const value = (message || '').toLowerCase();
@@ -94,8 +95,6 @@ export default function AdminLoginPage() {
         );
       }
 
-      // Only a non-sensitive UI marker is persisted. The compatibility token
-      // remains in an HttpOnly cookie and cannot be read by JavaScript.
       writeSessionItem('academic_admin_auth', 'true');
       removeSessionItem('admin_token');
       setStep('complete');
@@ -139,7 +138,6 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Remove abandoned enrollment attempts before starting a fresh setup.
       for (const pendingFactor of factors.data.totp.filter(
         (factor) => factor.status !== 'verified'
       )) {
@@ -204,8 +202,6 @@ export default function AdminLoginPage() {
         supabaseError = result.error;
       }
 
-      // Geçiş döneminde mevcut portfolyo yöneticisi hesabını korur. Bu yol
-      // yalnızca server-side ALLOW_LEGACY_ADMIN_LOGIN=true iken açıktır.
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -221,8 +217,6 @@ export default function AdminLoginPage() {
         );
       }
 
-      // Legacy token yalnız HttpOnly cookie'de kalır; tarayıcı depolamasına
-      // taşınmaz. Marker yalnız eski panelin görsel oturum durumudur.
       writeSessionItem('academic_admin_auth', 'true');
       removeSessionItem('admin_token');
       setStep('complete');
@@ -257,7 +251,9 @@ export default function AdminLoginPage() {
       if (!response.ok || payload?.success !== true) {
         throw new Error(payload?.error || 'Doğrulama kodu gönderilemedi.');
       }
-      setNotice(payload.message || 'Doğrulama kodu e-posta adresinize gönderildi.');
+      setNotice(
+        payload.message || 'Doğrulama kodu e-posta adresinize gönderildi.'
+      );
       setResetCode('');
       setStep('reset-verify');
     } catch (resetError) {
@@ -311,7 +307,8 @@ export default function AdminLoginPage() {
       setConfirmPassword('');
       setStep('credentials');
       setNotice(
-        payload.message || 'Parolanız güncellendi. Yeni parolanızla giriş yapabilirsiniz.'
+        payload.message ||
+          'Parolanız güncellendi. Yeni parolanızla giriş yapabilirsiniz.'
       );
     } catch (resetError) {
       setError(
@@ -377,96 +374,104 @@ export default function AdminLoginPage() {
   const characterMode: CharacterMode =
     step !== 'credentials'
       ? 'idle'
-      : activeField === 'password' && password.length > 0
-        ? 'privacy'
-        : activeField === 'email' && email.length > 0
+      : activeField === 'password'
+        ? showPassword
+          ? 'peeking'
+          : 'privacy'
+        : activeField === 'email'
           ? 'typing'
           : 'pointer';
 
-  const heading =
-    step === 'credentials'
-      ? 'Hoş geldin'
-      : step === 'challenge'
-        ? 'Kodu doğrula'
-        : step === 'enrollment'
-          ? 'Authenticator kurulumu'
-          : step === 'reset-request'
-            ? 'Parolanı yenile'
-            : step === 'reset-verify'
-              ? 'Yeni parolanı belirle'
-              : 'Giriş tamamlandı';
-
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#fff7df] p-4 text-[#27333b] sm:p-6 lg:p-10">
-      <div className="pointer-events-none absolute -left-24 top-10 h-64 w-64 rounded-full bg-[#ffdd71]/35 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 right-0 h-80 w-80 rounded-full bg-[#b9ead5]/45 blur-3xl" />
-      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[2.25rem] border border-[#ead9ad] bg-white shadow-[0_30px_90px_rgba(72,53,20,0.18)] lg:min-h-[38rem] lg:grid-cols-[0.92fr_1.08fr]">
-        <section className="order-1 relative min-h-[17rem] overflow-hidden bg-[radial-gradient(circle_at_50%_25%,#fff9d6_0%,#ffe78e_42%,#ffc947_100%)] lg:order-2 lg:min-h-full">
-          <Link
-            href="/"
-            className="absolute left-5 top-5 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-2 text-xs font-bold text-[#73550e] shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-white"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Siteye dön
-          </Link>
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-[radial-gradient(ellipse_at_center_bottom,rgba(116,77,17,0.22),transparent_67%)]" />
-          <CharacterVideo mode={characterMode} emailLength={email.length} />
-        </section>
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-x-hidden bg-[#FAF7F0] p-4 text-[#2D2A26] sm:p-6 md:p-8">
+      {/* Background Ambient Elements */}
+      <div className="pointer-events-none absolute -left-20 -top-20 h-96 w-96 rounded-full bg-[#FFE58F]/40 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-20 -right-20 h-96 w-96 rounded-full bg-[#B7EB8F]/30 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/2 top-1/3 h-80 w-80 -translate-x-1/2 rounded-full bg-[#FFD591]/25 blur-3xl" />
 
-        <section className="order-2 flex items-center p-6 sm:p-10 lg:order-1 lg:p-14">
-          <div className="w-full max-w-sm">
-            <div className="mb-8">
-              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#27333b] text-[#ffe271] shadow-[0_8px_20px_rgba(39,51,59,0.2)]">
-                {step === 'credentials' ? (
-                  <LockKeyhole className="h-5 w-5" />
-                ) : (
-                  <KeyRound className="h-5 w-5" />
-                )}
+      {/* Top Siteye Dön Button */}
+      <div className="absolute left-4 top-4 z-20 sm:left-8 sm:top-8">
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-2 rounded-full border border-stone-200/80 bg-white/80 px-4 py-2 text-xs font-bold text-stone-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-stone-950 hover:shadow-md"
+        >
+          <ArrowLeft className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" />
+          <span>Siteye Dön</span>
+        </Link>
+      </div>
+
+      {/* Main Login Card */}
+      <div className="relative z-10 w-full max-w-[420px] pt-4">
+        <div className="overflow-hidden rounded-[2.25rem] border border-[#EBE4D5] bg-white shadow-[0_24px_70px_rgba(65,48,20,0.09)]">
+          {/* Top Character Stage */}
+          <div className="relative flex flex-col items-center justify-end overflow-hidden border-b border-[#F2ECE0] bg-white pt-6 pb-2">
+            <InteractiveMinion
+              mode={characterMode}
+              emailLength={email.length}
+            />
+            {/* Ground Shadow for Real Physics */}
+            <div className="mt-[-8px] h-3 w-32 rounded-[50%] bg-stone-900/[0.07] blur-[3px]" />
+          </div>
+
+          {/* Form Content Area */}
+          <div className="px-6 py-7 sm:px-8">
+            {/* Title & Badge */}
+            <div className="mb-6 text-center">
+              <div className="mx-auto mb-2 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-amber-800">
+                <Sparkles className="h-3 w-3 text-amber-500" />
+                <span>Yönetici Paneli</span>
               </div>
-              <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#b37a00]">
-                Blog CMS
-              </p>
-              <h1 className="mt-2 text-3xl font-black tracking-[-0.045em] text-[#27333b] sm:text-[2.1rem]">
-                {heading}
+              <h1 className="text-2xl font-black tracking-tight text-[#2D2A26] sm:text-[1.65rem]">
+                {step === 'credentials' && 'Hoş Geldiniz'}
+                {step === 'challenge' && 'Kodu Doğrula'}
+                {step === 'enrollment' && 'İki Aşamalı Güvenlik'}
+                {step === 'reset-request' && 'Parolayı Sıfırla'}
+                {step === 'reset-verify' && 'Yeni Parola Belirle'}
+                {step === 'complete' && 'Giriş Başarılı'}
               </h1>
-              {step === 'credentials' ? (
-                <p className="mt-2 text-sm leading-6 text-[#66737b]">
-                  Devam etmek için giriş yap.
-                </p>
-              ) : null}
+              <p className="mt-1 text-xs font-medium text-stone-500">
+                {step === 'credentials' && 'Devam etmek için oturum açın.'}
+                {step === 'challenge' && 'Authenticator uygulamanızdaki 6 haneli kodu girin.'}
+                {step === 'enrollment' && 'QR kodu tarayarak MFA kurulumunu tamamlayın.'}
+                {step === 'reset-request' && 'E-posta adresinize doğrulama kodu göndereceğiz.'}
+                {step === 'reset-verify' && 'E-postanıza gelen kodu ve yeni parolanızı girin.'}
+                {step === 'complete' && 'Yönetim paneline yönlendiriliyorsunuz...'}
+              </p>
             </div>
 
-            {!isSupabaseAuthConfigured ? (
-              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-                Supabase Auth henüz yapılandırılmamış. Ortam değişkenlerine
-                proje URL&apos;sini ve publishable key&apos;i ekleyin.
+            {!isSupabaseAuthConfigured && (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-xs font-medium leading-5 text-amber-900">
+                Supabase Auth henüz yapılandırılmamış. Ortam değişkenlerini kontrol edin.
               </div>
-            ) : null}
+            )}
 
-            {error ? (
+            {error && (
               <div
                 role="alert"
-                className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200"
+                className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold leading-5 text-red-800"
               >
                 {error}
               </div>
-            ) : null}
+            )}
 
-            {notice ? (
+            {notice && (
               <div
                 role="status"
-                className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200"
+                className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-semibold leading-5 text-emerald-800"
               >
                 {notice}
               </div>
-            ) : null}
+            )}
 
-            {step === 'credentials' ? (
-              <form onSubmit={submitCredentials} className="space-y-5">
-                <label className="block space-y-2">
-                  <span className="text-sm font-bold">E-posta adresi</span>
-                  <span className="relative block">
-                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400" />
+            {/* STEP: CREDENTIALS */}
+            {step === 'credentials' && (
+              <form onSubmit={submitCredentials} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-stone-700">
+                    E-posta adresi
+                  </label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                     <input
                       type="email"
                       autoComplete="username"
@@ -475,15 +480,17 @@ export default function AdminLoginPage() {
                       onFocus={() => setActiveField('email')}
                       onBlur={() => setActiveField(null)}
                       onChange={(event) => setEmail(event.target.value)}
-                      className="h-14 w-full rounded-[1.1rem] border border-[#e7ddc7] bg-[#fffdf7] px-12 py-3.5 text-[#27333b] outline-none transition placeholder:text-[#a9a196] focus:border-[#edb52c] focus:ring-4 focus:ring-[#f7d66c]/35"
-                      placeholder="bilgi@muhammedakan.com"
+                      className="h-12 w-full rounded-2xl border border-stone-200 bg-stone-50/50 px-10 text-sm font-medium text-stone-900 outline-none transition-all placeholder:text-stone-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/20"
+                      placeholder="admin@muhammedakan.com"
                     />
-                  </span>
-                </label>
+                  </div>
+                </div>
 
-                <label className="block space-y-2">
-                  <span className="flex items-center justify-between gap-3 text-sm font-bold">
-                    <span>Parola</span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-stone-700">
+                      Parola
+                    </label>
                     <button
                       type="button"
                       onClick={(event) => {
@@ -493,14 +500,13 @@ export default function AdminLoginPage() {
                         setNotice('');
                         setStep('reset-request');
                       }}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 transition hover:text-amber-900 hover:underline dark:text-amber-400 dark:hover:text-amber-300"
+                      className="text-xs font-semibold text-amber-700 transition hover:text-amber-900 hover:underline"
                     >
-                      <KeyRound className="h-3.5 w-3.5" />
                       Şifremi unuttum
                     </button>
-                  </span>
-                  <span className="relative block">
-                    <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400" />
+                  </div>
+                  <div className="relative">
+                    <LockKeyhole className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                     <input
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
@@ -509,71 +515,74 @@ export default function AdminLoginPage() {
                       onFocus={() => setActiveField('password')}
                       onBlur={() => setActiveField(null)}
                       onChange={(event) => setPassword(event.target.value)}
-                      className="h-14 w-full rounded-[1.1rem] border border-[#e7ddc7] bg-[#fffdf7] px-12 py-3.5 pr-14 text-[#27333b] outline-none transition placeholder:text-[#a9a196] focus:border-[#edb52c] focus:ring-4 focus:ring-[#f7d66c]/35"
+                      className="h-12 w-full rounded-2xl border border-stone-200 bg-stone-50/50 pl-10 pr-11 text-sm font-medium text-stone-900 outline-none transition-all placeholder:text-stone-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/20"
                       placeholder="••••••••••••"
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword((visible) => !visible)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-2 text-stone-400 transition hover:bg-stone-100 hover:text-stone-800 dark:hover:bg-stone-800 dark:hover:text-white"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-stone-400 transition hover:bg-stone-100 hover:text-stone-700"
                       aria-label={showPassword ? 'Parolayı gizle' : 'Parolayı göster'}
                     >
                       {showPassword ? (
-                        <EyeOff className="h-5 w-5" />
+                        <EyeOff className="h-4 w-4" />
                       ) : (
-                        <Eye className="h-5 w-5" />
+                        <Eye className="h-4 w-4" />
                       )}
                     </button>
-                  </span>
-                </label>
+                  </div>
+                </div>
 
                 <button
                   type="submit"
                   disabled={isBusy}
-                  className="flex h-14 w-full items-center justify-center gap-2 rounded-[1.1rem] bg-[#27333b] px-5 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(39,51,59,0.18)] transition hover:-translate-y-0.5 hover:bg-[#3a4b55] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#2D2A26] text-sm font-bold text-white shadow-[0_8px_20px_rgba(45,42,38,0.2)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#3F3B36] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isBusy ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <ArrowRight className="h-5 w-5" />
+                    <>
+                      <span>Giriş Yap</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
                   )}
-                  Güvenli giriş yap
                 </button>
               </form>
-            ) : null}
+            )}
 
-            {step === 'reset-request' ? (
-              <form onSubmit={requestPasswordReset} className="space-y-5">
-                <p className="text-sm leading-6 text-stone-600 dark:text-stone-300">
-                  Kayıtlı yönetici e-posta adresinize 10 dakika geçerli,
-                  6 haneli bir doğrulama kodu göndereceğiz.
-                </p>
-                <label className="block space-y-2">
-                  <span className="text-sm font-bold">Yönetici e-postası</span>
-                  <span className="relative block">
-                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-stone-400" />
+            {/* STEP: PASSWORD RESET REQUEST */}
+            {step === 'reset-request' && (
+              <form onSubmit={requestPasswordReset} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-bold text-stone-700">
+                    Kayıtlı E-posta
+                  </label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
                     <input
                       type="email"
                       autoComplete="email"
                       required
                       value={resetEmail}
                       onChange={(event) => setResetEmail(event.target.value)}
-                      className="w-full rounded-2xl border border-stone-300 bg-white px-12 py-3.5 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-stone-700 dark:bg-stone-900"
-                      placeholder="bilgi@muhammedakan.com"
+                      className="h-12 w-full rounded-2xl border border-stone-200 bg-stone-50/50 px-10 text-sm font-medium text-stone-900 outline-none transition-all placeholder:text-stone-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/20"
+                      placeholder="admin@muhammedakan.com"
                     />
-                  </span>
-                </label>
+                  </div>
+                </div>
                 <button
                   type="submit"
                   disabled={isBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-stone-950 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-stone-950 dark:hover:bg-amber-400"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#2D2A26] text-sm font-bold text-white shadow-md transition-all hover:bg-[#3F3B36] disabled:opacity-60"
                 >
                   {isBusy ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Mail className="h-5 w-5" />
+                    <>
+                      <Mail className="h-4 w-4" />
+                      <span>Kod Gönder</span>
+                    </>
                   )}
-                  Doğrulama kodu gönder
                 </button>
                 <button
                   type="button"
@@ -582,22 +591,21 @@ export default function AdminLoginPage() {
                     setNotice('');
                     setStep('credentials');
                   }}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-300 px-4 py-3 text-sm font-bold text-stone-600 transition hover:bg-stone-100 hover:text-stone-950 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900 dark:hover:text-white"
+                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl border border-stone-200 text-xs font-bold text-stone-600 transition hover:bg-stone-50 hover:text-stone-900"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                  Giriş ekranına dön
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>Giriş ekranına dön</span>
                 </button>
               </form>
-            ) : null}
+            )}
 
-            {step === 'reset-verify' ? (
-              <form onSubmit={completePasswordReset} className="space-y-4">
-                <p className="text-sm leading-6 text-stone-600 dark:text-stone-300">
-                  <strong>{resetEmail}</strong> adresine gönderilen kodu ve yeni
-                  parolanızı girin.
-                </p>
-                <label className="block space-y-2">
-                  <span className="text-sm font-bold">6 haneli kod</span>
+            {/* STEP: PASSWORD RESET VERIFY */}
+            {step === 'reset-verify' && (
+              <form onSubmit={completePasswordReset} className="space-y-3.5">
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-stone-700">
+                    6 Haneli Kod
+                  </label>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -611,13 +619,14 @@ export default function AdminLoginPage() {
                         event.target.value.replace(/\D/g, '').slice(0, 6)
                       )
                     }
-                    className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3.5 text-center font-mono text-2xl font-black tracking-[0.3em] outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-stone-700 dark:bg-stone-900"
-                    aria-label="E-posta doğrulama kodu"
+                    className="h-12 w-full rounded-2xl border border-stone-200 bg-white px-4 text-center font-mono text-xl font-black tracking-[0.25em] text-stone-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-400/20"
                     placeholder="000000"
                   />
-                </label>
-                <label className="block space-y-2">
-                  <span className="text-sm font-bold">Yeni parola</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-stone-700">
+                    Yeni Parola
+                  </label>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -625,12 +634,14 @@ export default function AdminLoginPage() {
                     required
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
-                    className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3.5 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-stone-700 dark:bg-stone-900"
+                    className="h-11 w-full rounded-2xl border border-stone-200 bg-white px-4 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-400/20"
                     placeholder="En az 8 karakter"
                   />
-                </label>
-                <label className="block space-y-2">
-                  <span className="text-sm font-bold">Yeni parola tekrar</span>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-bold text-stone-700">
+                    Yeni Parola Tekrar
+                  </label>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -638,21 +649,23 @@ export default function AdminLoginPage() {
                     required
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-3.5 outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-stone-700 dark:bg-stone-900"
+                    className="h-11 w-full rounded-2xl border border-stone-200 bg-white px-4 text-sm outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-400/20"
                     placeholder="Yeni parolayı tekrar girin"
                   />
-                </label>
+                </div>
                 <button
                   type="submit"
                   disabled={isBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-stone-950 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-stone-950 dark:hover:bg-amber-400"
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#2D2A26] text-sm font-bold text-white shadow-md transition-all hover:bg-[#3F3B36] disabled:opacity-60"
                 >
                   {isBusy ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <ShieldCheck className="h-5 w-5" />
+                    <>
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Parolayı Güncelle</span>
+                    </>
                   )}
-                  Parolayı güvenle güncelle
                 </button>
                 <button
                   type="button"
@@ -661,45 +674,41 @@ export default function AdminLoginPage() {
                     setNotice('');
                     setStep('reset-request');
                   }}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-300 px-4 py-3 text-sm font-bold text-stone-600 transition hover:bg-stone-100 hover:text-stone-950 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900 dark:hover:text-white"
+                  className="flex h-10 w-full items-center justify-center gap-1.5 rounded-2xl border border-stone-200 text-xs font-bold text-stone-600 transition hover:bg-stone-50"
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  Yeni kod iste
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Yeni kod iste</span>
                 </button>
               </form>
-            ) : null}
+            )}
 
-            {step === 'enrollment' ? (
-              <div className="space-y-5">
-                <p className="text-sm leading-6 text-stone-600 dark:text-stone-300">
-                  Authenticator uygulamanızla QR kodu tarayın. Ardından oluşan
-                  6 haneli kodu aşağıya girerek MFA&apos;yı etkinleştirin.
-                </p>
-                {qrCode ? (
-                  <div className="mx-auto w-fit rounded-3xl border border-stone-200 bg-white p-4 shadow-sm">
+            {/* STEP: ENROLLMENT (QR CODE) */}
+            {step === 'enrollment' && (
+              <div className="space-y-4">
+                {qrCode && (
+                  <div className="mx-auto flex w-fit justify-center rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
                     <Image
                       src={qrCode}
-                      alt="TOTP authenticator kurulum QR kodu"
-                      width={220}
-                      height={220}
+                      alt="TOTP QR Kodu"
+                      width={180}
+                      height={180}
                       unoptimized
-                      className="h-[220px] w-[220px]"
+                      className="h-[180px] w-[180px]"
                     />
                   </div>
-                ) : null}
-                <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900">
-                  <p className="text-xs font-bold uppercase tracking-wider text-stone-500">
-                    Elle kurulum anahtarı
+                )}
+                <div className="rounded-xl border border-stone-200 bg-stone-50 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                    Kurulum Anahtarı
                   </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <code className="min-w-0 flex-1 break-all text-xs font-bold text-stone-800 dark:text-stone-200">
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <code className="min-w-0 flex-1 break-all text-xs font-bold text-stone-800">
                       {secret}
                     </code>
                     <button
                       type="button"
                       onClick={copySecret}
-                      className="rounded-xl border border-stone-200 bg-white p-2 text-stone-500 transition hover:text-stone-950 dark:border-stone-700 dark:bg-stone-800 dark:hover:text-white"
-                      aria-label="Kurulum anahtarını kopyala"
+                      className="rounded-lg border border-stone-200 bg-white p-1.5 text-stone-600 transition hover:text-stone-900"
                     >
                       {copied ? (
                         <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -714,68 +723,89 @@ export default function AdminLoginPage() {
                   setCode={setCode}
                   isBusy={isBusy}
                   onSubmit={verifySecondFactor}
-                  buttonLabel="MFA'yı etkinleştir"
+                  buttonLabel="MFA'yı Etkinleştir"
                 />
               </div>
-            ) : null}
+            )}
 
-            {step === 'challenge' ? (
-              <div className="space-y-5">
-                <p className="text-sm leading-6 text-stone-600 dark:text-stone-300">
-                  Authenticator uygulamanızdaki güncel 6 haneli kodu girin.
-                  Kodlar yaklaşık 30 saniyede bir yenilenir.
-                </p>
+            {/* STEP: CHALLENGE (MFA TOTP) */}
+            {step === 'challenge' && (
+              <div className="space-y-4">
                 <MfaCodeForm
                   code={code}
                   setCode={setCode}
                   isBusy={isBusy}
                   onSubmit={verifySecondFactor}
-                  buttonLabel="Kodu doğrula"
+                  buttonLabel="Kodu Doğrula"
                 />
                 <button
                   type="button"
                   onClick={startOver}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-stone-300 px-4 py-3 text-sm font-bold text-stone-600 transition hover:bg-stone-100 hover:text-stone-950 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-900 dark:hover:text-white"
+                  className="flex h-10 w-full items-center justify-center gap-1.5 rounded-2xl border border-stone-200 text-xs font-bold text-stone-600 transition hover:bg-stone-50"
                 >
-                  <RefreshCw className="h-4 w-4" />
-                  Farklı hesapla başla
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Farklı hesapla başla</span>
                 </button>
               </div>
-            ) : null}
+            )}
 
-            {step === 'complete' ? (
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm font-semibold text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-6 w-6" />
-                  Yönetim paneli açılıyor…
-                </div>
+            {/* STEP: COMPLETE */}
+            {step === 'complete' && (
+              <div className="flex items-center justify-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-900">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                <span>Yönetim paneli açılıyor…</span>
               </div>
-            ) : null}
-
+            )}
           </div>
-        </section>
+        </div>
       </div>
     </main>
   );
 }
 
-function gazeTimestamp(progress: number) {
-  const clampedProgress = Math.min(Math.max(progress, 0), 1);
-
-  // Klipte sol bakış 1–2.5 sn, sağ bakış ise 3.3–5.1 sn arasında.
-  // Ortadaki kısa göz kırpma geçişini atlayarak hareketi akıcı tutuyoruz.
-  return clampedProgress < 0.5
-    ? 1.1 + clampedProgress * 2.8
-    : 3.3 + (clampedProgress - 0.5) * 3.6;
+/**
+ * Calculates target timestamp based on state & interaction
+ */
+function getTargetTimestamp(
+  mode: CharacterMode,
+  emailLength: number,
+  pointerX: number
+): number {
+  if (mode === 'privacy') {
+    // Hands covering eyes
+    return 8.2;
+  }
+  if (mode === 'peeking') {
+    // Hands peeking through fingers
+    return 9.4;
+  }
+  if (mode === 'typing') {
+    // Smooth left-to-right eye tracking when typing email
+    // Range: t=3.6s (looking left-down) to t=4.8s (looking right-down)
+    const progress = Math.min(emailLength / 26, 1);
+    return 3.6 + progress * 1.2;
+  }
+  if (mode === 'pointer') {
+    // Screen cursor tracking:
+    // Left edge (pointerX=0): t=2.0s
+    // Center (pointerX=0.5): t=6.0s (direct eye contact)
+    // Right edge (pointerX=1): t=4.5s
+    const clampedX = Math.min(Math.max(pointerX, 0), 1);
+    if (clampedX < 0.5) {
+      const norm = clampedX / 0.5; // 0 to 1
+      return 2.0 + norm * (6.0 - 2.0);
+    } else {
+      const norm = (clampedX - 0.5) / 0.5; // 0 to 1
+      return 6.0 + norm * (4.5 - 6.0);
+    }
+  }
+  return 6.0;
 }
 
-function characterTimestamp(mode: CharacterMode, emailLength: number) {
-  if (mode === 'privacy') return 8;
-  if (mode === 'typing') return gazeTimestamp(Math.min(emailLength, 32) / 32);
-  return 5.8;
-}
-
-function CharacterVideo({
+/**
+ * Interactive Minion Character Component with butter-smooth RAF interpolation
+ */
+function InteractiveMinion({
   mode,
   emailLength,
 }: {
@@ -783,58 +813,106 @@ function CharacterVideo({
   emailLength: number;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const characterRef = useRef<HTMLDivElement>(null);
-  const behaviorRef = useRef({ mode, emailLength });
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const seekTo = useCallback((timestamp: number) => {
-    const video = videoRef.current;
-    if (!video || video.readyState < HTMLMediaElement.HAVE_METADATA) return;
+  // State refs for buttery 60fps RAF loop
+  const pointerPosRef = useRef<{ x: number; y: number }>({ x: 0.5, y: 0.5 });
+  const currentSeekRef = useRef<number>(6.0);
+  const currentTransformRef = useRef<{ x: number; y: number; rotate: number }>({
+    x: 0,
+    y: 0,
+    rotate: 0,
+  });
 
-    video.pause();
-    if (Math.abs(video.currentTime - timestamp) > 0.04) {
-      video.currentTime = timestamp;
-    }
+  // Track global pointermove
+  useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      pointerPosRef.current = {
+        x: event.clientX / window.innerWidth,
+        y: event.clientY / window.innerHeight,
+      };
+    };
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    return () => window.removeEventListener('pointermove', onPointerMove);
   }, []);
 
+  // Continuous RAF interpolation loop
   useEffect(() => {
-    behaviorRef.current = { mode, emailLength };
-    seekTo(characterTimestamp(mode, emailLength));
-  }, [emailLength, mode, seekTo]);
+    let animFrameId: number;
 
-  useEffect(() => {
-    const handlePointerMove = (event: PointerEvent) => {
-      if (behaviorRef.current.mode !== 'pointer') return;
+    const tick = () => {
+      const video = videoRef.current;
+      const container = containerRef.current;
 
-      const x = event.clientX / window.innerWidth;
-      const y = event.clientY / window.innerHeight;
-      const character = characterRef.current;
+      const targetTime = getTargetTimestamp(
+        mode,
+        emailLength,
+        pointerPosRef.current.x
+      );
 
-      if (character) {
-        character.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
+      // Smooth timestamp interpolation (lerp)
+      const lerpSpeed = mode === 'privacy' || mode === 'peeking' ? 0.25 : 0.16;
+      currentSeekRef.current +=
+        (targetTime - currentSeekRef.current) * lerpSpeed;
+
+      if (video && video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+        // Fast seek without stutter
+        if (Math.abs(video.currentTime - currentSeekRef.current) > 0.02) {
+          video.currentTime = currentSeekRef.current;
+        }
       }
-      seekTo(gazeTimestamp(x));
+
+      // Smooth 3D tilt and translation physics
+      if (container) {
+        let targetX = 0;
+        let targetY = 0;
+        let targetRotate = 0;
+
+        if (mode === 'pointer') {
+          targetX = (pointerPosRef.current.x - 0.5) * 16;
+          targetY = (pointerPosRef.current.y - 0.5) * 10;
+          targetRotate = (pointerPosRef.current.x - 0.5) * 6;
+        } else if (mode === 'typing') {
+          targetX = (Math.min(emailLength / 26, 1) - 0.5) * 10;
+          targetY = 4; // tilt down towards the input
+          targetRotate = (Math.min(emailLength / 26, 1) - 0.5) * 4;
+        } else if (mode === 'privacy') {
+          targetY = -2;
+          targetRotate = 0;
+        }
+
+        currentTransformRef.current.x +=
+          (targetX - currentTransformRef.current.x) * 0.12;
+        currentTransformRef.current.y +=
+          (targetY - currentTransformRef.current.y) * 0.12;
+        currentTransformRef.current.rotate +=
+          (targetRotate - currentTransformRef.current.rotate) * 0.12;
+
+        container.style.transform = `translate3d(${currentTransformRef.current.x}px, ${currentTransformRef.current.y}px, 0) rotate(${currentTransformRef.current.rotate}deg)`;
+      }
+
+      animFrameId = requestAnimationFrame(tick);
     };
 
-    document.addEventListener('pointermove', handlePointerMove, { passive: true });
-    return () => document.removeEventListener('pointermove', handlePointerMove);
-  }, [seekTo]);
+    animFrameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animFrameId);
+  }, [mode, emailLength]);
 
   return (
-    <div
-      className="absolute inset-x-0 bottom-[-2.25rem] top-7 flex items-end justify-center overflow-hidden"
-      aria-hidden="true"
-    >
+    <div className="relative flex h-[140px] w-full items-end justify-center overflow-visible sm:h-[155px]">
       <div
-        ref={characterRef}
-        className="transition-transform duration-100 ease-out motion-reduce:transform-none"
+        ref={containerRef}
+        className="pointer-events-none relative flex items-end justify-center will-change-transform"
       >
         <video
           ref={videoRef}
           muted
           playsInline
           preload="auto"
-          onLoadedData={() => seekTo(characterTimestamp(mode, emailLength))}
-          className="h-[19rem] w-auto max-w-none mix-blend-multiply sm:h-[22rem] lg:h-[33rem]"
+          className="h-[185px] w-auto max-w-none select-none mix-blend-multiply sm:h-[205px]"
+          style={{
+            filter: 'contrast(1.02) brightness(1.0)',
+          }}
         >
           <source src="/media/monion.mp4" type="video/mp4" />
         </video>
@@ -858,8 +936,10 @@ function MfaCodeForm({
 }) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <label className="block space-y-2">
-        <span className="text-sm font-bold">Tek kullanımlık kod</span>
+      <div className="space-y-1.5">
+        <label className="block text-xs font-bold text-stone-700">
+          6 Haneli Doğrulama Kodu
+        </label>
         <input
           type="text"
           inputMode="numeric"
@@ -871,22 +951,21 @@ function MfaCodeForm({
           onChange={(event) =>
             setCode(event.target.value.replace(/\D/g, '').slice(0, 6))
           }
-          className="w-full rounded-2xl border border-stone-300 bg-white px-4 py-4 text-center font-mono text-3xl font-black tracking-[0.34em] outline-none transition focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 dark:border-stone-700 dark:bg-stone-900"
-          aria-label="Altı haneli doğrulama kodu"
+          className="h-14 w-full rounded-2xl border border-stone-200 bg-white px-4 text-center font-mono text-2xl font-black tracking-[0.3em] text-stone-900 outline-none transition focus:border-amber-400 focus:ring-4 focus:ring-amber-400/20"
           placeholder="000000"
         />
-      </label>
+      </div>
       <button
         type="submit"
         disabled={isBusy || code.length !== 6}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-stone-950 px-5 py-3.5 text-sm font-extrabold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-amber-500 dark:text-stone-950 dark:hover:bg-amber-400"
+        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#2D2A26] text-sm font-bold text-white shadow-md transition hover:bg-[#3F3B36] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isBusy ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <ShieldCheck className="h-5 w-5" />
+          <ShieldCheck className="h-4 w-4" />
         )}
-        {buttonLabel}
+        <span>{buttonLabel}</span>
       </button>
     </form>
   );
