@@ -753,25 +753,39 @@ const COLS = 6;
 const FRAMES_PER_SHEET = 60;
 const TOTAL_FRAMES = 240;
 
-function gazeFrame(progress: number) {
-  const p = Math.min(Math.max(progress, 0), 1);
-  if (p < 0.4) {
-    // Sola / Yukarı Sola bakış (frame 65 - 75)
-    const t = p / 0.4;
-    return Math.round(64 + t * 10);
-  } else if (p > 0.6) {
-    // Sağa / Yukarı Sağa bakış (frame 95 - 105)
-    const t = (p - 0.6) / 0.4;
-    return Math.round(94 + t * 10);
+function gaze2DFrame(x: number, y: number) {
+  const px = Math.min(Math.max(x, 0), 1);
+  const py = Math.min(Math.max(y, 0), 1);
+
+  const isTop = py < 0.45;
+  const isLeft = px < 0.38;
+  const isRight = px > 0.62;
+
+  if (isTop) {
+    // Yukarı bakışlar
+    if (isLeft) return 64; // Frame 65: Yukarı Sol
+    if (isRight) return 99; // Frame 100: Yukarı Sağ
+    return 9; // Frame 10: Yukarı Merkez
+  } else {
+    // Aşağı bakışlar
+    if (isLeft) return 145; // Frame 146: Aşağı Sol
+    if (isRight) return 86; // Frame 87: Aşağı Sağ
+    return 134; // Frame 135: Aşağı / Düz Merkez
   }
-  // Merkeze / öne bakış (frame 135)
-  return 134;
+}
+
+function emailGazeFrame(emailLength: number) {
+  // E-posta alanı karakterin altında yer aldığından aşağı doğru soldan sağa takip eder
+  const p = Math.min(Math.max(emailLength / 30, 0), 1);
+  if (p < 0.35) return 145; // Frame 146: Aşağı Sol
+  if (p > 0.65) return 86; // Frame 87: Aşağı Sağ
+  return 134; // Frame 135: Aşağı Merkez
 }
 
 function targetFrameForMode(mode: CharacterMode, emailLength: number) {
   if (mode === 'privacy') return 179; // Frame 180: eller gözleri kapalı tutar
-  if (mode === 'typing') return gazeFrame(Math.min(emailLength, 32) / 32);
-  return 134; // Frame 135: merkeze / öne bakış (idle)
+  if (mode === 'typing') return emailGazeFrame(emailLength);
+  return 134; // Frame 135: merkez / öne bakış (idle)
 }
 
 function CharacterFrames({
@@ -873,9 +887,9 @@ function CharacterFrames({
       const character = characterRef.current;
 
       if (character) {
-        character.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
+        character.style.transform = `translate3d(${(x - 0.5) * 14}px, ${(y - 0.5) * 10}px, 0)`;
       }
-      targetFrameRef.current = gazeFrame(x);
+      targetFrameRef.current = gaze2DFrame(x, y);
     };
 
     document.addEventListener('pointermove', handlePointerMove, {
