@@ -757,45 +757,35 @@ function gazeFrame(x: number, y: number = 0.5) {
   const px = Math.min(Math.max(x, 0), 1);
   const py = Math.min(Math.max(y, 0), 1);
 
-  if (py < 0.45) {
-    // Üst kısım (Yukarı bakış)
-    if (px < 0.4) {
-      // Yukarı Sol (kullanıcının solu) -> Frame 105 (max)
-      const t = px / 0.4;
-      return Math.round(105 + t * 15);
-    } else if (px > 0.6) {
-      // Yukarı Sağ (kullanıcının sağı) -> Frame 65 (max)
-      const t = (px - 0.6) / 0.4;
-      return Math.round(80 - t * 15);
+  if (py < 0.45) { // UP
+    if (px < 0.5) {
+      // Up-Left: Segment 120 (Center) -> 105 (Up-Left)
+      const t = px / 0.5;
+      return Math.round(105 + t * 15); // px=0->105, px=0.5->120
     } else {
-      return 134;
+      // Up-Right: Segment 80 (Center) -> 65 (Up-Right)
+      const t = (px - 0.5) / 0.5;
+      return Math.round(80 - t * 15); // px=0.5->80, px=1->65
     }
-  } else if (py > 0.65) {
-    // Alt kısım (Aşağı bakış)
-    if (px < 0.4) {
-      // Aşağı Sol -> Frame 144 (max)
-      const t = px / 0.4;
-      return Math.round(144 - t * 10);
-    } else if (px > 0.6) {
-      // Aşağı Sağ -> Frame 130 (max)
-      const t = (px - 0.6) / 0.4;
-      return Math.round(134 - t * 4);
+  } else if (py > 0.65) { // DOWN
+    if (px < 0.5) {
+      // Down-Left: Segment 134 (Center) -> 144 (Down-Left)
+      const t = px / 0.5;
+      return Math.round(144 - t * 10); // px=0->144, px=0.5->134
     } else {
-      // Aşağı Merkez -> Frame 151
-      return 151;
+      // Down-Right: Segment 120 (Center) -> 130 (Down-Right)
+      const t = (px - 0.5) / 0.5;
+      return Math.round(120 + t * 10); // px=0.5->120, px=1->130
     }
-  } else {
-    // Orta kısım (Düz bakış)
-    if (px < 0.4) {
-      // Sol -> Frame 40 (max)
-      const t = px / 0.4;
-      return Math.round(40 - t * 10);
-    } else if (px > 0.6) {
-      // Sağ -> Frame 10 (max)
-      const t = (px - 0.6) / 0.4;
-      return Math.round(30 - t * 20);
+  } else { // MIDDLE
+    if (px < 0.5) {
+      // Left: Segment 50 (Center) -> 40 (Left)
+      const t = px / 0.5;
+      return Math.round(40 + t * 10); // px=0->40, px=0.5->50
     } else {
-      return 134;
+      // Right: Segment 30 (Center) -> 10 (Right)
+      const t = (px - 0.5) / 0.5;
+      return Math.round(30 - t * 20); // px=0.5->30, px=1->10
     }
   }
 }
@@ -805,7 +795,7 @@ function targetFrameForMode(mode: CharacterMode, emailLength: number) {
   if (mode === 'typing') {
     // Yazı yazarken alt kısma bakmasını sağlıyoruz (y = 0.8)
     const x = Math.min(emailLength, 32) / 32;
-    const mappedX = 0.1 + (x * 0.8); // 0.1 ile 0.9 arası (aşağı sol ile aşağı sağ)
+    const mappedX = 0.2 + (x * 0.6); // 0.2 to 0.8
     return gazeFrame(mappedX, 0.8);
   }
   return 134; // Frame 135: merkeze / öne bakış (idle)
@@ -879,17 +869,30 @@ function CharacterFrames({
     const tick = () => {
       const target = targetFrameRef.current;
       const current = currentFrameRef.current;
-      const delta = target - current;
+      let targetForThisFrame = target;
 
-      if (Math.abs(delta) > 15) {
-        currentFrameRef.current = target;
-        drawFrame(target);
+      if (current > 140 && target < 134) {
+        targetForThisFrame = 134;
+      } else if (target === 179 && current < 134) {
+        targetForThisFrame = 134;
+      }
+
+      const delta = targetForThisFrame - current;
+      
+      let maxLerpDelta = 15;
+      if (current >= 134 && targetForThisFrame >= 134) {
+        maxLerpDelta = 50;
+      }
+
+      if (Math.abs(delta) > maxLerpDelta) {
+        currentFrameRef.current = targetForThisFrame;
+        drawFrame(targetForThisFrame);
       } else if (Math.abs(delta) > 0.04) {
         currentFrameRef.current += delta * 0.2;
         drawFrame(currentFrameRef.current);
-      } else if (lastDrawnFrameRef.current !== Math.round(target)) {
-        currentFrameRef.current = target;
-        drawFrame(target);
+      } else if (lastDrawnFrameRef.current !== Math.round(targetForThisFrame)) {
+        currentFrameRef.current = targetForThisFrame;
+        drawFrame(targetForThisFrame);
       }
 
       rafRef.current = requestAnimationFrame(tick);
