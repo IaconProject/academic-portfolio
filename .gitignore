@@ -31,3 +31,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw media frames (processed assets in /public/media/character/)
+/public/media/frame/

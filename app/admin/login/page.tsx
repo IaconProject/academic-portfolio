@@ -408,7 +408,7 @@ export default function AdminLoginPage() {
       </Link>
       <div className="relative flex w-full max-w-md flex-col items-center">
         <section className="relative z-10 -mb-4 flex items-end justify-center overflow-hidden" aria-hidden="true">
-          <CharacterVideo mode={characterMode} emailLength={email.length} />
+          <CharacterFrames mode={characterMode} emailLength={email.length} />
         </section>
 
         <section className="relative z-20 w-full overflow-hidden rounded-[2.25rem] border border-[#ead9ad] bg-white p-6 shadow-[0_30px_90px_rgba(72,53,20,0.18)] sm:p-10">
@@ -747,112 +747,136 @@ export default function AdminLoginPage() {
   );
 }
 
-function gazeTimestamp(progress: number) {
+const FRAME_W = 270;
+const FRAME_H = 480;
+const COLS = 6;
+const FRAMES_PER_SHEET = 60;
+const TOTAL_FRAMES = 240;
+
+function gazeFrame(progress: number) {
   const clampedProgress = Math.min(Math.max(progress, 0), 1);
-
-  // Klipte sol bakış 1–2.5 sn, sağ bakış ise 3.3–5.1 sn arasında.
-  // Ortadaki kısa göz kırpma geçişini atlayarak hareketi akıcı tutuyoruz.
-  return clampedProgress < 0.5
-    ? 1.1 + clampedProgress * 2.8
-    : 3.3 + (clampedProgress - 0.5) * 3.6;
+  // Klipte sol bakış 1–2.5 sn (frames 33–75), sağ bakış 3.3–5.1 sn (frames 99–153)
+  const time =
+    clampedProgress < 0.5
+      ? 1.1 + clampedProgress * 2.8
+      : 3.3 + (clampedProgress - 0.5) * 3.6;
+  return Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(time * 30)));
 }
 
-function characterTimestamp(mode: CharacterMode, emailLength: number) {
-  if (mode === 'privacy') return 8;
-  if (mode === 'typing') return gazeTimestamp(Math.min(emailLength, 32) / 32);
-  return 5.8;
+function targetFrameForMode(mode: CharacterMode, emailLength: number) {
+  if (mode === 'privacy') return 239; // 8.0s - gözleri ellerle kapatma
+  if (mode === 'typing') return gazeFrame(Math.min(emailLength, 32) / 32);
+  return 174; // 5.8s - merkeze / öne bakış
 }
 
-const FRAME_FPS = 15;
-const FRAME_COUNT = 150;
-
-// Build frame paths once at module level
-const FRAME_PATHS: string[] = [];
-for (let i = 1; i <= FRAME_COUNT; i++) {
-  FRAME_PATHS.push(`/media/frames/f${String(i).padStart(3, '0')}.jpg`);
-}
-
-function timeToFrame(time: number) {
-  return Math.max(0, Math.min(FRAME_COUNT - 1, Math.round(time * FRAME_FPS)));
-}
-
-function CharacterVideo({
+function CharacterFrames({
   mode,
   emailLength,
 }: {
   mode: CharacterMode;
   emailLength: number;
 }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const characterRef = useRef<HTMLDivElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
   const behaviorRef = useRef({ mode, emailLength });
-  const targetFrameRef = useRef(timeToFrame(5.8));
-  const currentFrameRef = useRef(timeToFrame(5.8));
-  const displayedFrameRef = useRef(-1);
+  const targetFrameRef = useRef(174);
+  const currentFrameRef = useRef(174);
   const rafRef = useRef<number>(0);
+  const sheetsRef = useRef<HTMLImageElement[]>([]);
+  const lastDrawnFrameRef = useRef<number>(-1);
 
-  // Preload all frames on mount
-  useEffect(() => {
-    for (const src of FRAME_PATHS) {
-      const img = new window.Image();
-      img.src = src;
+  const drawFrame = useCallback((frameIndex: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const f = Math.min(TOTAL_FRAMES - 1, Math.max(0, Math.round(frameIndex)));
+    const sheetIdx = Math.floor(f / FRAMES_PER_SHEET);
+    const localIdx = f % FRAMES_PER_SHEET;
+    const col = localIdx % COLS;
+    const row = Math.floor(localIdx / COLS);
+
+    const sheet = sheetsRef.current[sheetIdx];
+    if (sheet && sheet.complete && sheet.naturalWidth > 0) {
+      ctx.clearRect(0, 0, FRAME_W, FRAME_H);
+      ctx.drawImage(
+        sheet,
+        col * FRAME_W,
+        row * FRAME_H,
+        FRAME_W,
+        FRAME_H,
+        0,
+        0,
+        FRAME_W,
+        FRAME_H
+      );
+      lastDrawnFrameRef.current = f;
     }
   }, []);
 
-  // Lerp loop — interpolates frame index, swaps img src (instant, no decode)
+  // Preload all 4 sprite sheets
+  useEffect(() => {
+    const sheets: HTMLImageElement[] = [];
+    for (let i = 0; i < 4; i++) {
+      const img = new window.Image();
+      img.src = `/media/character/sheet_${i}.webp`;
+      img.onload = () => {
+        // As soon as sheet 2 (containing idle frame 174) or sheet 0 loads, draw initial pose
+        if (i === 2 || i === 0) {
+          drawFrame(currentFrameRef.current);
+        }
+      };
+      sheets.push(img);
+    }
+    sheetsRef.current = sheets;
+  }, [drawFrame]);
+
+  // Smooth lerp loop: interpolates current frame toward target at 60fps
   useEffect(() => {
     const tick = () => {
-      const delta = targetFrameRef.current - currentFrameRef.current;
-      if (Math.abs(delta) > 0.4) {
-        currentFrameRef.current += delta * 0.22;
-      } else {
-        currentFrameRef.current = targetFrameRef.current;
-      }
+      const target = targetFrameRef.current;
+      const current = currentFrameRef.current;
+      const delta = target - current;
 
-      const frameIdx = Math.max(
-        0,
-        Math.min(FRAME_COUNT - 1, Math.round(currentFrameRef.current))
-      );
-
-      if (frameIdx !== displayedFrameRef.current && imgRef.current) {
-        imgRef.current.src = FRAME_PATHS[frameIdx];
-        displayedFrameRef.current = frameIdx;
+      if (Math.abs(delta) > 0.04) {
+        currentFrameRef.current += delta * 0.2;
+        drawFrame(currentFrameRef.current);
+      } else if (lastDrawnFrameRef.current !== Math.round(target)) {
+        currentFrameRef.current = target;
+        drawFrame(target);
       }
 
       rafRef.current = requestAnimationFrame(tick);
     };
+
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, []);
+  }, [drawFrame]);
 
-  // React to mode / email length changes
   useEffect(() => {
     behaviorRef.current = { mode, emailLength };
-    targetFrameRef.current = timeToFrame(
-      characterTimestamp(mode, emailLength)
-    );
+    targetFrameRef.current = targetFrameForMode(mode, emailLength);
   }, [emailLength, mode]);
 
-  // Pointer tracking
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       if (behaviorRef.current.mode !== 'pointer') return;
 
       const x = event.clientX / window.innerWidth;
       const y = event.clientY / window.innerHeight;
-      const el = characterRef.current;
+      const character = characterRef.current;
 
-      if (el) {
-        el.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
+      if (character) {
+        character.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
       }
-      targetFrameRef.current = timeToFrame(gazeTimestamp(x));
+      targetFrameRef.current = gazeFrame(x);
     };
 
     document.addEventListener('pointermove', handlePointerMove, {
       passive: true,
     });
-    return () =>
-      document.removeEventListener('pointermove', handlePointerMove);
+    return () => document.removeEventListener('pointermove', handlePointerMove);
   }, []);
 
   return (
@@ -861,13 +885,11 @@ function CharacterVideo({
       className="will-change-transform"
       style={{ transition: 'transform 0.12s cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        ref={imgRef}
-        alt=""
-        src={FRAME_PATHS[timeToFrame(5.8)]}
-        className="pointer-events-none h-[14rem] w-auto max-w-none select-none sm:h-[17rem] lg:h-[20rem]"
-        draggable={false}
+      <canvas
+        ref={canvasRef}
+        width={FRAME_W}
+        height={FRAME_H}
+        className="h-[14rem] w-auto max-w-none sm:h-[17rem] lg:h-[20rem]"
       />
     </div>
   );
