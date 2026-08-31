@@ -39,7 +39,7 @@ type LoginStep =
   | 'reset-verify'
   | 'complete';
 
-type CharacterMode = 'idle' | 'pointer' | 'typing' | 'privacy';
+type CharacterMode = 'idle' | 'pointer' | 'typing' | 'privacy' | 'success';
 
 function friendlyAuthError(message?: string) {
   const value = (message || '').toLowerCase();
@@ -374,13 +374,15 @@ export default function AdminLoginPage() {
   }
 
   const characterMode: CharacterMode =
-    step !== 'credentials'
-      ? 'idle'
-      : activeField === 'password'
-        ? 'privacy'
-        : activeField === 'email'
-          ? 'typing'
-          : 'pointer';
+    step === 'complete'
+      ? 'success'
+      : step !== 'credentials'
+        ? 'idle'
+        : activeField === 'password'
+          ? 'privacy'
+          : activeField === 'email'
+            ? 'typing'
+            : 'pointer';
 
   const heading =
     step === 'credentials'
@@ -753,52 +755,56 @@ const COLS = 6;
 const FRAMES_PER_SHEET = 60;
 const TOTAL_FRAMES = 240;
 
-function gazeFrame(x: number, y: number = 0.5) {
-  const px = Math.min(Math.max(x, 0), 1);
-  const py = Math.min(Math.max(y, 0), 1);
+// Keyframe sequences (0-indexed)
+// Raising hands to cover eyes: frames 153 to 180
+const RAISE_FRAMES = [152, 155, 157, 159, 161, 163, 167, 174, 179];
+// Lowering hands from eyes: frames 205 to 50
+const LOWER_FRAMES = [204, 206, 208, 210, 212, 214, 219, 224, 49];
+// Typing eye-tracking (Down-Left -> Down-Center -> Down-Right): frames 142, 144, 146, 148, 150, 215, 217, 219
+const TYPING_FRAMES = [141, 143, 145, 147, 149, 214, 216, 218];
 
-  if (py < 0.45) { // UP
-    if (px < 0.5) {
-      // Up-Left: Segment 120 (Center) -> 105 (Up-Left)
-      const t = px / 0.5;
-      return Math.round(105 + t * 15); // px=0->105, px=0.5->120
-    } else {
-      // Up-Right: Segment 80 (Center) -> 65 (Up-Right)
-      const t = (px - 0.5) / 0.5;
-      return Math.round(80 - t * 15); // px=0.5->80, px=1->65
-    }
-  } else if (py > 0.65) { // DOWN
-    if (px < 0.5) {
-      // Down-Left: Segment 134 (Center) -> 144 (Down-Left)
-      const t = px / 0.5;
-      return Math.round(144 - t * 10); // px=0->144, px=0.5->134
-    } else {
-      // Down-Right: Segment 120 (Center) -> 130 (Down-Right)
-      const t = (px - 0.5) / 0.5;
-      return Math.round(120 + t * 10); // px=0.5->120, px=1->130
-    }
-  } else { // MIDDLE
-    if (px < 0.5) {
-      // Left: Segment 50 (Center) -> 40 (Left)
-      const t = px / 0.5;
-      return Math.round(40 + t * 10); // px=0->40, px=0.5->50
-    } else {
-      // Right: Segment 30 (Center) -> 10 (Right)
-      const t = (px - 0.5) / 0.5;
-      return Math.round(30 - t * 20); // px=0.5->30, px=1->10
-    }
+function calculateGazeFrame(dx: number, dy: number): number {
+  const dist = Math.hypot(dx, dy);
+  if (dist < 0.12) {
+    return 49; // Neutral Center (frame 50)
   }
-}
 
-function targetFrameForMode(mode: CharacterMode, emailLength: number) {
-  if (mode === 'privacy') return 179; // Frame 180: eller gözleri kapalı tutar
-  if (mode === 'typing') {
-    // Yazı yazarken alt kısma bakmasını sağlıyoruz (y = 0.8)
-    const x = Math.min(emailLength, 32) / 32;
-    const mappedX = 0.2 + (x * 0.6); // 0.2 to 0.8
-    return gazeFrame(mappedX, 0.8);
+  // Angle in degrees from character center (-180 to 180)
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  if (angle >= -22.5 && angle < 22.5) {
+    // Mid-Right (frames 36..42)
+    const t = Math.min(Math.max((dx - 0.12) / 0.88, 0), 1);
+    return Math.round(35 + t * 6);
+  } else if (angle >= 22.5 && angle < 67.5) {
+    // Down-Right (frames 216..220)
+    const t = Math.min(Math.max((dist - 0.12) / 0.88, 0), 1);
+    return Math.round(215 + t * 4);
+  } else if (angle >= 67.5 && angle < 112.5) {
+    // Down-Center (frames 148..152)
+    const t = Math.min(Math.max((dy - 0.12) / 0.88, 0), 1);
+    return Math.round(147 + t * 4);
+  } else if (angle >= 112.5 && angle < 157.5) {
+    // Down-Left (frames 142..146)
+    const t = Math.min(Math.max((dist - 0.12) / 0.88, 0), 1);
+    return Math.round(141 + t * 4);
+  } else if (angle >= 157.5 || angle < -157.5) {
+    // Mid-Left (frames 18..22)
+    const t = Math.min(Math.max((-dx - 0.12) / 0.88, 0), 1);
+    return Math.round(17 + t * 4);
+  } else if (angle >= -157.5 && angle < -112.5) {
+    // Up-Left (frames 100..106)
+    const t = Math.min(Math.max((dist - 0.12) / 0.88, 0), 1);
+    return Math.round(99 + t * 6);
+  } else if (angle >= -112.5 && angle < -67.5) {
+    // Up-Center (frames 88..92)
+    const t = Math.min(Math.max((-dy - 0.12) / 0.88, 0), 1);
+    return Math.round(87 + t * 4);
+  } else {
+    // Up-Right (frames 66..74)
+    const t = Math.min(Math.max((dist - 0.12) / 0.88, 0), 1);
+    return Math.round(65 + t * 8);
   }
-  return 134; // Frame 135: merkeze / öne bakış (idle)
 }
 
 function CharacterFrames({
@@ -810,12 +816,25 @@ function CharacterFrames({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const characterRef = useRef<HTMLDivElement>(null);
-  const behaviorRef = useRef({ mode, emailLength });
-  const targetFrameRef = useRef(134);
-  const currentFrameRef = useRef(134);
-  const rafRef = useRef<number>(0);
   const sheetsRef = useRef<HTMLImageElement[]>([]);
   const lastDrawnFrameRef = useRef<number>(-1);
+  const currentPointerRef = useRef<{ dx: number; dy: number }>({ dx: 0, dy: 0 });
+
+  const animStateRef = useRef<{
+    mode: CharacterMode;
+    privacyPhase: 'none' | 'raising' | 'covered' | 'lowering';
+    privacyIndex: number;
+    lastStepTime: number;
+    emailLength: number;
+    targetFrame: number;
+  }>({
+    mode,
+    privacyPhase: mode === 'privacy' ? 'covered' : 'none',
+    privacyIndex: 0,
+    lastStepTime: 0,
+    emailLength,
+    targetFrame: mode === 'privacy' ? 179 : 49,
+  });
 
   const drawFrame = useCallback((frameIndex: number) => {
     const canvas = canvasRef.current;
@@ -854,9 +873,8 @@ function CharacterFrames({
       const img = new window.Image();
       img.src = `/media/character/sheet_${i}.webp`;
       img.onload = () => {
-        // As soon as sheet 2 (containing idle frame 134 and privacy frame 179) or sheet 0 loads, draw initial pose
-        if (i === 2 || i === 0) {
-          drawFrame(currentFrameRef.current);
+        if (i === 0 || i === 2) {
+          drawFrame(animStateRef.current.targetFrame);
         }
       };
       sheets.push(img);
@@ -864,74 +882,138 @@ function CharacterFrames({
     sheetsRef.current = sheets;
   }, [drawFrame]);
 
-  // Smooth lerp loop: interpolates current frame toward target at 60fps
+  // Synchronize state when mode or emailLength changes
   useEffect(() => {
-    const tick = () => {
-      const target = targetFrameRef.current;
-      const current = currentFrameRef.current;
-      let targetForThisFrame = target;
+    const state = animStateRef.current;
+    const prevMode = state.mode;
+    state.mode = mode;
+    state.emailLength = emailLength;
 
-      if (current > 140 && target < 134) {
-        targetForThisFrame = 134;
-      } else if (target === 179 && current < 134) {
-        targetForThisFrame = 134;
+    if (mode === 'privacy') {
+      if (
+        prevMode !== 'privacy' &&
+        state.privacyPhase !== 'raising' &&
+        state.privacyPhase !== 'covered'
+      ) {
+        state.privacyPhase = 'raising';
+        state.privacyIndex = 0;
+        state.lastStepTime = performance.now();
+      }
+    } else {
+      if (
+        prevMode === 'privacy' ||
+        state.privacyPhase === 'covered' ||
+        state.privacyPhase === 'raising'
+      ) {
+        state.privacyPhase = 'lowering';
+        state.privacyIndex = 0;
+        state.lastStepTime = performance.now();
+      }
+    }
+  }, [mode, emailLength]);
+
+  // Master 60fps render and animation loop
+  useEffect(() => {
+    let rafId = 0;
+
+    const tick = (now: number) => {
+      const state = animStateRef.current;
+      const STEP_INTERVAL = 38; // ms per step for cinematic character motion
+
+      let frameToDraw = state.targetFrame;
+
+      if (state.privacyPhase === 'raising') {
+        if (now - state.lastStepTime >= STEP_INTERVAL) {
+          state.lastStepTime = now;
+          state.privacyIndex++;
+          if (state.privacyIndex >= RAISE_FRAMES.length - 1) {
+            state.privacyIndex = RAISE_FRAMES.length - 1;
+            state.privacyPhase = 'covered';
+          }
+        }
+        frameToDraw = RAISE_FRAMES[state.privacyIndex];
+      } else if (state.privacyPhase === 'covered') {
+        frameToDraw = 179; // Frame 180: hands covering eyes
+      } else if (state.privacyPhase === 'lowering') {
+        if (now - state.lastStepTime >= STEP_INTERVAL) {
+          state.lastStepTime = now;
+          state.privacyIndex++;
+          if (state.privacyIndex >= LOWER_FRAMES.length - 1) {
+            state.privacyIndex = LOWER_FRAMES.length - 1;
+            state.privacyPhase = 'none';
+          }
+        }
+        frameToDraw = LOWER_FRAMES[state.privacyIndex];
+      } else {
+        // Normal interactive modes (privacyPhase === 'none')
+        if (state.mode === 'typing') {
+          const p = Math.min(state.emailLength, 28) / 28;
+          const idx = Math.min(
+            Math.floor(p * TYPING_FRAMES.length),
+            TYPING_FRAMES.length - 1
+          );
+          frameToDraw = TYPING_FRAMES[idx];
+        } else if (state.mode === 'success') {
+          frameToDraw = 234; // Frame 235: Happy celebration
+        } else if (state.mode === 'idle') {
+          frameToDraw = 49; // Frame 50: Neutral center
+        } else {
+          // Pointer tracking mode
+          const { dx, dy } = currentPointerRef.current;
+          frameToDraw = calculateGazeFrame(dx, dy);
+        }
       }
 
-      const delta = targetForThisFrame - current;
-      
-      let maxLerpDelta = 15;
-      if (current >= 134 && targetForThisFrame >= 134) {
-        maxLerpDelta = 50;
+      state.targetFrame = frameToDraw;
+      if (lastDrawnFrameRef.current !== frameToDraw) {
+        drawFrame(frameToDraw);
       }
 
-      if (Math.abs(delta) > maxLerpDelta) {
-        currentFrameRef.current = targetForThisFrame;
-        drawFrame(targetForThisFrame);
-      } else if (Math.abs(delta) > 0.04) {
-        currentFrameRef.current += delta * 0.2;
-        drawFrame(currentFrameRef.current);
-      } else if (lastDrawnFrameRef.current !== Math.round(targetForThisFrame)) {
-        currentFrameRef.current = targetForThisFrame;
-        drawFrame(targetForThisFrame);
-      }
-
-      rafRef.current = requestAnimationFrame(tick);
+      rafId = requestAnimationFrame(tick);
     };
 
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [drawFrame]);
 
-  useEffect(() => {
-    behaviorRef.current = { mode, emailLength };
-    targetFrameRef.current = targetFrameForMode(mode, emailLength);
-  }, [emailLength, mode]);
-
+  // Pointer listener for eye tracking and 3D parallax
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
-      if (behaviorRef.current.mode !== 'pointer') return;
+      const state = animStateRef.current;
+      if (state.privacyPhase !== 'none' || state.mode !== 'pointer') return;
 
-      const x = event.clientX / window.innerWidth;
-      const y = event.clientY / window.innerHeight;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const charCenterX = rect.left + rect.width / 2;
+      const charEyesY = rect.top + rect.height * 0.35;
+
+      const halfW = Math.max(window.innerWidth * 0.45, 200);
+      const halfH = Math.max(window.innerHeight * 0.45, 200);
+
+      const dx = Math.max(-1, Math.min(1, (event.clientX - charCenterX) / halfW));
+      const dy = Math.max(-1, Math.min(1, (event.clientY - charEyesY) / halfH));
+
+      currentPointerRef.current = { dx, dy };
+
       const character = characterRef.current;
-
       if (character) {
-        character.style.transform = `translate3d(${(x - 0.5) * 12}px, ${(y - 0.5) * 8}px, 0)`;
+        character.style.transform = `translate3d(${dx * 10}px, ${dy * 8}px, 0) rotate(${dx * 2}deg)`;
       }
-      targetFrameRef.current = gazeFrame(x, y);
     };
 
-    document.addEventListener('pointermove', handlePointerMove, {
+    window.addEventListener('pointermove', handlePointerMove, {
       passive: true,
     });
-    return () => document.removeEventListener('pointermove', handlePointerMove);
+    return () => window.removeEventListener('pointermove', handlePointerMove);
   }, []);
 
   return (
     <div
       ref={characterRef}
       className="will-change-transform"
-      style={{ transition: 'transform 0.12s cubic-bezier(0.22, 1, 0.36, 1)' }}
+      style={{ transition: 'transform 0.1s cubic-bezier(0.22, 1, 0.36, 1)' }}
     >
       <canvas
         ref={canvasRef}
