@@ -839,14 +839,10 @@ function CharacterVideo({
           targetTimeRef.current = characterTimestamp(mode, emailLength);
         }}
         className="h-[14rem] w-auto max-w-none sm:h-[17rem] lg:h-[20rem]"
-        style={{
-          WebkitMaskImage:
-            'radial-gradient(ellipse 70% 80% at 50% 55%, black 50%, transparent 100%)',
-          maskImage:
-            'radial-gradient(ellipse 70% 80% at 50% 55%, black 50%, transparent 100%)',
-        }}
       >
-        <source src="/media/monion.mp4" type="video/mp4" />
+        <source src="/media/minion.mp4" type='video/mp4; codecs="hvc1"' />
+        <source src="/media/minion.webm" type="video/webm" />
+        <source src="/media/minion-h264.mp4" type="video/mp4" />
       </video>
     </div>
   );
