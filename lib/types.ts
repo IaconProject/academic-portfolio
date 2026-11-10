@@ -269,10 +269,12 @@ export interface TabBarSettings {
 
 export interface HomePopupSettings {
   enabled: boolean;
+  displayMode: 'content' | 'image';
   eyebrow: string;
   title: string;
   message: string;
   imageUrl: string;
+  imageAlt: string;
   buttonLabel: string;
   buttonUrl: string;
   delaySeconds: number;

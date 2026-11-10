@@ -2,10 +2,12 @@ import type { HomePopupSettings } from './types';
 
 export const DEFAULT_HOME_POPUP_SETTINGS: HomePopupSettings = {
   enabled: false,
+  displayMode: 'content',
   eyebrow: 'DUYURU',
   title: 'Yeni bir duyuru',
   message: 'Ziyaretçilerinizle paylaşmak istediğiniz kısa bir mesaj ekleyin.',
   imageUrl: '',
+  imageAlt: 'Duyuru görseli',
   buttonLabel: 'Daha fazla bilgi',
   buttonUrl: '',
   delaySeconds: 2,
@@ -37,10 +39,12 @@ export function normalizeHomePopupSettings(value: unknown): HomePopupSettings {
   const delay = Number(value.delaySeconds);
   return {
     enabled: value.enabled === true,
+    displayMode: value.displayMode === 'image' ? 'image' : 'content',
     eyebrow: text(value.eyebrow, DEFAULT_HOME_POPUP_SETTINGS.eyebrow, 60),
     title: text(value.title, DEFAULT_HOME_POPUP_SETTINGS.title, 120),
     message: text(value.message, DEFAULT_HOME_POPUP_SETTINGS.message, 600),
     imageUrl: safeUrl(value.imageUrl),
+    imageAlt: text(value.imageAlt, DEFAULT_HOME_POPUP_SETTINGS.imageAlt, 160),
     buttonLabel: text(value.buttonLabel, DEFAULT_HOME_POPUP_SETTINGS.buttonLabel, 60),
     buttonUrl: safeUrl(value.buttonUrl),
     delaySeconds: Number.isFinite(delay) ? Math.min(30, Math.max(0, Math.round(delay))) : DEFAULT_HOME_POPUP_SETTINGS.delaySeconds,

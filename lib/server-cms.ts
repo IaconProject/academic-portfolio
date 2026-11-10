@@ -136,7 +136,9 @@ export async function getPortfolioDataServer(): Promise<PortfolioData> {
             authorName: seoData.author_name,
           } : initialPortfolioData.seoSettings,
           tabBarSettings: normalizeTabBarSettings(seoData?.tab_bar_settings),
-          homePopupSettings: normalizeHomePopupSettings(seoData?.home_popup_settings),
+          homePopupSettings: normalizeHomePopupSettings(
+            seoData?.tab_bar_settings?.homePopupSettings ?? seoData?.home_popup_settings
+          ),
         };
       }
     } catch (e) {

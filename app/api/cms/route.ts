@@ -201,7 +201,9 @@ export async function GET(request: Request) {
             seoData?.tab_bar_settings ?? currentTmp.tabBarSettings
           ),
           homePopupSettings: normalizeHomePopupSettings(
-            seoData?.home_popup_settings ?? currentTmp.homePopupSettings
+            seoData?.tab_bar_settings?.homePopupSettings ??
+              seoData?.home_popup_settings ??
+              currentTmp.homePopupSettings
           ),
           adminCredentials: credData ? {
             email: credData.email,
@@ -271,7 +273,7 @@ export async function POST(request: Request) {
 
         const { data: seoRows, error: lookupError } = await supabase
           .from('seo_settings')
-          .select('id')
+          .select('id, tab_bar_settings')
           .limit(1);
 
         if (lookupError) {
@@ -283,13 +285,20 @@ export async function POST(request: Request) {
         }
 
         const existingId = seoRows?.[0]?.id;
+        const popupSettings = normalizeHomePopupSettings(
+          currentTmp.homePopupSettings ?? seoRows?.[0]?.tab_bar_settings?.homePopupSettings
+        );
+        const persistedTabBarSettings = {
+          ...tabBarSettings,
+          homePopupSettings: popupSettings,
+        };
         const legacySeo = body.seoSettings || currentTmp.seoSettings || initialPortfolioData.seoSettings;
         const updatedAt = new Date().toISOString();
         const writeResult = existingId
           ? await supabase
               .from('seo_settings')
               .update({
-                tab_bar_settings: tabBarSettings,
+                tab_bar_settings: persistedTabBarSettings,
                 updated_at: updatedAt,
               })
               .eq('id', existingId)
@@ -304,7 +313,7 @@ export async function POST(request: Request) {
                 og_image_url: legacySeo.ogImageUrl,
                 canonical_url: legacySeo.canonicalUrl,
                 author_name: legacySeo.authorName,
-                tab_bar_settings: tabBarSettings,
+                tab_bar_settings: persistedTabBarSettings,
                 updated_at: updatedAt,
               })
               .select('id')
@@ -340,7 +349,7 @@ export async function POST(request: Request) {
 
         const { data: seoRows, error: lookupError } = await supabase
           .from('seo_settings')
-          .select('id')
+          .select('id, tab_bar_settings')
           .limit(1);
         if (lookupError) {
           console.error('[cms] homepage popup settings lookup failed', lookupError);
@@ -351,10 +360,16 @@ export async function POST(request: Request) {
         }
 
         const existingId = seoRows?.[0]?.id;
+        const persistedTabBarSettings = {
+          ...normalizeTabBarSettings(
+            seoRows?.[0]?.tab_bar_settings ?? currentTmp.tabBarSettings
+          ),
+          homePopupSettings,
+        };
         const legacySeo = body.seoSettings || currentTmp.seoSettings || initialPortfolioData.seoSettings;
         const writeResult = existingId
           ? await supabase.from('seo_settings').update({
-              home_popup_settings: homePopupSettings,
+              tab_bar_settings: persistedTabBarSettings,
               updated_at: new Date().toISOString(),
             }).eq('id', existingId).select('id').single()
           : await supabase.from('seo_settings').insert({
@@ -364,8 +379,7 @@ export async function POST(request: Request) {
               og_image_url: legacySeo.ogImageUrl,
               canonical_url: legacySeo.canonicalUrl,
               author_name: legacySeo.authorName,
-              tab_bar_settings: normalizeTabBarSettings(currentTmp.tabBarSettings),
-              home_popup_settings: homePopupSettings,
+              tab_bar_settings: persistedTabBarSettings,
               updated_at: new Date().toISOString(),
             }).select('id').single();
 
