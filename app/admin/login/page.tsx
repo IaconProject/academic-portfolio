@@ -98,7 +98,7 @@ export default function AdminLoginPage() {
       writeSessionItem('academic_admin_auth', 'true');
       removeSessionItem('admin_token');
       setStep('complete');
-      router.replace('/admin?tab=articles');
+      router.replace('/admin?tab=visitors');
       router.refresh();
     } catch (loginError) {
       setError(
@@ -225,7 +225,7 @@ export default function AdminLoginPage() {
       writeSessionItem('academic_admin_auth', 'true');
       removeSessionItem('admin_token');
       setStep('complete');
-      router.replace('/admin?tab=articles');
+      router.replace('/admin?tab=visitors');
       router.refresh();
     } catch (authError) {
       setError(
