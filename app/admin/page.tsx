@@ -23,6 +23,7 @@ import { VisitorLogsManager } from '@/components/admin/VisitorLogsManager';
 import { SocialLinksEditor } from '@/components/admin/SocialLinksEditor';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
 import { TabBarSettingsEditor } from '@/components/admin/TabBarSettingsEditor';
+import { HomePopupSettingsEditor } from '@/components/admin/HomePopupSettingsEditor';
 import {
   User,
   School,
@@ -225,6 +226,33 @@ function AdminDashboardContent() {
     }
   };
 
+  const handleSaveHomePopupSettings = async (
+    homePopupSettings: PortfolioData['homePopupSettings']
+  ) => {
+    if (!data || !homePopupSettings) return;
+    const updated = { ...data, homePopupSettings };
+    setIsSaving(true);
+    setData(updated);
+    savePortfolioDataLocally(updated);
+    try {
+      const token = typeof window !== 'undefined' ? readSessionItem('admin_token') || '' : '';
+      const response = await fetch('/api/cms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Admin-Token': token } : {}) },
+        body: JSON.stringify({ homePopupSettings }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.success !== true) {
+        throw new Error(typeof result?.error === 'string' ? result.error : result?.error?.message || 'Pop-up ayarları kaydedilemedi.');
+      }
+      toast.success('Ana sayfa pop-up ayarları kaydedildi.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Pop-up ayarları kalıcı olarak kaydedilemedi.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleLogout = async () => {
     await fetch('/api/blog/auth/sign-out', { method: 'POST' }).catch(() => null);
     clearAdminSession();
@@ -259,7 +287,7 @@ function AdminDashboardContent() {
     { id: 'activities' as AdminTab, label: 'Faaliyetler', icon: ListOrdered },
     { id: 'references' as AdminTab, label: 'Referanslar', icon: Users },
     { id: 'seo' as AdminTab, label: 'SEO Ayarları', icon: Search },
-    { id: 'appearance' as AdminTab, label: 'Görünüm & FAB Bar', icon: Palette },
+    { id: 'appearance' as AdminTab, label: 'Görünüm & Pop-up', icon: Palette },
     { id: 'visitors' as AdminTab, label: 'Ziyaretçi Analizi', icon: Activity },
     { id: 'security' as AdminTab, label: 'Güvenlik & Giriş', icon: KeyRound },
   ];
@@ -388,12 +416,19 @@ function AdminDashboardContent() {
               )}
 
               {activeTab === 'appearance' && (
-                <TabBarSettingsEditor
-                  settings={data.tabBarSettings}
-                  email={data.profile.email}
-                  isSaving={isSaving}
-                  onSave={handleSaveTabBarSettings}
-                />
+                <div className="space-y-6">
+                  <HomePopupSettingsEditor
+                    settings={data.homePopupSettings}
+                    isSaving={isSaving}
+                    onSave={handleSaveHomePopupSettings}
+                  />
+                  <TabBarSettingsEditor
+                    settings={data.tabBarSettings}
+                    email={data.profile.email}
+                    isSaving={isSaving}
+                    onSave={handleSaveTabBarSettings}
+                  />
+                </div>
               )}
 
               {activeTab === 'visitors' && <VisitorLogsManager />}

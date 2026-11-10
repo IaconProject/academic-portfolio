@@ -267,6 +267,18 @@ export interface TabBarSettings {
   darkPalette: TabBarDarkPalette;
 }
 
+export interface HomePopupSettings {
+  enabled: boolean;
+  eyebrow: string;
+  title: string;
+  message: string;
+  imageUrl: string;
+  buttonLabel: string;
+  buttonUrl: string;
+  delaySeconds: number;
+  frequency: 'session' | 'always';
+}
+
 export interface PortfolioData {
   profile: Profile;
   education: EducationItem[];
@@ -278,6 +290,7 @@ export interface PortfolioData {
   socialLinks: SocialLink[];
   seoSettings: SeoSettings;
   tabBarSettings: TabBarSettings;
+  homePopupSettings?: HomePopupSettings;
   adminCredentials?: AdminCredentials;
   notificationSettings?: NotificationSettings;
   articles?: ArticleItem[];

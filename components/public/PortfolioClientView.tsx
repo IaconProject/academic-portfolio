@@ -15,6 +15,7 @@ import { ReferencesSection } from '@/components/public/sections/ReferencesSectio
 import { ContactSection } from '@/components/public/sections/ContactSection';
 import { JsonLdSchema } from '@/components/public/JsonLdSchema';
 import { sortArchiveContent } from '@/lib/content-presentation';
+import { HomeAnnouncementPopup } from '@/components/public/HomeAnnouncementPopup';
 
 interface PortfolioClientViewProps {
   initialData: PortfolioData;
@@ -34,6 +35,7 @@ export const PortfolioClientView: React.FC<PortfolioClientViewProps> = ({ initia
     <div className="min-h-screen bg-academic-bg text-academic-ink font-sans antialiased flex flex-col transition-colors duration-300 selection:bg-academic-accent-soft">
       {/* JSON-LD Structured Data for SEO */}
       <JsonLdSchema data={data} />
+      <HomeAnnouncementPopup settings={data.homePopupSettings} />
 
       {/* Desktop Navigation Sidebar */}
       <DesktopSidebar

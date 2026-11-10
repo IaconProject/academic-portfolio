@@ -7,6 +7,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 import { normalizeTabBarSettings } from './tab-bar';
+import { normalizeHomePopupSettings } from './home-popup';
 
 const TMP_FILE_PATH = path.join('/tmp', 'academic_portfolio_data_v2.json');
 
@@ -135,6 +136,7 @@ export async function getPortfolioDataServer(): Promise<PortfolioData> {
             authorName: seoData.author_name,
           } : initialPortfolioData.seoSettings,
           tabBarSettings: normalizeTabBarSettings(seoData?.tab_bar_settings),
+          homePopupSettings: normalizeHomePopupSettings(seoData?.home_popup_settings),
         };
       }
     } catch (e) {
@@ -150,6 +152,7 @@ export async function getPortfolioDataServer(): Promise<PortfolioData> {
         return {
           ...parsed,
           tabBarSettings: normalizeTabBarSettings(parsed.tabBarSettings),
+          homePopupSettings: normalizeHomePopupSettings(parsed.homePopupSettings),
         };
       }
     }

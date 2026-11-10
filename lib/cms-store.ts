@@ -7,6 +7,7 @@ import {
 } from './admin-credentials-safety';
 import { readSessionItem } from './admin-session-storage';
 import { normalizeTabBarSettings } from './tab-bar';
+import { normalizeHomePopupSettings } from './home-popup';
 
 const STORAGE_KEY = 'academic_portfolio_cms_v1';
 const CREDS_KEY = 'academic_portfolio_admin_creds_v1';
@@ -52,6 +53,7 @@ export function getPortfolioData(): PortfolioData {
         return redactAdminPassword({
           ...parsed,
           tabBarSettings: normalizeTabBarSettings(parsed.tabBarSettings),
+          homePopupSettings: normalizeHomePopupSettings(parsed.homePopupSettings),
         });
       }
     }
@@ -77,6 +79,7 @@ export function savePortfolioDataLocally(data: PortfolioData): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(redactAdminPassword({
       ...data,
       tabBarSettings: normalizeTabBarSettings(data.tabBarSettings),
+      homePopupSettings: normalizeHomePopupSettings(data.homePopupSettings),
     })));
   } catch (e) {
     console.error('Failed to save to localStorage:', e);
@@ -278,6 +281,7 @@ export async function fetchPortfolioFromSupabase(): Promise<PortfolioData | null
         authorName: seoData.author_name,
       } : initialPortfolioData.seoSettings,
       tabBarSettings: normalizeTabBarSettings(seoData?.tab_bar_settings),
+      homePopupSettings: normalizeHomePopupSettings(seoData?.home_popup_settings),
       adminCredentials: {
         email: localCreds.email,
         password: '',

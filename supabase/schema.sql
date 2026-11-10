@@ -102,6 +102,8 @@ CREATE TABLE IF NOT EXISTS public.seo_settings (
   author_name TEXT NOT NULL,
   tab_bar_settings JSONB NOT NULL DEFAULT '{"version":1,"enabled":true,"buttons":[{"id":"home","visible":true},{"id":"theme","visible":true},{"id":"email","visible":true},{"id":"contact","visible":true}],"lightPalette":"ivory","darkPalette":"midnight"}'::JSONB
     CHECK (jsonb_typeof(tab_bar_settings) = 'object'),
+  home_popup_settings JSONB NOT NULL DEFAULT '{"enabled":false,"eyebrow":"DUYURU","title":"Yeni bir duyuru","message":"Ziyaretçilerinizle paylaşmak istediğiniz kısa bir mesaj ekleyin.","imageUrl":"","buttonLabel":"Daha fazla bilgi","buttonUrl":"","delaySeconds":2,"frequency":"session"}'::JSONB
+    CHECK (jsonb_typeof(home_popup_settings) = 'object'),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

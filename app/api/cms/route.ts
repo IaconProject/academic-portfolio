@@ -12,6 +12,7 @@ import { omitAdminCredentials } from '@/lib/admin-credentials-safety';
 import fs from 'fs';
 import path from 'path';
 import { normalizeTabBarSettings } from '@/lib/tab-bar';
+import { normalizeHomePopupSettings } from '@/lib/home-popup';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -53,6 +54,7 @@ function sanitizePublicData(data: PortfolioData): PortfolioData {
   return {
     ...data,
     tabBarSettings: normalizeTabBarSettings(data.tabBarSettings),
+    homePopupSettings: normalizeHomePopupSettings(data.homePopupSettings),
     adminCredentials: {
       email: data.adminCredentials?.email || 'bilgi@muhammedakan.com',
       password: '', // Never leak password in public GET requests
@@ -198,6 +200,9 @@ export async function GET(request: Request) {
           tabBarSettings: normalizeTabBarSettings(
             seoData?.tab_bar_settings ?? currentTmp.tabBarSettings
           ),
+          homePopupSettings: normalizeHomePopupSettings(
+            seoData?.home_popup_settings ?? currentTmp.homePopupSettings
+          ),
           adminCredentials: credData ? {
             email: credData.email,
             password: '',
@@ -315,6 +320,65 @@ export async function POST(request: Request) {
       }
 
       writeTmpStore({ ...currentTmp, tabBarSettings });
+    }
+
+    // 1b. Homepage announcement popup settings.
+    if (Object.prototype.hasOwnProperty.call(body, 'homePopupSettings')) {
+      const homePopupSettings = normalizeHomePopupSettings(body.homePopupSettings);
+      const isPopupOnlyRequest = Object.keys(body).every((key) => key === 'homePopupSettings');
+      body.homePopupSettings = homePopupSettings;
+
+      if (isPopupOnlyRequest || JSON.stringify(homePopupSettings) !== JSON.stringify(
+        normalizeHomePopupSettings(currentTmp.homePopupSettings)
+      )) {
+        if (!isSupabaseConfigured || !supabase || !hasSupabaseServiceRole) {
+          return NextResponse.json(
+            { success: false, error: { code: 'CMS_STORE_UNAVAILABLE', message: 'Kalıcı CMS veritabanı bağlantısı yapılandırılmamış.' } },
+            { status: 503 }
+          );
+        }
+
+        const { data: seoRows, error: lookupError } = await supabase
+          .from('seo_settings')
+          .select('id')
+          .limit(1);
+        if (lookupError) {
+          console.error('[cms] homepage popup settings lookup failed', lookupError);
+          return NextResponse.json(
+            { success: false, error: { code: 'HOME_POPUP_SETTINGS_READ_FAILED', message: 'Ana sayfa pop-up ayarları veritabanından okunamadı.' } },
+            { status: 503 }
+          );
+        }
+
+        const existingId = seoRows?.[0]?.id;
+        const legacySeo = body.seoSettings || currentTmp.seoSettings || initialPortfolioData.seoSettings;
+        const writeResult = existingId
+          ? await supabase.from('seo_settings').update({
+              home_popup_settings: homePopupSettings,
+              updated_at: new Date().toISOString(),
+            }).eq('id', existingId).select('id').single()
+          : await supabase.from('seo_settings').insert({
+              meta_title: legacySeo.metaTitle,
+              meta_description: legacySeo.metaDescription,
+              keywords: legacySeo.keywords,
+              og_image_url: legacySeo.ogImageUrl,
+              canonical_url: legacySeo.canonicalUrl,
+              author_name: legacySeo.authorName,
+              tab_bar_settings: normalizeTabBarSettings(currentTmp.tabBarSettings),
+              home_popup_settings: homePopupSettings,
+              updated_at: new Date().toISOString(),
+            }).select('id').single();
+
+        if (writeResult.error) {
+          console.error('[cms] homepage popup settings write failed', writeResult.error);
+          return NextResponse.json(
+            { success: false, error: { code: 'HOME_POPUP_SETTINGS_WRITE_FAILED', message: 'Ana sayfa pop-up ayarları kalıcı olarak kaydedilemedi.' } },
+            { status: 503 }
+          );
+        }
+      }
+
+      writeTmpStore({ ...currentTmp, homePopupSettings });
     }
 
     // 2. Notification Settings Sync

@@ -1,5 +1,6 @@
 import { PortfolioData } from './types';
 import { DEFAULT_TAB_BAR_SETTINGS } from './tab-bar';
+import { DEFAULT_HOME_POPUP_SETTINGS } from './home-popup';
 
 export const initialPortfolioData: PortfolioData = {
   profile: {
@@ -193,6 +194,7 @@ export const initialPortfolioData: PortfolioData = {
     },
   },
   tabBarSettings: DEFAULT_TAB_BAR_SETTINGS,
+  homePopupSettings: DEFAULT_HOME_POPUP_SETTINGS,
   notificationSettings: {
     emailNotificationsEnabled: true,
     notifyOnNewMessage: true,
