@@ -72,7 +72,7 @@ export function AnalyticsUrlParametersDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
         <div>
           <h2 className="text-sm font-black text-stone-900 dark:text-stone-100">UTM parametreli ziyaretler</h2>
-          <p className="mt-1 max-w-2xl text-[11px] leading-5 text-stone-500 dark:text-stone-400">/7 dışındaki sayfalarda yalnızca izin verilen UTM alanları raporlanır. Ham URL sorgusu kaydedilmez; yeni veriler analitik izninden sonra toplanır.</p>
+          <p className="mt-1 max-w-2xl text-[11px] leading-5 text-stone-500 dark:text-stone-400">/7 dışındaki UTM kampanya alanları bu sekmede raporlanır. Ham URL sorgusu kaydedilmez; yeni sayfa görüntülemeleri yalnız açık analitik izninden sonra toplanır.</p>
         </div>
         <div className="flex items-center gap-2">
           <select aria-label="Rapor dönemi" value={days} onChange={(event) => setDays(Number(event.target.value) as RangeDays)} className="h-10 rounded-xl border border-stone-200 bg-white px-3 text-xs font-bold text-stone-700 outline-none focus:border-amber-500 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-200">

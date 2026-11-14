@@ -151,12 +151,19 @@ function parseStoredSession(value: string | null): StoredSession | null {
  * A browser session is renewed after 30 minutes of inactivity. The visitor
  * identifier remains stable until consent is denied/revoked.
  */
-export function getOrCreateSessionId(now = Date.now()): string {
+export function getOrCreateSessionId(
+  now = Date.now(),
+  scope: 'primary' | 'general' = 'primary'
+): string {
   if (typeof window === 'undefined') return '';
 
+  const storageKey =
+    scope === 'general'
+      ? ANALYTICS_STORAGE_KEYS.generalSession
+      : ANALYTICS_STORAGE_KEYS.session;
   const stored =
-    parseStoredSession(safeLocalStorageGet(ANALYTICS_STORAGE_KEYS.session)) ||
-    volatileSession;
+    parseStoredSession(safeLocalStorageGet(storageKey)) ||
+    (scope === 'primary' ? volatileSession : null);
   const session =
     stored &&
     now - stored.lastActivityAt >= 0 &&
@@ -164,8 +171,8 @@ export function getOrCreateSessionId(now = Date.now()): string {
       ? { ...stored, lastActivityAt: now }
       : { id: createUuid(), lastActivityAt: now };
 
-  volatileSession = session;
-  safeLocalStorageSet(ANALYTICS_STORAGE_KEYS.session, JSON.stringify(session));
+  if (scope === 'primary') volatileSession = session;
+  safeLocalStorageSet(storageKey, JSON.stringify(session));
   return session.id;
 }
 
@@ -230,18 +237,17 @@ function readQueue(): AnalyticsClientEventContract[] {
   }
 }
 
-function hasCampaignParameters(utm: AnalyticsUtmProperties | undefined): boolean {
-  return Boolean(utm && Object.values(utm).some((value) => typeof value === 'string' && value.length > 0));
-}
-
 function isAnalyticsEventTracked(
   event: Partial<AnalyticsClientEventContract>
 ): boolean {
-  return isVisitorAnalyticsTrackedPath(event.path) || hasCampaignParameters(event.utm);
+  return (
+    isVisitorAnalyticsTrackedPath(event.path) ||
+    (event.eventType === 'page_view' && hasExplicitAnalyticsConsent())
+  );
 }
 
 function shouldTrackCurrentPage(path: string): boolean {
-  return isVisitorAnalyticsTrackedPath(path) || hasCampaignParameters(allowedUtmProperties());
+  return isVisitorAnalyticsTrackedPath(path) || hasExplicitAnalyticsConsent();
 }
 
 function trimQueue(
@@ -744,10 +750,14 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       useBeacon = false
     ): Promise<AnalyticsClientEventContract | null> => {
       const eventPath = canonicalPath(pathOverride);
+      const isBiographyLinkPath = isVisitorAnalyticsTrackedPath(eventPath);
+      const isConsentedGeneralPageView =
+        details.eventType === 'page_view' && hasExplicitAnalyticsConsent();
       if (
         typeof window === 'undefined' ||
         !enabled ||
         !shouldTrackCurrentPage(eventPath) ||
+        (!isBiographyLinkPath && !isConsentedGeneralPageView) ||
         !hasGrantedConsent()
       ) {
         return null;
@@ -756,7 +766,10 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       const generation = runtimeGeneration.current;
       const identity = await withQueueLock(() => ({
         visitorId: getOrCreateVisitorId(),
-        sessionId: getOrCreateSessionId(),
+        sessionId: getOrCreateSessionId(
+          Date.now(),
+          isVisitorAnalyticsTrackedPath(eventPath) ? 'primary' : 'general'
+        ),
         tabId: getOrCreateTabId(),
         sequence: nextSequence(),
       }));
@@ -858,12 +871,12 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       trackGooglePageView(path);
     }
 
-    const utm = allowedUtmProperties();
-    if (!isVisitorAnalyticsTrackedPath(path) && !hasCampaignParameters(utm)) {
+    if (!isVisitorAnalyticsTrackedPath(path) && !hasExplicitAnalyticsConsent()) {
       lastTrackedPath.current = '';
       return;
     }
 
+    const utm = allowedUtmProperties();
     const pageKey = `${path}:${JSON.stringify(utm || {})}`;
     if (lastTrackedPath.current === pageKey) return;
     lastTrackedPath.current = pageKey;

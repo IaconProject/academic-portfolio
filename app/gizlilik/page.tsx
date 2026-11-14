@@ -91,36 +91,40 @@ export default async function PrivacyPage() {
           </h2>
           <div className="mt-3 space-y-3">
             <p>
-              Türkiye’den yalnız <code>/7</code> Instagram biyografi
-              bağlantısına yapılan yeni ziyaretlerde bu alan adına ait, siteler
-              arası takip yapmayan ve bağlantı performansı ile hedef kitle
-              ölçümüyle sınırlı Analytics v2 çalışır. Dağıtımdan sonra ana site,
-              arama motoru ve blog ziyaretleri bu ziyaretçi sayacına yazılmaz;
-              önceki dönem kayıtları korunur. Bu bölgesel uygulama,
+              Türkiye’den <code>/7</code> Instagram biyografi bağlantısına
+              yapılan yeni ziyaretlerde bu alan adına ait, siteler arası takip
+              yapmayan ve bağlantı performansı ile hedef kitle ölçümüyle sınırlı
+              Analytics v2 çalışabilir. <code>/7</code> dışındaki sayfalarda
+              sayfa görüntüleme ölçümü yalnız açık analitik izninden sonra
+              yapılır. Önceki dönem kayıtları korunur. Bu bölgesel uygulama,
               KVKK Çerez Uygulamaları Hakkında Rehberindeki birinci taraf
               analitik yaklaşımıyla sınırlandırılmıştır. Google Analytics bu
               kapsamda otomatik olarak yüklenmez.
             </p>
             <p>
-              Türkiye dışındaki <code>/7</code> ziyaretlerinde Analytics v2,
-              tüm sayfalarda ise Google Analytics varsayılan olarak kapalıdır;
-              yalnız açık analitik izni sonrasında etkinleşir. Ülke güvenilir
+              Türkiye dışındaki <code>/7</code> ziyaretlerinde Analytics v2 ve
+              diğer sayfalardaki görüntüleme ölçümü, Google Analytics gibi,
+              varsayılan olarak kapalıdır; yalnız açık analitik izni sonrasında
+              etkinleşir. Ülke güvenilir
               biçimde belirlenemezse de aynı güvenli varsayılan uygulanır.
               Reklam depolaması hiçbir bölgede açılmaz.
             </p>
             <p>
-              Yeni site içi ölçüm yalnız canonical <code>/7</code> sayfa yolu ve
-              başlığı, yalnız yönlendiren alan adı, izinli UTM kampanya alanları, dil,
-              saat dilimi, yaklaşık ekran sınıfı, cihaz sınıfı ve tarayıcının
-              bildirebildiği ölçüde cihaz markası/modeli ile tarayıcı ve
-              işletim sistemi adı/sürümü, sayfada görünür geçirilen süre,
-              ulaşılan kaydırma
-              eşiği, dış bağlantının yalnız alan adı, indirilen dosyanın güvenli
-              yolu ve uzantısı, başarılı iletişim gönderimi, anonimleştirilmiş
-              istemci hata sınıfı, Core Web Vitals değerleri ve edge
-              sağlayıcının ve sunucu tarafındaki IP ağ çözümleme hizmetinin
-              ürettiği yaklaşık ülke/bölge/şehir, internet servis sağlayıcısı,
-              ağ kuruluşu, ASN ve mobil/sabit ağ sınıfı bilgisini kaydeder.
+              <code>/7</code> için canonical sayfa yolu, sayfa başlığı ve izin
+              verilen etkileşimler kaydedilir. Diğer sayfalarda açık analitik
+              izninden sonra sayfa görüntülemesi ve canonical sayfa yolu raporlanır;
+              ham URL sorgusu saklanmaz. İki kapsamda da sınırlı bağlam olarak
+              yönlendiren alan adı, izinli UTM kampanya alanları, dil, saat
+              dilimi, yaklaşık ekran ve cihaz sınıfı, tarayıcının bildirebildiği
+              ölçüde cihaz markası/modeli ile tarayıcı ve işletim sistemi
+              adı/sürümü ve edge sağlayıcının ve sunucu tarafındaki IP ağ
+              çözümleme hizmetinin ürettiği yaklaşık ülke/bölge/şehir, internet
+              servis sağlayıcısı, ağ kuruluşu, ASN ve mobil/sabit ağ sınıfı
+              bilgisi işlenebilir. Yalnız <code>/7</code> kapsamındaki ek
+              ölçümler sayfada görünür süre, ulaşılan kaydırma eşiği, dış
+              bağlantının yalnız alan adı, indirilen dosyanın güvenli yolu ve
+              uzantısı, başarılı iletişim gönderimi, anonimleştirilmiş istemci
+              hata sınıfı ve Core Web Vitals değerlerini içerir.
               Proxy veya hosting ağı sinyali varsa bu durum veri kalitesi için
               işaretlenebilir. Teknoloji bilgisi tam User-Agent veya donanım kimliği
               saklanmadan, sunucu tarafındaki ayrıştırma ve destekleyen

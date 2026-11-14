@@ -330,6 +330,7 @@ export async function POST(request: Request) {
   }
 
   const now = Date.now();
+  const retainedEvents: typeof parsed.data.events = [];
   for (const event of parsed.data.events) {
     const normalizedPath = normalizeAnalyticsPath(event.path);
     if (
@@ -345,26 +346,39 @@ export async function POST(request: Request) {
     }
 
     const isLinkAnalyticsPath = isVisitorAnalyticsTrackedPath(normalizedPath);
-    const hasCampaignParameters = Boolean(
-      event.utm && Object.values(event.utm).some((value) => Boolean(value))
-    );
-    if (!isLinkAnalyticsPath && !hasCampaignParameters) {
-      return success(
-        {
-          acceptedCount: 0,
-          duplicateCount: 0,
-          rejectedCount: 0,
-          filtered: 'untracked_path',
-        },
-        200
-      );
-    }
+    const isConsentedGeneralPageView =
+      event.eventType === 'page_view' && authorizationBasis === 'consent';
+    const retainEvent =
+      isLinkAnalyticsPath ||
+      isConsentedGeneralPageView;
+    if (!retainEvent) continue;
+
+    // On non-/7 routes, collect page views only after explicit analytics
+    // consent. Interaction and timing events remain scoped to /7.
+    if (
+      !isLinkAnalyticsPath &&
+      event.eventType !== 'page_view'
+    ) continue;
 
     // Keep the dedicated biography-link report canonical. Other public pages
-    // enter collection only with validated UTM values and retain their path.
+    // retain their normalized pathname for the separate page-path report.
     event.path = isLinkAnalyticsPath
       ? VISITOR_ANALYTICS_TRACKED_PATH
       : normalizedPath;
+    retainedEvents.push(event);
+  }
+
+  parsed.data.events = retainedEvents;
+  if (retainedEvents.length === 0) {
+    return success(
+      {
+        acceptedCount: 0,
+        duplicateCount: 0,
+        rejectedCount: 0,
+        filtered: 'untracked_path',
+      },
+      200
+    );
   }
 
   const detectedTrafficClass = classifyObviousBot(
