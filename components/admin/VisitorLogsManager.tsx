@@ -19,7 +19,6 @@ import {
 import toast from 'react-hot-toast';
 import { AnalyticsV2Dashboard } from './AnalyticsV2Dashboard';
 import { AnalyticsUrlParametersDashboard } from './AnalyticsUrlParametersDashboard';
-import { AnalyticsPagePathsDashboard } from './AnalyticsPagePathsDashboard';
 
 type VisitorStats = {
   storedPageSteps: number;
@@ -1142,31 +1141,15 @@ const LegacyVisitorLogsManager: React.FC<{
 };
 
 export const VisitorLogsManager: React.FC = () => {
-  const [activeView, setActiveView] = useState<'v2' | 'pages' | 'parameters' | 'legacy'>('v2');
+  const [activeView, setActiveView] = useState<'v2' | 'parameters' | 'legacy'>('v2');
 
   return (
     <section className="space-y-4">
       <div
         role="tablist"
-        aria-label="Ziyaretçi analizi raporları"
+        aria-label="Ziyaretçi analizi veri kaynağı"
         className="flex w-full max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-stone-200 bg-white/90 p-1 shadow-sm dark:border-stone-800 dark:bg-stone-900/90 sm:inline-flex sm:w-auto"
       >
-        <button
-          type="button"
-          role="tab"
-          id="analytics-pages-tab"
-          aria-selected={activeView === 'pages'}
-          aria-controls="analytics-pages-panel"
-          tabIndex={0}
-          onClick={() => setActiveView('pages')}
-          className={`min-h-10 flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-colors sm:flex-none ${
-            activeView === 'pages'
-              ? 'bg-stone-900 text-white dark:bg-amber-600 dark:text-stone-950'
-              : 'text-stone-600 hover:text-stone-950 dark:text-stone-400 dark:hover:text-stone-100'
-          }`}
-        >
-          Diğer sayfalar
-        </button>
         <button
           type="button"
           role="tab"
@@ -1197,7 +1180,7 @@ export const VisitorLogsManager: React.FC = () => {
               : 'text-stone-600 hover:text-stone-950 dark:text-stone-400 dark:hover:text-stone-100'
           }`}
         >
-          UTM parametreleri
+          URL parametreleri
         </button>
         <button
           type="button"
@@ -1220,24 +1203,20 @@ export const VisitorLogsManager: React.FC = () => {
       <p className="max-w-3xl text-xs leading-5 text-stone-500 dark:text-stone-400">
           {activeView === 'v2'
           ? 'Analytics v2 yalnız /7 Instagram biyografi bağlantısının ziyaret, etkileşim ve edinme kayıtlarını gösterir; ana site ve blog trafiği bu alana yazılmaz.'
-          : activeView === 'pages'
-            ? 'Bu sekme /7 dışındaki sayfa yollarını gösterir. Yeni parametresiz sayfa görüntülemeleri yalnız açık analitik izniyle toplanır; sayfa yolları /7 raporundan ayrı tutulur.'
-            : activeView === 'parameters'
-              ? 'Bu sekme /7 dışındaki UTM kampanya parametrelerini gösterir. Ham URL sorgusu saklanmaz; yalnız izin verilen UTM alanları raporlanır.'
-              : 'Arşiv, Analytics v2 öncesinde visitor_logs ve visitor_sessions tablolarına yazılmış tarihî kayıtlardır. Yeni ziyaretler bu eski tablolara eklenmez; alan yalnız geçmiş veriyi incelemek veya temizlemek için korunur.'}
+          : activeView === 'parameters'
+            ? 'Bu sekme /7 dışındaki UTM parametreli sayfa ziyaretlerini gösterir. Yalnız utm_source, utm_medium, utm_campaign, utm_term ve utm_content alanları saklanır.'
+            : 'Arşiv, Analytics v2 öncesinde visitor_logs ve visitor_sessions tablolarına yazılmış tarihî kayıtlardır. Yeni ziyaretler bu eski tablolara eklenmez; alan yalnız geçmiş veriyi incelemek veya temizlemek için korunur.'}
       </p>
 
       <div
         role="tabpanel"
-        id={activeView === 'v2' ? 'analytics-v2-panel' : activeView === 'pages' ? 'analytics-pages-panel' : activeView === 'parameters' ? 'analytics-parameters-panel' : 'analytics-legacy-panel'}
+        id={activeView === 'v2' ? 'analytics-v2-panel' : activeView === 'parameters' ? 'analytics-parameters-panel' : 'analytics-legacy-panel'}
         aria-labelledby={
-          activeView === 'v2' ? 'analytics-v2-tab' : activeView === 'pages' ? 'analytics-pages-tab' : activeView === 'parameters' ? 'analytics-parameters-tab' : 'analytics-legacy-tab'
+          activeView === 'v2' ? 'analytics-v2-tab' : activeView === 'parameters' ? 'analytics-parameters-tab' : 'analytics-legacy-tab'
         }
       >
         {activeView === 'v2' ? (
           <AnalyticsV2Dashboard />
-        ) : activeView === 'pages' ? (
-          <AnalyticsPagePathsDashboard />
         ) : activeView === 'parameters' ? (
           <AnalyticsUrlParametersDashboard />
         ) : (

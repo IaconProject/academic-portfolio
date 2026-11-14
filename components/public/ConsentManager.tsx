@@ -44,7 +44,6 @@ export const ANALYTICS_PREFERENCES_OPEN_EVENT =
 export const ANALYTICS_STORAGE_KEYS = {
   visitorId: 'analytics_visitor_id_v2',
   session: 'analytics_session_v2',
-  generalSession: 'analytics_general_session_v2',
   queue: 'analytics_event_queue_v2',
   tabId: 'analytics_tab_id_v2',
   sequence: 'analytics_event_sequence_v2',
@@ -94,7 +93,6 @@ export function clearAnalyticsClientState(): void {
   try {
     localStorage.removeItem(ANALYTICS_STORAGE_KEYS.visitorId);
     localStorage.removeItem(ANALYTICS_STORAGE_KEYS.session);
-    localStorage.removeItem(ANALYTICS_STORAGE_KEYS.generalSession);
     localStorage.removeItem(ANALYTICS_STORAGE_KEYS.queue);
     localStorage.removeItem(ANALYTICS_STORAGE_KEYS.legacySessionId);
   } catch {
@@ -484,8 +482,8 @@ export function ConsentManager({
           </p>
           <p className="mt-2 text-xs leading-5 text-academic-slate">
             {isRegionalFirstPartyMode
-              ? 'Türkiye’de /7 Instagram biyografi bağlantısının dar kapsamlı birinci taraf ölçümü etkin olabilir. /7 dışındaki sayfalarda sayfa görüntüleme kaydı yalnız açık analitik izninizle tutulur. İsterseniz bölgesel /7 ölçümünü kapatabilir; Google Analytics ve diğer sayfalardaki ölçüm için ayrıca izin verebilirsiniz. Reklam depolaması kullanılmaz.'
-              : '/7 bağlantısının site içi ölçümü, diğer sayfaların görüntüleme ölçümü ve Google Analytics yalnız açık analitik izninizle çalışır. Ham URL sorgusu saklanmaz; izinli UTM alanları ayrı raporlanabilir. Reklam depolaması kullanılmaz.'}{' '}
+              ? 'Türkiye için yalnız /7 Instagram biyografi bağlantısında, birinci taraf ve siteler arası takip yapmayan ölçüm etkindir. Dağıtımdan sonra ana site ve blog ziyaretleri bu sayaca yazılmaz; geçmiş dönem kayıtları korunur. İsterseniz bu ölçümü kapatabilir veya Google Analytics için ayrıca izin verebilirsiniz. Reklam depolaması kullanılmaz.'
+              : '/7 Instagram biyografi bağlantısındaki site içi ölçüm ve Google Analytics yalnız izninizle çalışır. Dağıtımdan sonra ana site ve blog ziyaretleri birinci taraf ziyaretçi sayacına yazılmaz; geçmiş dönem kayıtları korunur. Reklam depolaması kullanılmaz.'}{' '}
             Ayrıntılar için{' '}
             <Link
               href="/gizlilik"
