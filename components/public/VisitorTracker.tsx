@@ -215,7 +215,9 @@ function readQueue(): AnalyticsClientEventContract[] {
         typeof event === 'object' &&
         typeof (event as Partial<AnalyticsClientEventContract>).eventId ===
           'string' &&
-        isAnalyticsEventTracked(event as Partial<AnalyticsClientEventContract>),
+        isVisitorAnalyticsTrackedPath(
+          (event as Partial<AnalyticsClientEventContract>).path
+        ),
     );
     if (volatileQueue.length !== parsed.length) {
       localStorage.setItem(
@@ -228,20 +230,6 @@ function readQueue(): AnalyticsClientEventContract[] {
     queueStorageDegraded = true;
     return [...volatileQueue];
   }
-}
-
-function hasCampaignParameters(utm: AnalyticsUtmProperties | undefined): boolean {
-  return Boolean(utm && Object.values(utm).some((value) => typeof value === 'string' && value.length > 0));
-}
-
-function isAnalyticsEventTracked(
-  event: Partial<AnalyticsClientEventContract>
-): boolean {
-  return isVisitorAnalyticsTrackedPath(event.path) || hasCampaignParameters(event.utm);
-}
-
-function shouldTrackCurrentPage(path: string): boolean {
-  return isVisitorAnalyticsTrackedPath(path) || hasCampaignParameters(allowedUtmProperties());
 }
 
 function trimQueue(
@@ -747,7 +735,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       if (
         typeof window === 'undefined' ||
         !enabled ||
-        !shouldTrackCurrentPage(eventPath) ||
+        !isVisitorAnalyticsTrackedPath(eventPath) ||
         !hasGrantedConsent()
       ) {
         return null;
@@ -858,15 +846,13 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       trackGooglePageView(path);
     }
 
-    const utm = allowedUtmProperties();
-    if (!isVisitorAnalyticsTrackedPath(path) && !hasCampaignParameters(utm)) {
+    if (!isVisitorAnalyticsTrackedPath(path)) {
       lastTrackedPath.current = '';
       return;
     }
 
-    const pageKey = `${path}:${JSON.stringify(utm || {})}`;
-    if (lastTrackedPath.current === pageKey) return;
-    lastTrackedPath.current = pageKey;
+    if (lastTrackedPath.current === path) return;
+    lastTrackedPath.current = path;
     const event = await emitAnalyticsEvent(
       { eventType: 'page_view' },
       path
@@ -881,7 +867,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       if (
         !enabled ||
         !hasGrantedConsent() ||
-        !shouldTrackCurrentPage(pathname) ||
+        !isVisitorAnalyticsTrackedPath(pathname) ||
         !ANALYTICS_WEB_VITAL_NAMES.includes(
           metric.name as AnalyticsWebVitalName
         )
@@ -982,7 +968,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (
       !enabled ||
-      !shouldTrackCurrentPage(pathname)
+      !isVisitorAnalyticsTrackedPath(pathname)
     ) {
       return;
     }
@@ -1170,7 +1156,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (
       !enabled ||
-      !shouldTrackCurrentPage(pathname) ||
+      !isVisitorAnalyticsTrackedPath(pathname) ||
       !window.visualViewport
     ) {
       return;
@@ -1209,7 +1195,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (
       !enabled ||
-      !shouldTrackCurrentPage(pathname)
+      !isVisitorAnalyticsTrackedPath(pathname)
     ) {
       return;
     }
@@ -1292,7 +1278,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (
       !enabled ||
-      !shouldTrackCurrentPage(pathname)
+      !isVisitorAnalyticsTrackedPath(pathname)
     ) {
       return;
     }

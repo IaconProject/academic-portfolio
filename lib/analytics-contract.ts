@@ -19,8 +19,8 @@ export const VISITOR_ANALYTICS_TRACKED_FROM =
   '2026-08-27T11:40:47.200Z' as const;
 
 /**
- * The primary visitor report remains scoped to the /7 biography link. A
- * separate UTM report accepts campaign-tagged views from other public paths.
+ * The first-party visitor dashboard is a private link counter for the
+ * Instagram biography URL. Public pages and blog traffic must never enter it.
  */
 export function isVisitorAnalyticsTrackedPath(
   value: string | null | undefined

@@ -344,11 +344,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const isLinkAnalyticsPath = isVisitorAnalyticsTrackedPath(normalizedPath);
-    const hasCampaignParameters = Boolean(
-      event.utm && Object.values(event.utm).some((value) => Boolean(value))
-    );
-    if (!isLinkAnalyticsPath && !hasCampaignParameters) {
+    if (!isVisitorAnalyticsTrackedPath(normalizedPath)) {
       return success(
         {
           acceptedCount: 0,
@@ -360,11 +356,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Keep the dedicated biography-link report canonical. Other public pages
-    // enter collection only with validated UTM values and retain their path.
-    event.path = isLinkAnalyticsPath
-      ? VISITOR_ANALYTICS_TRACKED_PATH
-      : normalizedPath;
+    // Store one canonical value so trailing slashes cannot fragment the link
+    // report or bypass its fixed /7 query scope.
+    event.path = VISITOR_ANALYTICS_TRACKED_PATH;
   }
 
   const detectedTrafficClass = classifyObviousBot(

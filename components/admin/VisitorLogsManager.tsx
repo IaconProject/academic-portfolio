@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AnalyticsV2Dashboard } from './AnalyticsV2Dashboard';
-import { AnalyticsUrlParametersDashboard } from './AnalyticsUrlParametersDashboard';
 
 type VisitorStats = {
   storedPageSteps: number;
@@ -1141,7 +1140,7 @@ const LegacyVisitorLogsManager: React.FC<{
 };
 
 export const VisitorLogsManager: React.FC = () => {
-  const [activeView, setActiveView] = useState<'v2' | 'parameters' | 'legacy'>('v2');
+  const [activeView, setActiveView] = useState<'v2' | 'legacy'>('v2');
 
   return (
     <section className="space-y-4">
@@ -1169,22 +1168,6 @@ export const VisitorLogsManager: React.FC = () => {
         <button
           type="button"
           role="tab"
-          id="analytics-parameters-tab"
-          aria-selected={activeView === 'parameters'}
-          aria-controls="analytics-parameters-panel"
-          tabIndex={0}
-          onClick={() => setActiveView('parameters')}
-          className={`min-h-10 flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-xs font-bold transition-colors sm:flex-none ${
-            activeView === 'parameters'
-              ? 'bg-stone-900 text-white dark:bg-amber-600 dark:text-stone-950'
-              : 'text-stone-600 hover:text-stone-950 dark:text-stone-400 dark:hover:text-stone-100'
-          }`}
-        >
-          URL parametreleri
-        </button>
-        <button
-          type="button"
-          role="tab"
           id="analytics-legacy-tab"
           aria-selected={activeView === 'legacy'}
           aria-controls="analytics-legacy-panel"
@@ -1201,24 +1184,20 @@ export const VisitorLogsManager: React.FC = () => {
       </div>
 
       <p className="max-w-3xl text-xs leading-5 text-stone-500 dark:text-stone-400">
-          {activeView === 'v2'
+        {activeView === 'v2'
           ? 'Analytics v2 yalnız /7 Instagram biyografi bağlantısının ziyaret, etkileşim ve edinme kayıtlarını gösterir; ana site ve blog trafiği bu alana yazılmaz.'
-          : activeView === 'parameters'
-            ? 'Bu sekme /7 dışındaki UTM parametreli sayfa ziyaretlerini gösterir. Yalnız utm_source, utm_medium, utm_campaign, utm_term ve utm_content alanları saklanır.'
-            : 'Arşiv, Analytics v2 öncesinde visitor_logs ve visitor_sessions tablolarına yazılmış tarihî kayıtlardır. Yeni ziyaretler bu eski tablolara eklenmez; alan yalnız geçmiş veriyi incelemek veya temizlemek için korunur.'}
+          : 'Arşiv, Analytics v2 öncesinde visitor_logs ve visitor_sessions tablolarına yazılmış tarihî kayıtlardır. Yeni ziyaretler bu eski tablolara eklenmez; alan yalnız geçmiş veriyi incelemek veya temizlemek için korunur.'}
       </p>
 
       <div
         role="tabpanel"
-        id={activeView === 'v2' ? 'analytics-v2-panel' : activeView === 'parameters' ? 'analytics-parameters-panel' : 'analytics-legacy-panel'}
+        id={activeView === 'v2' ? 'analytics-v2-panel' : 'analytics-legacy-panel'}
         aria-labelledby={
-          activeView === 'v2' ? 'analytics-v2-tab' : activeView === 'parameters' ? 'analytics-parameters-tab' : 'analytics-legacy-tab'
+          activeView === 'v2' ? 'analytics-v2-tab' : 'analytics-legacy-tab'
         }
       >
         {activeView === 'v2' ? (
           <AnalyticsV2Dashboard />
-        ) : activeView === 'parameters' ? (
-          <AnalyticsUrlParametersDashboard />
         ) : (
           <LegacyVisitorLogsManager
             onOpenAnalyticsV2={() => setActiveView('v2')}
