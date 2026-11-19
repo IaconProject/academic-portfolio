@@ -2,7 +2,6 @@ import {
   ANALYTICS_PROFILE_INTERACTION_KEYS,
   ANALYTICS_SCREEN_INTERACTION_KEYS,
   VISITOR_ANALYTICS_TRACKED_PATH,
-  VISITOR_ANALYTICS_TRACKED_FROM,
 } from './analytics-contract';
 
 export interface VisitorLinkEventRow {
@@ -71,9 +70,6 @@ const PROFILE_INTERACTIONS = new Set<string>(
 );
 const SCREEN_INTERACTIONS = new Set<string>(
   ANALYTICS_SCREEN_INTERACTION_KEYS
-);
-const VISITOR_ANALYTICS_TRACKED_FROM_MS = Date.parse(
-  VISITOR_ANALYTICS_TRACKED_FROM
 );
 
 function cleanText(value: string | null | undefined): string | null {
@@ -176,10 +172,7 @@ function sortedDimension(map: Map<string, number>, limit = 50) {
     .slice(0, limit);
 }
 
-/**
- * Builds the admin report without rewriting history: pre-cutover events keep
- * their original paths, while post-cutover events must be the /7 link.
- */
+/** Builds the admin report exclusively from events whose canonical path is /7. */
 export function buildVisitorLinkAnalyticsDashboard(input: {
   range: ReportRange;
   events: VisitorLinkEventRow[];
@@ -187,13 +180,9 @@ export function buildVisitorLinkAnalyticsDashboard(input: {
   health?: VisitorLinkIngestHealthRow | null;
 }) {
   const sessionById = new Map(input.sessions.map((session) => [session.id, session]));
-  const scopedEvents = input.events.filter((event) => {
-    const occurredAt = Date.parse(event.occurred_at);
-    return (
-      occurredAt < VISITOR_ANALYTICS_TRACKED_FROM_MS ||
-      event.path === VISITOR_ANALYTICS_TRACKED_PATH
-    );
-  });
+  const scopedEvents = input.events.filter(
+    (event) => event.path === VISITOR_ANALYTICS_TRACKED_PATH
+  );
   const humanEvents = scopedEvents.filter(
     (event) => sessionById.get(event.session_id)?.traffic_class === 'human'
   );
@@ -235,27 +224,6 @@ export function buildVisitorLinkAnalyticsDashboard(input: {
         event.event_type === 'heartbeat' || event.event_type === 'engagement'
     )
     .reduce((sum, event) => sum + Math.max(0, event.duration_ms || 0), 0);
-  const pageState = new Map<
-    string,
-    { pageViews: number; sessionIds: Set<string>; exits: number }
-  >();
-  const lastPageBySession = new Map<string, string>();
-  for (const event of pageViews) {
-    const path = event.path?.startsWith('/') ? event.path : '/';
-    const current = pageState.get(path) || {
-      pageViews: 0,
-      sessionIds: new Set<string>(),
-      exits: 0,
-    };
-    current.pageViews += 1;
-    current.sessionIds.add(event.session_id);
-    pageState.set(path, current);
-    lastPageBySession.set(event.session_id, path);
-  }
-  for (const path of Array.from(lastPageBySession.values())) {
-    const current = pageState.get(path);
-    if (current) current.exits += 1;
-  }
 
   const seriesState = new Map<
     string,
@@ -468,32 +436,20 @@ export function buildVisitorLinkAnalyticsDashboard(input: {
       pageViews: value.pageViews,
       conversions: value.conversions,
     })),
-    topPages: Array.from(pageState, ([path, value]) => {
-      const pageSessionMetrics = metrics.filter((metric) =>
-        value.sessionIds.has(metric.session.id)
-      );
-      return {
-        path,
-        pageViews: value.pageViews,
-        sessions: value.sessionIds.size,
-        exits: value.exits,
-        avgEngagementSeconds: rounded(
-          pageSessionMetrics.length
-            ? pageSessionMetrics.reduce(
-                (sum, metric) => sum + metric.engagementDurationMs,
-                0
-              ) /
-                pageSessionMetrics.length /
-                1000
-            : 0
-        ),
-      };
-    })
-      .sort(
-        (left, right) =>
-          right.pageViews - left.pageViews || left.path.localeCompare(right.path)
-      )
-      .slice(0, 100),
+    topPages:
+      pageViews.length > 0
+        ? [
+            {
+              path: VISITOR_ANALYTICS_TRACKED_PATH,
+              pageViews: pageViews.length,
+              sessions: new Set(pageViews.map((event) => event.session_id)).size,
+              exits: new Set(pageViews.map((event) => event.session_id)).size,
+              avgEngagementSeconds: rounded(
+                metrics.length ? engagementDurationMs / metrics.length / 1000 : 0
+              ),
+            },
+          ]
+        : [],
     acquisition: Array.from(acquisitionState.values())
       .sort(
         (left, right) =>

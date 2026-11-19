@@ -3,10 +3,7 @@ import 'server-only';
 import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import { getAnalyticsHashSecret } from './analytics';
-import {
-  VISITOR_ANALYTICS_TRACKED_FROM,
-  VISITOR_ANALYTICS_TRACKED_PATH,
-} from './analytics-contract';
+import { VISITOR_ANALYTICS_TRACKED_PATH } from './analytics-contract';
 import {
   hasSupabaseServiceRole,
   serverSupabase,
@@ -674,9 +671,6 @@ function reportContractFailed() {
 const VISITOR_LINK_REPORT_PAGE_SIZE = 1_000;
 const VISITOR_LINK_REPORT_MAX_EVENTS = 50_000;
 const VISITOR_LINK_SESSION_CHUNK_SIZE = 100;
-const VISITOR_ANALYTICS_TRACKED_FROM_MS = Date.parse(
-  VISITOR_ANALYTICS_TRACKED_FROM
-);
 
 const visitorLinkEventRowSchema = z
   .object({
@@ -735,25 +729,21 @@ const visitorLinkHealthRowSchema = z
   })
   .strict();
 
-async function getVisitorLinkEventsWindow(
+async function getVisitorLinkEvents(
   client: ReturnType<typeof requireReportingClient>,
-  from: string,
-  to: string,
-  trackedPath?: string
+  query: AnalyticsDashboardQuery
 ): Promise<VisitorLinkEventRow[]> {
   const rows: VisitorLinkEventRow[] = [];
 
   for (let offset = 0; offset < VISITOR_LINK_REPORT_MAX_EVENTS; offset += VISITOR_LINK_REPORT_PAGE_SIZE) {
-    let eventsQuery = client
+    const { data, error } = await client
       .from('analytics_events')
       .select(
         'event_id, visitor_id, session_id, event_type, occurred_at, received_at, path, screen_bucket, duration_ms, content_type, content_key, properties'
       )
-      .gte('occurred_at', from)
-      .lt('occurred_at', to);
-    if (trackedPath) eventsQuery = eventsQuery.eq('path', trackedPath);
-
-    const { data, error } = await eventsQuery
+      .eq('path', VISITOR_ANALYTICS_TRACKED_PATH)
+      .gte('occurred_at', query.from)
+      .lt('occurred_at', query.to)
       .order('occurred_at', { ascending: true })
       .order('event_id', { ascending: true })
       .range(offset, offset + VISITOR_LINK_REPORT_PAGE_SIZE - 1);
@@ -768,63 +758,9 @@ async function getVisitorLinkEventsWindow(
 
   throw new AnalyticsReportingError(
     'ANALYTICS_REPORT_TOO_LARGE',
-    'Seçilen tarih aralığındaki analitik verisi rapor sınırını aşıyor. Daha kısa bir tarih aralığı seçin.',
+    'Seçilen tarih aralığındaki /7 analitik verisi rapor sınırını aşıyor. Daha kısa bir tarih aralığı seçin.',
     413
   );
-}
-
-async function getVisitorLinkEvents(
-  client: ReturnType<typeof requireReportingClient>,
-  query: AnalyticsDashboardQuery
-): Promise<VisitorLinkEventRow[]> {
-  const fromMs = Date.parse(query.from);
-  const toMs = Date.parse(query.to);
-  const windows: Array<{
-    from: string;
-    to: string;
-    trackedPath?: string;
-  }> = [];
-
-  if (fromMs < VISITOR_ANALYTICS_TRACKED_FROM_MS) {
-    const historicalTo = new Date(
-      Math.min(toMs, VISITOR_ANALYTICS_TRACKED_FROM_MS)
-    ).toISOString();
-    windows.push({ from: query.from, to: historicalTo });
-  }
-  if (toMs > VISITOR_ANALYTICS_TRACKED_FROM_MS) {
-    const trackedFrom = new Date(
-      Math.max(fromMs, VISITOR_ANALYTICS_TRACKED_FROM_MS)
-    ).toISOString();
-    windows.push({
-      from: trackedFrom,
-      to: query.to,
-      trackedPath: VISITOR_ANALYTICS_TRACKED_PATH,
-    });
-  }
-
-  const windowRows = await Promise.all(
-    windows.map((window) =>
-      getVisitorLinkEventsWindow(
-        client,
-        window.from,
-        window.to,
-        window.trackedPath
-      )
-    )
-  );
-  const rows = windowRows.flat().sort(
-    (left, right) =>
-      Date.parse(left.occurred_at) - Date.parse(right.occurred_at) ||
-      left.event_id.localeCompare(right.event_id)
-  );
-  if (rows.length > VISITOR_LINK_REPORT_MAX_EVENTS) {
-    throw new AnalyticsReportingError(
-      'ANALYTICS_REPORT_TOO_LARGE',
-      'Seçilen tarih aralığındaki analitik verisi rapor sınırını aşıyor. Daha kısa bir tarih aralığı seçin.',
-      413
-    );
-  }
-  return rows;
 }
 
 async function getVisitorLinkSessions(
@@ -941,17 +877,6 @@ function sessionQueryFingerprint(query: AnalyticsSessionsQuery): string {
     .digest('hex');
 }
 
-function analyticsSessionsRpcPath(
-  query: AnalyticsSessionsQuery
-): string | null {
-  // Before the rollout, the old report was site-wide and must remain
-  // visible. Once the requested window starts at the cutover, only /7 can be
-  // present because the collector rejects every other path.
-  return Date.parse(query.from) >= VISITOR_ANALYTICS_TRACKED_FROM_MS
-    ? VISITOR_ANALYTICS_TRACKED_PATH
-    : null;
-}
-
 function encodeCursor(
   cursor: z.infer<typeof internalCursorSchema>,
   fingerprint: string,
@@ -1044,7 +969,6 @@ export async function getAnalyticsSessions(
     ...query,
     path: VISITOR_ANALYTICS_TRACKED_PATH,
   };
-  const rpcPath = analyticsSessionsRpcPath(query);
   const fingerprint = sessionQueryFingerprint(scopedQuery);
   const cursor = decodeCursor(scopedQuery.cursor, fingerprint);
   const { data, error } = await client.rpc('get_analytics_sessions', {
@@ -1055,7 +979,7 @@ export async function getAnalyticsSessions(
     p_cursor_at: cursor.at,
     p_cursor_key: cursor.key,
     p_traffic_class: scopedQuery.trafficClass,
-    p_path: rpcPath,
+    p_path: VISITOR_ANALYTICS_TRACKED_PATH,
     p_snapshot_to: cursor.snapshotTo,
   });
 
