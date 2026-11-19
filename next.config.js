@@ -50,6 +50,11 @@ const nextConfig = {
         permanent: true,
       },
       ...productionVercelRedirects,
+      {
+        source: '/7',
+        destination: '/',
+        permanent: true,
+      },
     ];
   },
   async headers() {
