@@ -26,7 +26,6 @@ import {
   AnalyticsUtmProperties,
   AnalyticsWebVitalName,
   getSafeAnalyticsDownload,
-  isVisitorAnalyticsTrackedPath,
   normalizeAnalyticsClientErrorName,
   normalizeAnalyticsCampaignValue,
   normalizeAnalyticsNavigationType,
@@ -214,17 +213,8 @@ function readQueue(): AnalyticsClientEventContract[] {
         Boolean(event) &&
         typeof event === 'object' &&
         typeof (event as Partial<AnalyticsClientEventContract>).eventId ===
-          'string' &&
-        isVisitorAnalyticsTrackedPath(
-          (event as Partial<AnalyticsClientEventContract>).path
-        ),
+          'string',
     );
-    if (volatileQueue.length !== parsed.length) {
-      localStorage.setItem(
-        ANALYTICS_STORAGE_KEYS.queue,
-        JSON.stringify(volatileQueue)
-      );
-    }
     return [...volatileQueue];
   } catch {
     queueStorageDegraded = true;
@@ -453,9 +443,11 @@ function hasExplicitAnalyticsConsent(): boolean {
   return record?.state === 'granted' && record.basis === 'consent';
 }
 
-function trackGooglePageView(path: string): void {
+function trackGooglePageView(
+  event: AnalyticsClientEventContract,
+  path: string
+): void {
   const safeLocation = new URL(path, window.location.origin);
-  const utm = allowedUtmProperties();
   const campaignParameters = {
     source: 'utm_source',
     medium: 'utm_medium',
@@ -464,16 +456,14 @@ function trackGooglePageView(path: string): void {
     content: 'utm_content',
   } as const;
   Object.entries(campaignParameters).forEach(([key, parameter]) => {
-    const value = utm?.[key as keyof AnalyticsUtmProperties];
+    const value = event.utm?.[key as keyof AnalyticsUtmProperties];
     if (value) safeLocation.searchParams.set(parameter, value);
   });
 
   const pageView: AnalyticsGaPageView = {
-    eventId: createUuid(),
+    eventId: event.eventId,
     page_path: path,
-    page_title: (
-      document.title || 'Muhammed AKAN | Akademik Portfolyo'
-    ).slice(0, MAX_TITLE_LENGTH),
+    page_title: event.title,
     // Only allowlisted UTM parameters survive; arbitrary query input is never
     // forwarded to GA4.
     page_location: safeLocation.toString(),
@@ -536,7 +526,6 @@ function retryAfterMilliseconds(value: string | null): number | null {
 export function VisitorTracker({ enabled }: { enabled: boolean }) {
   const pathname = usePathname();
   const lastTrackedPath = useRef('');
-  const lastTrackedGooglePath = useRef('');
   const flushInProgress = useRef(false);
   const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryAttempt = useRef(0);
@@ -557,7 +546,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
     queueStorageDegraded = false;
     retryAttempt.current = 0;
     lastTrackedPath.current = '';
-    lastTrackedGooglePath.current = '';
     interactionEventCount.current = 0;
     interactionCooldowns.current.clear();
     trackedScrollThresholds.current.clear();
@@ -636,8 +624,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         const filtered = result?.data?.filtered;
         const intentionalFilter =
           (filtered === 'preview_environment' ||
-            filtered === 'verified_bot' ||
-            filtered === 'untracked_path') &&
+            filtered === 'verified_bot') &&
           acceptedCount === 0;
         const persistedBatch =
           Number.isSafeInteger(acceptedCount) &&
@@ -731,11 +718,11 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       pathOverride = canonicalPath(pathname),
       useBeacon = false
     ): Promise<AnalyticsClientEventContract | null> => {
-      const eventPath = canonicalPath(pathOverride);
       if (
         typeof window === 'undefined' ||
         !enabled ||
-        !isVisitorAnalyticsTrackedPath(eventPath) ||
+        pathOverride === '/admin' ||
+        pathOverride.startsWith('/admin/') ||
         !hasGrantedConsent()
       ) {
         return null;
@@ -773,7 +760,7 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         eventId: createUuid(),
         ...identity,
         occurredAt: new Date().toISOString(),
-        path: eventPath,
+        path: canonicalPath(pathOverride),
         title: (
           document.title || 'Muhammed AKAN | Akademik Portfolyo'
         ).slice(0, MAX_TITLE_LENGTH),
@@ -787,6 +774,12 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
         ...details,
       } as AnalyticsClientEventContract;
 
+      if (
+        event.eventType === 'page_view' &&
+        hasExplicitAnalyticsConsent()
+      ) {
+        trackGooglePageView(event, event.path);
+      }
       await enqueue(
         event,
         () => runtimeGeneration.current === generation && enabled
@@ -838,19 +831,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
     }
 
     const path = canonicalPath(pathname);
-    if (
-      hasExplicitAnalyticsConsent() &&
-      lastTrackedGooglePath.current !== path
-    ) {
-      lastTrackedGooglePath.current = path;
-      trackGooglePageView(path);
-    }
-
-    if (!isVisitorAnalyticsTrackedPath(path)) {
-      lastTrackedPath.current = '';
-      return;
-    }
-
     if (lastTrackedPath.current === path) return;
     lastTrackedPath.current = path;
     const event = await emitAnalyticsEvent(
@@ -867,7 +847,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       if (
         !enabled ||
         !hasGrantedConsent() ||
-        !isVisitorAnalyticsTrackedPath(pathname) ||
         !ANALYTICS_WEB_VITAL_NAMES.includes(
           metric.name as AnalyticsWebVitalName
         )
@@ -924,7 +903,6 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
     const handlePageShow = (event: PageTransitionEvent) => {
       if (event.persisted) {
         lastTrackedPath.current = '';
-        lastTrackedGooglePath.current = '';
         void trackCurrentPage();
       }
     };
@@ -968,7 +946,8 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (
       !enabled ||
-      !isVisitorAnalyticsTrackedPath(pathname)
+      pathname === '/admin' ||
+      pathname.startsWith('/admin/')
     ) {
       return;
     }
@@ -1156,7 +1135,8 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (
       !enabled ||
-      !isVisitorAnalyticsTrackedPath(pathname) ||
+      pathname === '/admin' ||
+      pathname.startsWith('/admin/') ||
       !window.visualViewport
     ) {
       return;
@@ -1195,7 +1175,8 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (
       !enabled ||
-      !isVisitorAnalyticsTrackedPath(pathname)
+      pathname === '/admin' ||
+      pathname.startsWith('/admin/')
     ) {
       return;
     }
@@ -1278,7 +1259,8 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (
       !enabled ||
-      !isVisitorAnalyticsTrackedPath(pathname)
+      pathname === '/admin' ||
+      pathname.startsWith('/admin/')
     ) {
       return;
     }

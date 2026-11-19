@@ -41,8 +41,8 @@ const sessionItem = {
   engagementSeconds: 30,
   maxScrollPercent: 90,
   conversions: 1,
-  landingPath: '/7',
-  exitPath: '/7',
+  landingPath: '/',
+  exitPath: '/yazilar',
   source: 'google',
   medium: 'organic',
   campaign: null,
@@ -64,8 +64,8 @@ const sessionItem = {
   journey: [
     {
       occurredAt: '2026-07-29T10:00:00.000Z',
-      path: '/7',
-      title: 'Instagram biyografi bağlantısı',
+      path: '/',
+      title: 'Ana Sayfa',
     },
   ],
   journeyTruncated: true,
@@ -106,7 +106,7 @@ describe('Analytics reporting cursor sözleşmesi', () => {
       deviceBrand: 'Apple',
       browserVersion: '127.0.0.0',
       journeyTruncated: true,
-      journey: [{ path: '/7', title: 'Instagram biyografi bağlantısı' }],
+      journey: [{ path: '/', title: 'Ana Sayfa' }],
     });
     expect(firstPage.nextCursor).toBeTruthy();
 
@@ -131,39 +131,36 @@ describe('Analytics reporting cursor sözleşmesi', () => {
     expect(secondRpcParameters).toMatchObject({
       p_cursor_at: '2026-07-29T09:55:00.000Z',
       p_cursor_key: 'a'.repeat(32),
-      p_path: '/7',
       p_snapshot_to: firstRpcParameters.p_snapshot_to,
     });
   });
 
-  it('istemci başka filtre istese de oturum RPC kapsamını /7 olarak tutar', async () => {
-    reportingMocks.rpc
-      .mockResolvedValueOnce({
-        data: {
-          items: [sessionItem],
-          hasMore: true,
-          nextCursor: {
-            at: '2026-07-29T09:55:00.000Z',
-            key: 'b'.repeat(32),
-          },
+  it('cursor başka filtreyle kullanılırsa veritabanına gitmeden 400 üretir', async () => {
+    reportingMocks.rpc.mockResolvedValueOnce({
+      data: {
+        items: [sessionItem],
+        hasMore: true,
+        nextCursor: {
+          at: '2026-07-29T09:55:00.000Z',
+          key: 'b'.repeat(32),
         },
-        error: null,
-      })
-      .mockResolvedValueOnce({
-        data: { items: [], hasMore: false, nextCursor: null },
-        error: null,
-      });
+      },
+      error: null,
+    });
 
     const firstPage = await getAnalyticsSessions(baseQuery);
 
-    await getAnalyticsSessions({
-      ...baseQuery,
-      path: '/yazilar',
-      cursor: firstPage.nextCursor!,
+    await expect(
+      getAnalyticsSessions({
+        ...baseQuery,
+        path: '/yazilar',
+        cursor: firstPage.nextCursor!,
+      })
+    ).rejects.toMatchObject({
+      code: 'ANALYTICS_CURSOR_QUERY_MISMATCH',
+      status: 400,
     });
-    expect(reportingMocks.rpc).toHaveBeenCalledTimes(2);
-    expect(reportingMocks.rpc.mock.calls[0][1].p_path).toBe('/7');
-    expect(reportingMocks.rpc.mock.calls[1][1].p_path).toBe('/7');
+    expect(reportingMocks.rpc).toHaveBeenCalledTimes(1);
   });
 
   it('değiştirilmiş cursor imzasını reddeder', async () => {
