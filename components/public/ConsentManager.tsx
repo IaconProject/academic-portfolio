@@ -435,6 +435,15 @@ export function ConsentManager({
     );
   }
 
+  /**
+   * Both actions of the consent banner resolve to the same outcome: an
+   * explicit "consent" basis record is persisted, so the collector accepts
+   * events from every region and Google Analytics is allowed to load.
+   */
+  function grantAnalyticsConsent() {
+    choose('granted');
+  }
+
   const loadAnalytics =
     analyticsActive &&
     Boolean(safeMeasurementId) &&
@@ -496,19 +505,25 @@ export function ConsentManager({
           <div className="mt-4 flex flex-wrap justify-end gap-2">
             <button
               type="button"
-              onClick={() => choose('denied')}
+              onClick={
+                isRegionalFirstPartyMode
+                  ? () => choose('denied')
+                  : grantAnalyticsConsent
+              }
               className="rounded-xl border border-academic-border px-4 py-2 text-xs font-bold text-academic-slate transition-colors hover:bg-academic-surface-muted hover:text-academic-ink"
             >
               {isRegionalFirstPartyMode
                 ? 'Site içi analitiği kapat'
-                : 'Yalnız zorunlu'}
+                : 'İptal'}
             </button>
             <button
               type="button"
-              onClick={() => choose('granted')}
+              onClick={grantAnalyticsConsent}
               className="rounded-xl bg-academic-accent px-4 py-2 text-xs font-bold text-academic-on-accent transition-colors hover:bg-academic-accent-strong"
             >
-              Analitiğe izin ver
+              {isRegionalFirstPartyMode
+                ? 'Analitiğe izin ver'
+                : 'Tamam'}
             </button>
           </div>
         </aside>
