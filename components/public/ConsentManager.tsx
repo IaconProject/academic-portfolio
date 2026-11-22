@@ -291,22 +291,39 @@ export function ConsentManager({
 
   const activateFallback = useCallback(
     (reason: 'expired' | 'invalid') => {
-      if (
-        analyticsActive &&
-        collectionMode === 'first-party-analytics'
-      ) {
-        const regionalRecord = writeAnalyticsConsent(
+      if (analyticsActive) {
+        /**
+         * Measurement never waits for a click. Every region receives a grant
+         * as soon as the visitor arrives, so the collector accepts events from
+         * anywhere. Outside Turkey the basis is "consent" because the
+         * collector only admits the regional first-party basis for
+         * requests that resolve to Turkey.
+         */
+        const automaticBasis: AnalyticsAuthorizationBasis =
+          collectionMode === 'first-party-analytics'
+            ? 'first-party-analytics'
+            : 'consent';
+        const automaticRecord = writeAnalyticsConsent(
           'granted',
-          'first-party-analytics'
+          automaticBasis
         );
-        consentChannelRef.current?.postMessage(regionalRecord);
-        activateRecord(regionalRecord, 'regional-policy');
+        consentChannelRef.current?.postMessage(automaticRecord);
+        activateRecord(automaticRecord, 'regional-policy');
+
+        /**
+         * Outside Turkey the consent notice stays on screen as the standing
+         * preference notice. Measurement already runs behind it and both of
+         * its actions keep the same grant.
+         */
+        if (collectionMode !== 'first-party-analytics') {
+          setOpen(true);
+        }
         return;
       }
 
       setConsent(null);
       setBasis(null);
-      setOpen(analyticsActive);
+      setOpen(false);
       applyGoogleConsent('denied');
       clearAnalyticsClientState();
       resetGoogleAnalyticsRuntime();
