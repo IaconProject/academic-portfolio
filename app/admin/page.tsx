@@ -24,6 +24,7 @@ import { SocialLinksEditor } from '@/components/admin/SocialLinksEditor';
 import { BlockchainCanvasAnimation } from '@/components/admin/BlockchainCanvasAnimation';
 import { TabBarSettingsEditor } from '@/components/admin/TabBarSettingsEditor';
 import { HomePopupSettingsEditor } from '@/components/admin/HomePopupSettingsEditor';
+import { CacheSettingsEditor } from '@/components/admin/CacheSettingsEditor';
 import {
   User,
   School,
@@ -40,6 +41,7 @@ import {
   Inbox,
   FileText,
   Palette,
+  Database,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -57,7 +59,8 @@ type AdminTab =
   | 'seo'
   | 'appearance'
   | 'security'
-  | 'visitors';
+  | 'visitors'
+  | 'cache';
 
 const VALID_TABS: AdminTab[] = [
   'profile',
@@ -74,6 +77,7 @@ const VALID_TABS: AdminTab[] = [
   'appearance',
   'visitors',
   'security',
+  'cache',
 ];
 
 function AdminDashboardContent() {
@@ -290,6 +294,7 @@ function AdminDashboardContent() {
     { id: 'appearance' as AdminTab, label: 'Görünüm & Pop-up', icon: Palette },
     { id: 'visitors' as AdminTab, label: 'Ziyaretçi Analizi', icon: Activity },
     { id: 'security' as AdminTab, label: 'Güvenlik & Giriş', icon: KeyRound },
+    { id: 'cache' as AdminTab, label: 'Cache Yönetimi', icon: Database },
   ];
 
   return (
@@ -432,6 +437,8 @@ function AdminDashboardContent() {
               )}
 
               {activeTab === 'visitors' && <VisitorLogsManager />}
+
+              {activeTab === 'cache' && <CacheSettingsEditor />}
 
               {activeTab === 'security' && (
                 <div className="space-y-6">
