@@ -37,8 +37,8 @@ import { analyticsAuthorizationVersion } from '@/lib/analytics-consent-policy';
 import { getAnalyticsClientTechnology } from '@/lib/analytics-client-technology';
 
 const ANALYTICS_ENDPOINT = '/api/analytics/events';
-const MAX_QUEUE_EVENTS = 100;
-const MAX_QUEUE_BYTES = 128 * 1024;
+const MAX_QUEUE_EVENTS = 500;
+const MAX_QUEUE_BYTES = 512 * 1024;
 const MAX_BATCH_BYTES = 30 * 1024;
 const MAX_TITLE_LENGTH = 300;
 const MAX_PATH_LENGTH = 500;
@@ -506,6 +506,47 @@ function createBatchPayload(queue: AnalyticsClientEventContract[]): {
   return { batch, payload };
 }
 
+function createSingleEventPayload(event: AnalyticsClientEventContract): string {
+  return JSON.stringify({
+    schemaVersion: ANALYTICS_SCHEMA_VERSION,
+    consentVersion: event.consentVersion,
+    events: [event],
+  });
+}
+
+function responseConfirmsPersistence(
+  result: unknown,
+  eventCount: number
+): boolean {
+  if (!result || typeof result !== 'object') return false;
+  const envelope = result as {
+    success?: boolean;
+    data?: {
+      acceptedCount?: number;
+      duplicateCount?: number;
+      rejectedCount?: number;
+      filtered?: string;
+    };
+  };
+  const accepted = Number(envelope.data?.acceptedCount);
+  const duplicates = Number(envelope.data?.duplicateCount ?? 0);
+  const rejected = Number(envelope.data?.rejectedCount ?? 0);
+  const intentionallyFiltered =
+    (envelope.data?.filtered === 'preview_environment' ||
+      envelope.data?.filtered === 'verified_bot') &&
+    accepted === 0;
+  return (
+    envelope.success === true &&
+    (intentionallyFiltered ||
+      (Number.isSafeInteger(accepted) &&
+        accepted >= 0 &&
+        Number.isSafeInteger(duplicates) &&
+        duplicates >= 0 &&
+        rejected === 0 &&
+        accepted + duplicates === eventCount))
+  );
+}
+
 function retryAfterMilliseconds(value: string | null): number | null {
   if (!value) return null;
   const seconds = Number(value);
@@ -579,18 +620,19 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       try {
         // Keep the queue: the next successful fetch safely retries these
         // idempotent event IDs if the browser did not deliver the beacon.
-        navigator.sendBeacon(
+        const beaconQueued = navigator.sendBeacon(
           ANALYTICS_ENDPOINT,
           new Blob([payload], { type: 'application/json' }),
         );
+        if (beaconQueued) return;
       } catch {
-        // A future online/page-view event retries the persisted queue.
+        // Fall through to keepalive fetch when the browser rejects the beacon.
       }
-      return;
     }
 
     flushInProgress.current = true;
     let batchResolved = false;
+    let isolateInvalidBatch = false;
     let retryAfterMs: number | null = null;
     try {
       const response = await fetch(ANALYTICS_ENDPOINT, {
@@ -605,75 +647,104 @@ export function VisitorTracker({ enabled }: { enabled: boolean }) {
       });
 
       if (response.ok) {
-        const result = (await response.json().catch(() => null)) as {
-          success?: boolean;
-          data?: {
-            acceptedCount?: number;
-            duplicateCount?: number;
-            rejectedCount?: number;
-            filtered?: string;
-          };
-        } | null;
-        const acceptedCount = Number(result?.data?.acceptedCount);
-        const duplicateCount = Number(
-          result?.data?.duplicateCount ?? 0
-        );
-        const rejectedCount = Number(
-          result?.data?.rejectedCount ?? 0
-        );
-        const filtered = result?.data?.filtered;
-        const intentionalFilter =
-          (filtered === 'preview_environment' ||
-            filtered === 'verified_bot') &&
-          acceptedCount === 0;
-        const persistedBatch =
-          Number.isSafeInteger(acceptedCount) &&
-          acceptedCount >= 0 &&
-          Number.isSafeInteger(duplicateCount) &&
-          duplicateCount >= 0 &&
-          Number.isSafeInteger(rejectedCount) &&
-          rejectedCount === 0 &&
-          acceptedCount + duplicateCount === batch.length;
-
         // A generic/proxied 2xx is not proof of durable persistence. Events
         // leave the queue only after the collector's count invariant passes,
         // or after an explicitly enumerated environment/bot filter.
-        if (
-          result?.success === true &&
-          (persistedBatch || intentionalFilter)
-        ) {
+        const result = await response.json().catch(() => null);
+        if (responseConfirmsPersistence(result, batch.length)) {
           await removeFromQueue(
             new Set(batch.map((event) => event.eventId))
           );
           batchResolved = true;
         }
       } else if (response.status === 403) {
-        window.dispatchEvent(
-          new Event(ANALYTICS_RUNTIME_DISABLED_EVENT)
-        );
-        await removeFromQueue(
-          new Set(batch.map((event) => event.eventId))
-        );
-        batchResolved = true;
+        const result = (await response.json().catch(() => null)) as {
+          error?: { code?: string };
+        } | null;
+        if (result?.error?.code === 'ANALYTICS_DISABLED') {
+          window.dispatchEvent(
+            new Event(ANALYTICS_RUNTIME_DISABLED_EVENT)
+          );
+          await removeFromQueue(
+            new Set(batch.map((event) => event.eventId))
+          );
+          batchResolved = true;
+        }
       } else if (response.status === 429) {
         retryAfterMs = retryAfterMilliseconds(
           response.headers.get('retry-after')
         );
-      } else if (
-        // Permanent validation/auth failures must not poison every future batch.
-        response.status >= 400 &&
-        response.status < 500 &&
-        ![408, 409, 425, 429].includes(response.status)
-      ) {
-        await removeFromQueue(
-          new Set(batch.map((event) => event.eventId))
-        );
-        batchResolved = true;
+      } else if ([400, 413, 422].includes(response.status)) {
+        // One malformed/expired event must not cause valid page views in the
+        // same batch to be discarded. Retry each event independently below.
+        isolateInvalidBatch = true;
       }
     } catch {
       // Offline/network failure: the bounded queue is retried later.
     } finally {
       flushInProgress.current = false;
+    }
+
+    if (isolateInvalidBatch) {
+      let allEventsResolved = true;
+      for (const event of batch) {
+        try {
+          const singleResponse = await fetch(ANALYTICS_ENDPOINT, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Analytics-Schema': String(ANALYTICS_SCHEMA_VERSION),
+            },
+            body: createSingleEventPayload(event),
+            credentials: 'same-origin',
+            keepalive: true,
+          });
+
+          if (singleResponse.ok) {
+            const result = await singleResponse.json().catch(() => null);
+            if (responseConfirmsPersistence(result, 1)) {
+              await removeFromQueue(new Set([event.eventId]));
+              continue;
+            }
+            allEventsResolved = false;
+            break;
+          }
+
+          if (singleResponse.status === 403) {
+            const result = (await singleResponse.json().catch(() => null)) as {
+              error?: { code?: string };
+            } | null;
+            if (result?.error?.code === 'ANALYTICS_DISABLED') {
+              window.dispatchEvent(
+                new Event(ANALYTICS_RUNTIME_DISABLED_EVENT)
+              );
+              await removeFromQueue(new Set([event.eventId]));
+              continue;
+            }
+            allEventsResolved = false;
+            break;
+          }
+
+          if (
+            singleResponse.status >= 500 ||
+            [408, 409, 425, 429].includes(singleResponse.status)
+          ) {
+            allEventsResolved = false;
+            break;
+          }
+
+          // A permanently invalid event is isolated so subsequent page views
+          // can still be delivered. The rest of the queued batch is retained.
+          console.warn(
+            `[analytics] Dropping one invalid event after isolated retry (${singleResponse.status}).`
+          );
+          await removeFromQueue(new Set([event.eventId]));
+        } catch {
+          allEventsResolved = false;
+          break;
+        }
+      }
+      batchResolved = allEventsResolved;
     }
 
     if (batchResolved) {

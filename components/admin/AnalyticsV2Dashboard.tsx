@@ -365,6 +365,27 @@ function formatSessionLocation(session: AnalyticsSession): string {
   return uniqueParts.join(', ') || 'Bilinmiyor';
 }
 
+function trafficClassLabel(value: AnalyticsSession['trafficClass']): string {
+  switch (value) {
+    case 'suspected_bot':
+      return 'Şüpheli bot · User-Agent işareti';
+    case 'verified_bot':
+      return 'Doğrulanmış bot';
+    case 'internal':
+      return 'Dahili trafik';
+    case 'test':
+      return 'Test trafiği';
+    default:
+      return 'İnsan';
+  }
+}
+
+function proxyStatusLabel(value: boolean | null | undefined): string {
+  if (value === true) return 'VPN/proxy sinyali: Tespit edildi';
+  if (value === false) return 'VPN/proxy sinyali: Tespit edilmedi';
+  return 'VPN/proxy durumu: Bilinmiyor';
+}
+
 function geoQualityLabel(session: AnalyticsSession): string {
   if (session.geoSource === 'browser-geolocation') {
     return 'Geçmiş cihaz konumu kaydı · artık toplanmıyor';
@@ -1891,7 +1912,7 @@ export function AnalyticsV2Dashboard() {
                         [
                           row.asn,
                           row.isMobileNetwork === true ? 'Mobil ağ' : null,
-                          row.isProxy === true ? 'Proxy/VPN sinyali' : null,
+                          proxyStatusLabel(row.isProxy),
                           row.isHosting === true ? 'Hosting ağı' : null,
                         ]
                           .filter(Boolean)
@@ -1900,6 +1921,9 @@ export function AnalyticsV2Dashboard() {
                   />
                 </div>
               </div>
+              <p className="mt-4 rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-[11px] leading-5 text-stone-600 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-400">
+                VPN/proxy durumu IP ağ sağlayıcısının sinyalidir. “Tespit edilmedi” sonucu VPN kullanılmadığını kesin olarak kanıtlamaz; ISP/ağ adı tek başına VPN göstergesi değildir.
+              </p>
             </SectionCard>
 
             <SectionCard
@@ -2290,7 +2314,7 @@ export function AnalyticsV2Dashboard() {
                     session.asn,
                     session.isMobileNetwork === true ? 'Mobil ağ' : null,
                     session.isMobileNetwork === false ? 'Sabit ağ' : null,
-                    session.isProxy === true ? 'Proxy/VPN sinyali' : null,
+                    proxyStatusLabel(session.isProxy),
                     session.isHosting === true ? 'Hosting ağı' : null,
                   ]
                     .filter(Boolean)
@@ -2337,7 +2361,7 @@ export function AnalyticsV2Dashboard() {
                               {session.trafficClass &&
                                 session.trafficClass !== 'human' && (
                                   <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                    {session.trafficClass}
+                                    {trafficClassLabel(session.trafficClass)}
                                   </span>
                                 )}
                             </div>

@@ -343,9 +343,6 @@ export async function POST(request: Request) {
   const detectedTrafficClass = classifyObviousBot(
     request.headers.get('user-agent') || ''
   );
-  if (detectedTrafficClass === 'verified_bot') {
-    return success({ acceptedCount: 0, filtered: 'verified_bot' }, 200);
-  }
   const trafficClass =
     process.env.NODE_ENV === 'production' ? detectedTrafficClass : 'test';
   const baseRequestContext = buildAnalyticsRequestContext(request);
@@ -444,6 +441,9 @@ export async function POST(request: Request) {
           consent_version: parsed.data.consentVersion,
           authorization_basis: authorizationBasis,
           traffic_class: trafficClass,
+          ...(trafficClass === 'suspected_bot'
+            ? { bot_reason: 'user_agent_pattern' }
+            : {}),
         },
       }
     );

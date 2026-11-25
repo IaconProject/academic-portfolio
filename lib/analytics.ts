@@ -628,7 +628,9 @@ export function classifyObviousBot(userAgent: string): AnalyticsTrafficClass {
       ua
     )
   ) {
-    return 'verified_bot';
+    // A User-Agent match is a useful suspicion signal, not proof that the
+    // request came from a verified crawler. Keep it filterable for review.
+    return 'suspected_bot';
   }
   return 'human';
 }
